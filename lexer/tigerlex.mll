@@ -22,6 +22,7 @@ type token =
 	| BREAK
 	| ARRAY
 	| OF
+	| TYPE
 	| DOT
 	| OP_PLUS
 	| OP_MINUS
@@ -42,9 +43,11 @@ type token =
 	| LEFT_PAREN
 	| LEFT_BRACK
 	| LEFT_BRACE
-	| EOF
 	| COMMA
 	| COLON
+	| SEMICOLON
+	| COMMENT
+	| EOF
 
 exception SyntaxError of string
 
@@ -93,6 +96,8 @@ rule read =
   | "to" { TO }
   | "array" { ARRAY }
   | "of" { OF }
+  | "type" { TYPE }
+  | id { ID(Lexing.lexeme lexbuf) }
   | '.' { DOT }
   | '+' { OP_PLUS }
   | '-' { OP_MINUS }
@@ -115,6 +120,8 @@ rule read =
   | ']'      { RIGHT_BRACK }
   | ':'      { COLON }
   | ','      { COMMA }
+  | ';'      { SEMICOLON }
+  | "/*"      { read_comment lexbuf}
   | _ { raise (SyntaxError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }
   | eof      { EOF }
 
@@ -134,3 +141,11 @@ rule read =
     }
   | _ { raise (SyntaxError ("Illegal string character: " ^ Lexing.lexeme lexbuf)) }
   | eof { raise (SyntaxError ("String is not terminated")) }
+
+and read_comment =
+	parse
+	(* Tiger supports nested comments *)
+	| "/*"  { ignore(read_comment lexbuf); read_comment lexbuf }
+	| "*/" { COMMENT }
+	| _ { read_comment lexbuf }
+    | eof { raise (SyntaxError ("String is not terminated")) }

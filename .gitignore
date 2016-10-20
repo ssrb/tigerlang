@@ -1,0 +1,8 @@
+*.cmx
+*.cmi
+*.cmo
+*.o
+._d
+lexer_tester
+lexer_tester.byte
+

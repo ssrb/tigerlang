@@ -10,7 +10,7 @@ before_install:
 - opam install ocamlfind core ctypes ctypes-foreign menhir
 script:
 - eval $(opam config env)
-#- make
+- make
 
 
 
