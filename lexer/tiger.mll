@@ -23,7 +23,6 @@ type token =
 	| ARRAY
 	| OF
 	| DOT
-	| OP_EQ
 	| OP_PLUS
 	| OP_MINUS
 	| OP_MUL
@@ -47,7 +46,14 @@ type token =
 	| COMMA
 	| COLON
 
-type pos = int
+exception SyntaxError of string
+
+let next_line lexbuf =
+  let pos = lexbuf.lex_curr_p in
+  lexbuf.lex_curr_p <-
+    { pos with pos_bol = lexbuf.lex_curr_pos;
+               pos_lnum = pos.pos_lnum + 1
+    }
 }
 
 (* 
