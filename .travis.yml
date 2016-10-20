@@ -11,6 +11,3 @@ before_install:
 script:
 - eval $(opam config env)
 - make
-
-
-
