@@ -1,7 +1,7 @@
 {
 open Lexing
 
-(* Tempprary until work on parser begins *)
+(* Temporary until work on parser begins *)
 type token = 
 	| ID of (string)
 	| INT of (int)
