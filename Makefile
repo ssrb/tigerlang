@@ -11,7 +11,7 @@ export PROJ_lexer_tester
 
 define PROJ_parser_tester
 	RESULT = parser/parser_tester
-	SOURCES = lexer/tigerlex.mll lexer/lexer_tester.ml
+	SOURCES = parser/tigerparse.mly lexer/tigerlex.mll
 endef
 export PROJ_parser_tester
 

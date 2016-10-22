@@ -1,38 +1,60 @@
+%token <string> ID
+%token <string> STRING
+%token <int> INT
+%token EOF
+%token COMMA 
+%token COLON
+%token SEMICOLON
+%token LPAREN
+%token RPAREN
+%token LBRACK
+%token RBRACK 
+%token LBRACE
+%token RBRACE
+%token DOT 
+%token OP_PLUS
+%token OP_MINUS
+%token OP_MUL
+%token OP_DIV
+%token OP_EQ
+%token OP_NEQ
+%token OP_LT
+%token OP_LE
+%token OP_GT
+%token OP_GE
+%token OP_AND
+%token OP_OR
+%token ASSIGN
+%token ARRAY
+%token IF
+%token THEN
+%token ELSE
+%token WHILE
+%token FOR
+%token TO
+%token DO
+%token LET
+%token IN
+%token END
+%token OF 
+%token BREAK
+%token NIL
+%token FUNCTION
+%token VAR
+%token TYPE 
+%start <unit> dec
 %%
-%term
-    EOF 
-  | ID of string
-  | INT of int | STRING of string 
-  | COMMA | COLON | SEMICOLON | LPAREN | RPAREN | LBRACK | RBRACK 
-  | LBRACE | RBRACE | DOT 
-  | PLUS | MINUS | TIMES | DIVIDE | EQ | NEQ | LT | LE | GT | GE
-  | AND | OR | ASSIGN
-  | ARRAY | IF | THEN | ELSE | WHILE | FOR | TO | DO | LET | IN | END | OF 
-  | BREAK | NIL
-  | FUNCTION | VAR | TYPE 
 
-%nonterm  exp | program
+decs: dec* { () };
 
-%pos int
-%verbose
-%start program
-%eop EOF
-%noshift EOF
+dec: tydec /*| vardec | fundec*/ { () };
 
-%name Tiger
+tydec: TYPE; typeid; OP_EQ; ty { () };
 
-%keyword WHILE FOR TO BREAK LET IN END FUNCTION VAR TYPE ARRAY IF THEN ELSE 
-	DO OF NIL
+typeid: ID { () };
 
-%prefer THEN ELSE LPAREN
+ty: typeid | LBRACE; typefields; RBRACE | ARRAY; OF; typeid { () };
+ 
+typefield: ID; COLON; typeid { () };
 
-%value ID ("bogus")
-%value INT (1)
-%value STRING ("")
-
-%%
-
-program	: exp				()
-
-	
-exp: 			()
+typefields: separated_list(COMMA, typefield) { () };

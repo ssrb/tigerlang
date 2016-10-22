@@ -37,12 +37,12 @@ type token =
 	| OP_LT
 	| OP_LEQ
 	| ASSIGN
-	| RIGHT_PAREN
-	| RIGHT_BRACK
-	| RIGHT_BRACE
-	| LEFT_PAREN
-	| LEFT_BRACK
-	| LEFT_BRACE
+	| RPAREN
+	| RBRACK
+	| RBRACE
+	| LPAREN
+	| LBRACK
+	| LBRACE
 	| COMMA
 	| COLON
 	| SEMICOLON
@@ -66,17 +66,20 @@ let next_line lexbuf =
 let id = ['a'-'z' 'A'-'Z'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
 
 let digit = ['0'-'9']
-let int = '-'? digit digit*
+(*
+ Negative integers are parsed as two lexems: OP_MINUS INT
+*)
+let int = digit digit*
 let white = [' ' '\t']+
 let newline = '\r' | '\n' | "\r\n"
 
 rule read =
   parse
-  | white    { read lexbuf }
-  | newline  { next_line lexbuf; read lexbuf }
-  | int      { INT (int_of_string (Lexing.lexeme lexbuf)) }
-  | "nil"   { NIL }
-  | '"'      { read_string (Buffer.create 17) lexbuf }
+  | white { read lexbuf }
+  | newline { next_line lexbuf; read lexbuf }
+  | int { INT (int_of_string (Lexing.lexeme lexbuf)) }
+  | "nil" { NIL }
+  | '"' { read_string (Buffer.create 17) lexbuf }
   | "let" { LET }
   | "in" { IN }
   | "end" { END }
@@ -108,29 +111,29 @@ rule read =
   | '<' { OP_LT }
   | "<=" { OP_LEQ }
   | ":=" { ASSIGN }
-  | '(' { LEFT_PAREN }
-  | '{'      { LEFT_BRACE }
-  | '['      { LEFT_BRACK }
-  | ')' { RIGHT_PAREN }
-  | '}'      { RIGHT_BRACE }
-  | ']'      { RIGHT_BRACK }
-  | ':'      { COLON }
-  | ','      { COMMA }
-  | ';'      { SEMICOLON }
-  | "/*"      { read_comment lexbuf}
+  | '(' { LPAREN }
+  | '{' { LBRACE }
+  | '[' { LBRACK }
+  | ')' { RPAREN }
+  | '}' { RBRACE }
+  | ']' { RBRACK }
+  | ':' { COLON }
+  | ',' { COMMA }
+  | ';' { SEMICOLON }
+  | "/*" { read_comment lexbuf}
   | _ { raise (SyntaxError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }
-  | eof      { EOF }
+  | eof { EOF }
 
- and read_string buf =
+and read_string buf =
   parse
-  | '"'       { STRING (Buffer.contents buf) }
-  | '\\' '/'  { Buffer.add_char buf '/'; read_string buf lexbuf }
+  | '"' { STRING (Buffer.contents buf) }
+  | '\\' '/' { Buffer.add_char buf '/'; read_string buf lexbuf }
   | '\\' '\\' { Buffer.add_char buf '\\'; read_string buf lexbuf }
-  | '\\' 'b'  { Buffer.add_char buf '\b'; read_string buf lexbuf }
-  | '\\' 'f'  { Buffer.add_char buf '\012'; read_string buf lexbuf }
-  | '\\' 'n'  { Buffer.add_char buf '\n'; read_string buf lexbuf }
-  | '\\' 'r'  { Buffer.add_char buf '\r'; read_string buf lexbuf }
-  | '\\' 't'  { Buffer.add_char buf '\t'; read_string buf lexbuf }
+  | '\\' 'b' { Buffer.add_char buf '\b'; read_string buf lexbuf }
+  | '\\' 'f' { Buffer.add_char buf '\012'; read_string buf lexbuf }
+  | '\\' 'n' { Buffer.add_char buf '\n'; read_string buf lexbuf }
+  | '\\' 'r' { Buffer.add_char buf '\r'; read_string buf lexbuf }
+  | '\\' 't' { Buffer.add_char buf '\t'; read_string buf lexbuf }
   | [^ '"' '\\']+
     { Buffer.add_string buf (Lexing.lexeme lexbuf);
       read_string buf lexbuf
@@ -141,7 +144,7 @@ rule read =
 and read_comment =
 	parse
 	(* Tiger supports nested comments *)
-	| "/*"  { ignore(read_comment lexbuf); read_comment lexbuf }
+	| "/*" { ignore(read_comment lexbuf); read_comment lexbuf }
 	| "*/" { COMMENT }
 	| _ { read_comment lexbuf }
-    | eof { raise (SyntaxError ("String is not terminated")) }
+  | eof { raise (SyntaxError ("String is not terminated")) }
