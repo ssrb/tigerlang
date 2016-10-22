@@ -3,6 +3,5 @@
 *.cmo
 *.o
 ._d
-lexer_tester
-lexer_tester.byte
-
+._bcdi
+._ncdi
