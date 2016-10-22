@@ -67,14 +67,6 @@ let id = ['a'-'z' 'A'-'Z'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
 
 let digit = ['0'-'9']
 let int = '-'? digit digit*
-
-(* Tiger does not support floating point arithmetic *)
-(*
-	let frac = '.' digit*
-	let exp = ['e' 'E'] ['-' '+']? digit+
-	let float = digit* frac? exp?
-*)
-
 let white = [' ' '\t']+
 let newline = '\r' | '\n' | "\r\n"
 
@@ -94,6 +86,10 @@ rule read =
   | "while" { WHILE }
   | "do" { DO }
   | "to" { TO }
+  | "break" { BREAK }
+  | "if" { IF }
+  | "then" { THEN }
+  | "else" { ELSE }
   | "array" { ARRAY }
   | "of" { OF }
   | "type" { TYPE }
