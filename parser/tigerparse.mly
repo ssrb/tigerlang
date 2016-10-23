@@ -93,7 +93,7 @@ exp:  | lvalue
       | IF; exp; THEN; exp; ELSE; exp
       | IF; exp; THEN; exp
       | WHILE; exp; DO; exp
-      | FOR; ID; ASSIGN; exp; TO; exp
+      | FOR; ID; ASSIGN; exp; TO; exp; DO; exp
       | LET; decs; IN; separated_list(SEMICOLON, exp); END
       | BREAK
        { () };
