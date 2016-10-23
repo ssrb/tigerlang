@@ -61,8 +61,8 @@ typefields: separated_list(COMMA, typefield) { () };
 
 vardec: VAR; ID; ASSIGN; exp | VAR; ID; COLON; typeid; ASSIGN; exp { () };
 
-fundec: | FUNCTION; ID; LPAREN; typefields; RPAREN; ASSIGN; exp
-        | FUNCTION; ID; LPAREN; typefields; RPAREN; COLON; typeid; ASSIGN; exp { () };
+fundec: | FUNCTION; ID; LPAREN; typefields; RPAREN; EQ; exp
+        | FUNCTION; ID; LPAREN; typefields; RPAREN; COLON; typeid; EQ; exp { () };
 
 lvalue: | ID
         | lvalue; DOT; ID
@@ -73,4 +73,21 @@ exp:  | lvalue
       | LPAREN; separated_list(SEMICOLON, exp); RPAREN;
       | INT
       | STRING
-      | MINUS; exp { () };
+      | MINUS; exp 
+      | ID; LPAREN; separated_list(COMMA, exp); RPAREN 
+      | exp; PLUS; exp
+      | exp; MINUS; exp
+      | exp; MUL; exp
+      | exp; DIV; exp
+      | exp; EQ; exp
+      | exp; NEQ; exp
+      | exp; LT; exp
+      | exp; LE; exp
+      | exp; GT; exp
+      | exp; GE; exp
+      | exp; AND; exp
+      | exp; OR; exp
+      | typeid; LBRACE; separated_list(COMMA, ID; EQ; exp { () }); RBRACE
+      | typeid; LBRACK; exp; LBRACK; OF; exp
+      | lvalue; ASSIGN; exp
+       { () };
