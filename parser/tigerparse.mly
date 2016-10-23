@@ -90,4 +90,10 @@ exp:  | lvalue
       | typeid; LBRACE; separated_list(COMMA, ID; EQ; exp { () }); RBRACE
       | typeid; LBRACK; exp; LBRACK; OF; exp
       | lvalue; ASSIGN; exp
+      | IF; exp; THEN; exp; ELSE; exp
+      | IF; exp; THEN; exp
+      | WHILE; exp; DO; exp
+      | FOR; ID; ASSIGN; exp; TO; exp
+      | LET; decs; IN; separated_list(SEMICOLON, exp); END
+      | BREAK
        { () };
