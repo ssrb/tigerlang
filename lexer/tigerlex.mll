@@ -24,18 +24,18 @@ type token =
 	| OF
 	| TYPE
 	| DOT
-	| OP_PLUS
-	| OP_MINUS
-	| OP_MUL
-	| OP_DIV
-	| OP_AND
-	| OP_OR
-	| OP_EQ
-	| OP_NEQ
-	| OP_GT
-	| OP_GEQ
-	| OP_LT
-	| OP_LEQ
+	| PLUS
+	| MINUS
+	| MUL
+	| DIV
+	| AND
+	| OR
+	| EQ
+	| NEQ
+	| GT
+	| GEQ
+	| LT
+	| LEQ
 	| ASSIGN
 	| RPAREN
 	| RBRACK
@@ -67,7 +67,7 @@ let id = ['a'-'z' 'A'-'Z'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
 
 let digit = ['0'-'9']
 (*
- Negative integers are parsed as two lexems: OP_MINUS INT
+ Negative integers are parsed as two lexems: MINUS INT
 *)
 let int = digit digit*
 let white = [' ' '\t']+
@@ -98,18 +98,18 @@ rule read =
   | "type" { TYPE }
   | id { ID(Lexing.lexeme lexbuf) }
   | '.' { DOT }
-  | '+' { OP_PLUS }
-  | '-' { OP_MINUS }
-  | '*' { OP_MUL }
-  | '/' { OP_DIV }
-  | '&' { OP_AND }
-  | '|' { OP_OR }
-  | '=' { OP_EQ }
-  | "<>" { OP_NEQ }
-  | '>' { OP_GT }
-  | ">=" { OP_GEQ }
-  | '<' { OP_LT }
-  | "<=" { OP_LEQ }
+  | '+' { PLUS }
+  | '-' { MINUS }
+  | '*' { MUL }
+  | '/' { DIV }
+  | '&' { AND }
+  | '|' { OR }
+  | '=' { EQ }
+  | "<>" { NEQ }
+  | '>' { GT }
+  | ">=" { GEQ }
+  | '<' { LT }
+  | "<=" { LEQ }
   | ":=" { ASSIGN }
   | '(' { LPAREN }
   | '{' { LBRACE }

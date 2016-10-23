@@ -12,18 +12,18 @@
 %token LBRACE
 %token RBRACE
 %token DOT 
-%token OP_PLUS
-%token OP_MINUS
-%token OP_MUL
-%token OP_DIV
-%token OP_EQ
-%token OP_NEQ
-%token OP_LT
-%token OP_LE
-%token OP_GT
-%token OP_GE
-%token OP_AND
-%token OP_OR
+%token PLUS
+%token MINUS
+%token MUL
+%token DIV
+%token EQ
+%token NEQ
+%token LT
+%token LE
+%token GT
+%token GE
+%token AND
+%token OR
 %token ASSIGN
 %token ARRAY
 %token IF
@@ -47,9 +47,9 @@
 
 decs: dec* { () };
 
-dec: tydec /*| vardec | fundec*/ { () };
+dec: tydec | vardec | fundec { () };
 
-tydec: TYPE; typeid; OP_EQ; ty { () };
+tydec: TYPE; typeid; EQ; ty { () };
 
 typeid: ID { () };
 
@@ -58,3 +58,19 @@ ty: typeid | LBRACE; typefields; RBRACE | ARRAY; OF; typeid { () };
 typefield: ID; COLON; typeid { () };
 
 typefields: separated_list(COMMA, typefield) { () };
+
+vardec: VAR; ID; ASSIGN; exp | VAR; ID; COLON; typeid; ASSIGN; exp { () };
+
+fundec: | FUNCTION; ID; LPAREN; typefields; RPAREN; ASSIGN; exp
+        | FUNCTION; ID; LPAREN; typefields; RPAREN; COLON; typeid; ASSIGN; exp { () };
+
+lvalue: | ID
+        | lvalue; DOT; ID
+        | lvalue; LBRACK; exp; RBRACK { () };
+
+exp:  | lvalue
+      | NIL
+      | LPAREN; separated_list(SEMICOLON, exp); RPAREN;
+      | INT
+      | STRING
+      | MINUS; exp { () };
