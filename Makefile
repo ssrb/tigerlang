@@ -2,6 +2,7 @@ OCAMLMAKEFILE = OCamlMakefile
 
 export BCSUFFIX = ".byte"
 export OCAMLYACC = menhir
+export YFLAGS = --infer --explain
 
 define PROJ_lexer_tester
 	RESULT = lexer/lexer_tester
