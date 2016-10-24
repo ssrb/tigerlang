@@ -42,16 +42,24 @@
 %token FUNCTION
 %token VAR
 %token TYPE 
-%start <unit> dec
+
+%right THEN ELSE DO OF ASSIGN
+%left AND OR
+%nonassoc EQ NEQ LT LE GT GE
+%left PLUS MINUS
+%left MUL DIV
+%start <unit> prog
 %%
+
+prog: exp; EOF; { () };
 
 decs: dec* { () };
 
 dec: tydec | vardec | fundec { () };
 
-tydec: TYPE; typeid; EQ; ty { () };
+%inline typeid: ID { () };
 
-typeid: ID { () };
+tydec: TYPE; typeid; EQ; ty { () };
 
 ty: typeid | LBRACE; typefields; RBRACE | ARRAY; OF; typeid { () };
  
@@ -64,9 +72,11 @@ vardec: VAR; ID; ASSIGN; exp | VAR; ID; COLON; typeid; ASSIGN; exp { () };
 fundec: | FUNCTION; ID; LPAREN; typefields; RPAREN; EQ; exp
         | FUNCTION; ID; LPAREN; typefields; RPAREN; COLON; typeid; EQ; exp { () };
 
+bracketed: ID; LBRACK; exp; RBRACK; { () };
+
 lvalue: | ID
         | lvalue; DOT; ID
-        | lvalue; LBRACK; exp; RBRACK { () };
+        | bracketed { () };
 
 exp:  | lvalue
       | NIL
@@ -88,10 +98,10 @@ exp:  | lvalue
       | exp; AND; exp
       | exp; OR; exp
       | typeid; LBRACE; separated_list(COMMA, ID; EQ; exp { () }); RBRACE
-      | typeid; LBRACK; exp; LBRACK; OF; exp
+      | bracketed; OF; exp
       | lvalue; ASSIGN; exp
-      | IF; exp; THEN; exp; ELSE; exp
       | IF; exp; THEN; exp
+      | IF; exp; THEN; exp; ELSE; exp
       | WHILE; exp; DO; exp
       | FOR; ID; ASSIGN; exp; TO; exp; DO; exp
       | LET; decs; IN; separated_list(SEMICOLON, exp); END
