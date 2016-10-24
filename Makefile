@@ -2,7 +2,6 @@ OCAMLMAKEFILE = OCamlMakefile
 
 export BCSUFFIX = ".byte"
 export OCAMLYACC = menhir
-export YFLAGS = --infer --explain
 
 define PROJ_lexer_tester
 	RESULT = lexer/lexer_tester
@@ -12,7 +11,8 @@ export PROJ_lexer_tester
 
 define PROJ_parser_tester
 	RESULT = parser/parser_tester
-	SOURCES = parser/tigerparse.mly lexer/tigerlex.mll
+	SOURCES = parser/tigerparse.mly lexer/tigerlex.mll parser/parser_tester.ml
+	YFLAGS = --infer --explain --trace
 endef
 export PROJ_parser_tester
 
