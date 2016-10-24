@@ -48,62 +48,63 @@
 %nonassoc EQ NEQ LT LE GT GE
 %left PLUS MINUS
 %left MUL DIV
+%left negation
 %start <unit> prog
 %%
 
-prog: exp; EOF; { () };
+prog: exp EOF { () }
 
-decs: dec* { () };
+decs: dec* { () }
 
-dec: tydec | vardec | fundec { () };
+dec: tydec | vardec | fundec { () }
 
-%inline typeid: ID { () };
+%inline typeid: ID { () }
 
-tydec: TYPE; typeid; EQ; ty { () };
+tydec: TYPE typeid EQ ty { () }
 
-ty: typeid | LBRACE; typefields; RBRACE | ARRAY; OF; typeid { () };
+ty: typeid | LBRACE typefields RBRACE | ARRAY OF typeid { () }
  
-typefield: ID; COLON; typeid { () };
+typefield: ID COLON typeid { () }
 
-typefields: separated_list(COMMA, typefield) { () };
+typefields: separated_list(COMMA, typefield) { () }
 
-vardec: VAR; ID; ASSIGN; exp | VAR; ID; COLON; typeid; ASSIGN; exp { () };
+vardec: VAR ID ASSIGN exp | VAR ID COLON typeid ASSIGN exp { () }
 
-fundec: | FUNCTION; ID; LPAREN; typefields; RPAREN; EQ; exp
-        | FUNCTION; ID; LPAREN; typefields; RPAREN; COLON; typeid; EQ; exp { () };
+fundec: | FUNCTION ID LPAREN typefields RPAREN EQ exp
+        | FUNCTION ID LPAREN typefields RPAREN COLON typeid EQ exp { () }
 
-bracketed: ID; LBRACK; exp; RBRACK; { () };
+bracketed: ID LBRACK exp RBRACK { () }
 
 lvalue: | ID
-        | lvalue; DOT; ID
-        | bracketed { () };
+        | lvalue DOT ID
+        | bracketed { () }
 
 exp:  | lvalue
       | NIL
-      | LPAREN; separated_list(SEMICOLON, exp); RPAREN;
+      | LPAREN separated_list(SEMICOLON, exp) RPAREN
       | INT
       | STRING
-      | MINUS; exp 
-      | ID; LPAREN; separated_list(COMMA, exp); RPAREN 
-      | exp; PLUS; exp
-      | exp; MINUS; exp
-      | exp; MUL; exp
-      | exp; DIV; exp
-      | exp; EQ; exp
-      | exp; NEQ; exp
-      | exp; LT; exp
-      | exp; LE; exp
-      | exp; GT; exp
-      | exp; GE; exp
-      | exp; AND; exp
-      | exp; OR; exp
-      | typeid; LBRACE; separated_list(COMMA, ID; EQ; exp { () }); RBRACE
-      | bracketed; OF; exp
-      | lvalue; ASSIGN; exp
-      | IF; exp; THEN; exp
-      | IF; exp; THEN; exp; ELSE; exp
-      | WHILE; exp; DO; exp
-      | FOR; ID; ASSIGN; exp; TO; exp; DO; exp
-      | LET; decs; IN; separated_list(SEMICOLON, exp); END
+      | MINUS exp %prec negation
+      | ID LPAREN separated_list(COMMA, exp) RPAREN 
+      | exp PLUS exp
+      | exp MINUS exp
+      | exp MUL exp
+      | exp DIV exp
+      | exp EQ exp
+      | exp NEQ exp
+      | exp LT exp
+      | exp LE exp
+      | exp GT exp
+      | exp GE exp
+      | exp AND exp
+      | exp OR exp
+      | typeid LBRACE separated_list(COMMA, ID EQ exp { () }) RBRACE
+      | bracketed OF exp
+      | lvalue ASSIGN exp
+      | IF exp THEN exp
+      | IF exp THEN exp ELSE exp
+      | WHILE exp DO exp
+      | FOR ID ASSIGN exp TO exp DO exp
+      | LET decs IN separated_list(SEMICOLON, exp) END
       | BREAK
-       { () };
+       { () }
