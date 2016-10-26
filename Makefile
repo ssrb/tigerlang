@@ -2,16 +2,18 @@ OCAMLMAKEFILE = OCamlMakefile
 
 export BCSUFFIX = ".byte"
 export OCAMLYACC = menhir
+export PACKS = core
+export THREADS = yes
 
 define PROJ_lexer_tester
 	RESULT = lexer/lexer_tester
-	SOURCES = lexer/tigerlex.mll lexer/lexer_tester.ml
+	SOURCES = lexer/tigerlex.mll lexer/tokens.ml lexer/testtokens.ml lexer/lexer_tester.ml
 endef
 export PROJ_lexer_tester
 
 define PROJ_parser_tester
 	RESULT = parser/parser_tester
-	SOURCES = parser/tigerparse.mly lexer/tigerlex.mll parser/parser_tester.ml
+	SOURCES = parser/tigerparse.mly lexer/tigerlex.mll
 	YFLAGS = --infer --explain --trace
 endef
 export PROJ_parser_tester
