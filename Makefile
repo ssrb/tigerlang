@@ -7,13 +7,13 @@ export THREADS = yes
 
 define PROJ_lexer_tester
 	RESULT = lexer/lexer_tester
-	SOURCES = lexer/tigerlex.mll lexer/testtokens.ml lexer/lexer_tester.ml
+	SOURCES = lexer/tigerlex_intf.ml lexer/tigerlex.mll lexer/testtokens.ml lexer/lexer_tester.ml
 endef
 export PROJ_lexer_tester
 
 define PROJ_parser_tester
 	RESULT = parser/parser_tester
-	SOURCES = parser/tigerparse.mly lexer/tigerlex.mll
+	SOURCES = parser/tigerparse.mly lexer/tigerlex_intf.ml lexer/tigerlex.mll
 	YFLAGS = --infer --explain --trace
 endef
 export PROJ_parser_tester
