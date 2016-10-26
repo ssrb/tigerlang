@@ -7,7 +7,7 @@ export THREADS = yes
 
 define PROJ_lexer_tester
 	RESULT = lexer/lexer_tester
-	SOURCES = lexer/tigerlex.mll lexer/tokens.ml lexer/testtokens.ml lexer/lexer_tester.ml
+	SOURCES = lexer/tigerlex.mll lexer/testtokens.ml lexer/lexer_tester.ml
 endef
 export PROJ_lexer_tester
 

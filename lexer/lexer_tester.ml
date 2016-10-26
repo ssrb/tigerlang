@@ -1,6 +1,5 @@
 open Lexing
-open Tigerlex
-module Testlex = Tigerlex(Testtokens)
+module Testlex = Tigerlex.F(Testtokens)
 let _ =
 	let lexbuf = Lexing.from_channel stdin in
 	while not lexbuf.lex_eof_reached do
