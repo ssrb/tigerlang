@@ -45,5 +45,5 @@ val _STRING : string * linenum * linenum -> token
 val _INT : int * linenum * linenum -> token
 val _ID : string * linenum * linenum -> token
 val _EOF : linenum * linenum -> token
-val _COMMENT : linenum * linenum -> token
+val _COMMENT : linenum * linenum -> unit
 end

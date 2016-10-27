@@ -106,7 +106,7 @@ and read_comment =
 	parse
 	(* Tiger supports nested comments *)
 	| "/*" { ignore(read_comment lexbuf); read_comment lexbuf }
-	| "*/" { _COMMENT ((ls lexbuf), (le lexbuf))}
+	| "*/" { _COMMENT ((ls lexbuf), (le lexbuf)); read lexbuf}
 	| _ { read_comment lexbuf }
   | eof { raise (SyntaxError ("String is not terminated")) }
 

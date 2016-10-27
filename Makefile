@@ -13,7 +13,7 @@ export PROJ_lexer_tester
 
 define PROJ_parser_tester
 	RESULT = parser/parser_tester
-	SOURCES = parser/tigerparse.mly lexer/tigerlex_intf.ml lexer/tigerlex.mll
+	SOURCES = parser/tigerparse.mly lexer/tigerlex_intf.ml lexer/tigerlex.mll parser/parsertokens.ml parser/parser_tester.ml
 	YFLAGS = --infer --explain --trace
 endef
 export PROJ_parser_tester

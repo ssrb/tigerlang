@@ -1,7 +1,6 @@
 open Lexing
-open Tigerlex
-open Tigerparse
+module Lexer = Tigerlex.F(Parsertokens)
 
 let _ =
 	let lexbuf = Lexing.from_channel stdin in
-	Tigerparse.prog Tigerlex.read lexbuf
+	Tigerparse.prog Lexer.read lexbuf
