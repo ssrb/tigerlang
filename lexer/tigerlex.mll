@@ -32,59 +32,59 @@ rule read =
   parse
   | white { read lexbuf }
   | newline { next_line lexbuf; read lexbuf }
-  | int { _INT (int_of_string (Lexing.lexeme lexbuf), 0, 0) }
-  | "nil" { _NIL (0, 0) }
+  | int { _INT (int_of_string (Lexing.lexeme lexbuf), (Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf)) }
+  | "nil" { _NIL ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf)) }
   | '"' { read_string (Buffer.create 17) lexbuf }
-  | "let" { _LET (0, 0)}
-  | "in" { _IN (0, 0)}
-  | "end" { _END (0, 0)}
-  | "var" { _VAR (0, 0)}
-  | "function" { _FUNCTION (0, 0)}
-  | "for" { _FOR (0, 0)}
-  | "while" { _WHILE (0, 0)}
-  | "do" { _DO (0, 0)}
-  | "to" { _TO (0, 0)}
-  | "break" { _BREAK (0, 0)}
-  | "if" { _IF (0, 0)}
-  | "then" { _THEN (0, 0)}
-  | "else" { _ELSE (0, 0)}
-  | "array" { _ARRAY (0, 0)}
-  | "of" { _OF (0, 0)}
-  | "type" { _TYPE (0, 0)}
-  | id { _ID(Lexing.lexeme lexbuf, 0, 0) }
-  | '.' { _DOT (0, 0)}
-  | '+' { _PLUS (0, 0)}
-  | '-' { _MINUS (0, 0)}
-  | '*' { _MUL (0, 0)}
-  | '/' { _DIV (0, 0)}
-  | '&' { _AND (0, 0)}
-  | '|' { _OR (0, 0)}
-  | '=' { _EQ (0, 0)}
-  | "<>" { _NEQ (0, 0)}
-  | '>' { _GT (0, 0)}
-  | ">=" { _GE (0, 0)}
-  | '<' { _LT (0, 0)}
-  | "<=" { _LE (0, 0)}
-  | ":=" { _ASSIGN (0, 0)}
-  | '(' { _LPAREN (0, 0)}
-  | '{' { _LBRACE (0, 0)}
-  | '[' { _LBRACK (0, 0)}
-  | ')' { _RPAREN (0, 0)}
-  | '}' { _RBRACE (0, 0)}
-  | ']' { _RBRACK (0, 0)}
-  | ':' { _COLON (0, 0)}
-  | ',' { _COMMA (0, 0)}
-  | ';' { _SEMICOLON (0, 0)}
+  | "let" { _LET ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | "in" { _IN ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | "end" { _END ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | "var" { _VAR ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | "function" { _FUNCTION ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | "for" { _FOR ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | "while" { _WHILE ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | "do" { _DO ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | "to" { _TO ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | "break" { _BREAK ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | "if" { _IF ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | "then" { _THEN ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | "else" { _ELSE ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | "array" { _ARRAY ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | "of" { _OF ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | "type" { _TYPE ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | id { _ID(Lexing.lexeme lexbuf, (Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf)) }
+  | '.' { _DOT ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | '+' { _PLUS ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | '-' { _MINUS ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | '*' { _MUL ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | '/' { _DIV ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | '&' { _AND ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | '|' { _OR ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | '=' { _EQ ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | "<>" { _NEQ ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | '>' { _GT ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | ">=" { _GE ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | '<' { _LT ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | "<=" { _LE ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | ":=" { _ASSIGN ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | '(' { _LPAREN ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | '{' { _LBRACE ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | '[' { _LBRACK ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | ')' { _RPAREN ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | '}' { _RBRACE ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | ']' { _RBRACK ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | ':' { _COLON ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | ',' { _COMMA ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
+  | ';' { _SEMICOLON ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
   | "/*" { read_comment lexbuf}
   | _ { raise (SyntaxError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }
   | eof { 
     lexbuf.lex_eof_reached <- true;
-    _EOF (0, 0)
+    _EOF ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))
   }
 
 and read_string buf =
   parse
-  | '"' { _STRING (Buffer.contents buf, 0, 0) }
+  | '"' { _STRING (Buffer.contents buf, (Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf)) }
   | '\\' '/' { Buffer.add_char buf '/'; read_string buf lexbuf }
   | '\\' '\\' { Buffer.add_char buf '\\'; read_string buf lexbuf }
   | '\\' 'b' { Buffer.add_char buf '\b'; read_string buf lexbuf }
@@ -103,7 +103,7 @@ and read_comment =
 	parse
 	(* Tiger supports nested comments *)
 	| "/*" { ignore(read_comment lexbuf); read_comment lexbuf }
-	| "*/" { _COMMENT (0, 0)}
+	| "*/" { _COMMENT ((Lexing.lexeme_start lexbuf), (Lexing.lexeme_end lexbuf))}
 	| _ { read_comment lexbuf }
   | eof { raise (SyntaxError ("String is not terminated")) }
 
