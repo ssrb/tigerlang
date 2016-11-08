@@ -1,24 +1,21 @@
 type symbol = string * int
 
-type H = HashTable
-
-exception Symbol
+module H = Hashtbl
 
 let nextsym = ref 0
 
 let sizeHint = 128
 
-let hashtable : (string,int) H.hash_table = 
-	H.mkTable(HashString.hashString, op = ) (sizeHint,Symbol)
+let hashtable = String.Table.create ~size:sizeHint ()
 
 let symbol name =
     match H.find hashtable name with
-    | Some i => (name,i)
-    | None => let i = !nextsym in
+    | Some(i) -> (name, i)
+    | None -> let i = !nextsym in
       begin
-          nextsym := i+1;
-  	      H.insert hashtable (name,i);
-  	      (name,i)
+          nextsym := i + 1;
+  	      H.replace hashtable ~key:name ~data:i;
+  	      (name, i)
       end
 
 let name (s,n) = s
