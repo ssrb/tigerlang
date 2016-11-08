@@ -1,9 +1,6 @@
-structure Absyn = 
-struct
-
 type pos = int   and   symbol = Symbol.symbol
 
-datatype var = SimpleVar of symbol * pos
+type var = SimpleVar of symbol * pos
             | FieldVar of var * symbol * pos
             | SubscriptVar of var * exp * pos
 
@@ -47,6 +44,5 @@ withtype field = {name: symbol, escape: bool ref,
 		   result: (symbol * pos) option,
 		   body: exp,
 		   pos: pos}
-     
-end
+
         
