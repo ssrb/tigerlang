@@ -1,4 +1,10 @@
-signature TABLE = 
+module type IntMapTableKey = 
+sig
+	type t
+	val getInt: t -> int
+end
+
+module IntMapTable : functor (Key: IntMapTableKey) ->
 sig
    type key
    type 'a table

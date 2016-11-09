@@ -1,9 +1,21 @@
-functor IntMapTable (type key
-		     val getInt: key -> int) : TABLE =
+open Core.Std
+open Core_kernel
+
+module type IntMapTableKey = 
+sig
+	type t
+	val getInt: t -> int
+end
+
+module IntMapTable = functor(Key: IntMapTableKey) ->
 struct
-  type key=key
-  type 'a table = 'a IntBinaryMap.map
-  val empty = IntBinaryMap.empty
-  fun enter(t,k,a) = IntBinaryMap.insert(t,getInt k,a)
-  fun look(t,k) = IntBinaryMap.find(t,getInt k)
+  type key = Key.t
+
+  type 'a table = 'a Int.Map.t
+  
+  let empty = Int.Map.empty
+  
+  let enter (t, k, a) = Map.add t ~key:(Key.getInt k) ~data:a
+  
+  let look (t, k) = Map.find t (Key.getInt k)
 end
