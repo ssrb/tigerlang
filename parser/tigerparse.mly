@@ -1,3 +1,7 @@
+%{
+module A = Absyn
+%}
+
 %token <string> ID
 %token <string> STRING
 %token <int> INT
