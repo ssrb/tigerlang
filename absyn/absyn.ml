@@ -1,6 +1,17 @@
 type pos = int
 and symbol = Symbol.symbol
 
+type oper = PlusOp | MinusOp | TimesOp | DivideOp | EqOp | NeqOp | LtOp | LeOp | GtOp | GeOp
+
+type field = { name: symbol; escape: bool ref; typ: symbol; pos: pos }
+
+type ty = 
+    | NameTy of symbol * pos
+    | RecordTy of field list
+    | ArrayTy of symbol * pos
+
+type typedec = { name: symbol; ty: ty; pos: pos }
+
 type var = 
     | SimpleVar of symbol * pos
     | FieldVar of var * symbol * pos
@@ -25,12 +36,5 @@ and dec =
     | FunctionDec of fundec list
     | VarDec of { name: symbol; escape: bool ref; typ: (symbol * pos) option; init: exp; pos: pos }
     | TypeDec of typedec list
-and ty = 
-    | NameTy of symbol * pos
-    | RecordTy of field list
-    | ArrayTy of symbol * pos
-and oper = PlusOp | MinusOp | TimesOp | DivideOp | EqOp | NeqOp | LtOp | LeOp | GtOp | GeOp
-
-type field = { name: symbol; escape: bool ref; typ: symbol; pos: pos }
 and fundec = { name: symbol; params: field list; result: (symbol * pos) option; body: exp; pos: pos }
-and typedec = { name: symbol; ty: ty; pos: pos }
+
