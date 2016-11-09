@@ -1,5 +1,4 @@
 open Core.Std
-open Core_kernel
 
 module type IntMapTableKey = 
 sig
