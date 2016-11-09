@@ -18,8 +18,15 @@ define PROJ_parser_tester
 endef
 export PROJ_parser_tester
 
+define PROJ_absyn_tester
+	RESULT = absyn/absyn_tester
+	SOURCES = absyn/absyn.ml absyn/table.ml absyn/symbol.ml
+	YFLAGS = --infer --explain --trace --dump
+endef
+export PROJ_absyn_tester
+
 ifndef SUBPROJS
-  export SUBPROJS = lexer_tester parser_tester
+  export SUBPROJS = lexer_tester parser_tester absyn_tester
 endif
 
 all: debug-code native-code
