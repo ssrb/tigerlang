@@ -1,3 +1,5 @@
+open Core.Std
+
 type symbol = string * int
 
 module H = Hashtbl
@@ -14,19 +16,25 @@ let symbol name =
     | None -> let i = !nextsym in
       begin
           nextsym := i + 1;
-  	      H.replace hashtable ~key:name ~data:i;
+  	      H.set hashtable ~key:name ~data:i;
   	      (name, i)
       end
 
-let name (s,n) = s
+let name (s, n) = s
 
-structure Table = IntMapTable(type key = symbol
-			fun getInt(s,n) = n)
+module SymbolKey =
+struct
+ type t = symbol
+ let getInt (s, n) = n
+end
+
+module Table = Table.IntMapTable(SymbolKey)
 
 type 'a table = 'a Table.table
 
-let empty = Table.empty
+let look = Table.look
 
 let enter = Table.enter
 
-let look = Table.look
+let empty = Table.empty
+
