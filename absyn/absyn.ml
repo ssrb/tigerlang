@@ -1,7 +1,7 @@
-type pos = int
+type pos = Lexing.position
 and symbol = Symbol.symbol
 
-type oper = PlusOp | MinusOp | TimesOp | DivideOp | EqOp | NeqOp | LtOp | LeOp | GtOp | GeOp
+type oper = PlusOp | MinusOp | MulOp | DivOp | EqOp | NeqOp | LtOp | LeOp | GtOp | GeOp
 
 type field = { name: symbol; escape: bool ref; typ: symbol; pos: pos }
 
