@@ -63,26 +63,24 @@ decs: d = list(dec) { d }
 
 dec: tydec | vardec | fundec { A.NilExp }
 
-%inline typeid: ID { A.NilExp }
+%inline typeid: s = ID { s }
 
 tydec: TYPE typeid EQ ty { A.NilExp }
 
 ty: typeid | LBRACE typefields RBRACE | ARRAY OF typeid { A.NilExp }
  
-typefield: ID COLON typeid { A.NilExp }
+typefield: fname = ID c = COLON tname = typeid { ({ name = S.symbol fname; escape = ref false; typ = S.symbol tname; pos = $startpos(c) } : A.field) }
 
-typefields: separated_list(COMMA, typefield) { A.NilExp }
+typefields: fs = separated_list(COMMA, typefield) { fs }
 
 vardec: VAR ID ASSIGN exp | VAR ID COLON typeid ASSIGN exp { A.NilExp }
 
-fundec: | FUNCTION ID LPAREN typefields RPAREN EQ exp
-        | FUNCTION ID LPAREN typefields RPAREN COLON typeid EQ exp { A.NilExp }
+fundec: FUNCTION fname = ID LPAREN p = typefields RPAREN r = option(COLON t = typeid{ (S.symbol t, $startpos(t)) }) EQ b = exp 
+{ A.FunctionDec([{ name = S.symbol fname; params = p; result = r; body = b; pos = $startpos }]) }
 
-bracketed: ID LBRACK exp RBRACK { A.NilExp }
-
-lvalue: | ID
-        | lvalue DOT ID
-        | bracketed { A.NilExp }
+lvalue: | vname = ID { A.SimpleVar(S.symbol vname, $startpos) }
+        | v = lvalue d = DOT fname = ID { A.FieldVar(v, S.symbol fname, $startpos(d)) }
+        | v = lvalue LBRACK e = exp RBRACK { A.SubscriptVar(v, e, $startpos) }
 
 %inline op: | PLUS { A.PlusOp }
             | MINUS { A.MinusOp }
@@ -95,7 +93,7 @@ lvalue: | ID
             | GT { A.GtOp }
             | GE { A.GeOp }
 
-exp:  | lval = lvalue { lval }
+exp:  | lval = lvalue { A.VarExp(lval) }
       | NIL  { A.NilExp }
       | LPAREN seq = separated_list(SEMICOLON, e = exp { (e, $startpos) }) RPAREN { A.SeqExp(seq) }
       | i = INT { A.IntExp(i) }
@@ -106,8 +104,8 @@ exp:  | lval = lvalue { lval }
       | l = exp op = AND r = exp { A.IfExp({ test = l; then' = r; else' = Some(A.IntExp(0)); pos = $startpos(op) }) }
       | l = exp op = OR r = exp { A.IfExp({ test = l; then' = A.IntExp(1); else' = Some(r); pos = $startpos }) }
       | typeid LBRACE separated_list(COMMA, ID EQ exp { () }) RBRACE { A.NilExp }
-      | bracketed OF exp { A.NilExp }
-      | lvalue ASSIGN exp { A.NilExp }
+      | ID LBRACK exp RBRACK OF exp { A.NilExp }
+      | v = lvalue a = ASSIGN e = exp { A.AssignExp({ var = v; exp = e; pos = $startpos(a) }) }
       | IF test = exp THEN e = exp { A.IfExp({ test = test; then' = e; else' = None; pos = $startpos }) }
       | IF test = exp THEN e1 = exp ELSE e2 = exp { A.IfExp({ test = test; then' = e1; else' = Some(e2); pos = $startpos }) }
       | WHILE test = exp DO e = exp { A.WhileExp({ test = test; body = e; pos = $startpos }) }
