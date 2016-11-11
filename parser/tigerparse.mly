@@ -61,7 +61,7 @@ prog: e = exp EOF { e }
 
 decs: d = list(dec) { d }
 
-dec: tydec | vardec | fundec { A.NilExp }
+dec: tydec | vardec | fundec { A.VarDec({ name = S.symbol ""; escape = ref false; typ = None; init = A.NilExp; pos = $startpos }) }
 
 %inline typeid: s = ID { s }
 
@@ -93,9 +93,11 @@ lvalue: | vname = ID { A.SimpleVar(S.symbol vname, $startpos) }
             | GT { A.GtOp }
             | GE { A.GeOp }
 
+seqexp: s = separated_list(SEMICOLON, e = exp { (e, $startpos) }) { A.SeqExp(s) }
+
 exp:  | lval = lvalue { A.VarExp(lval) }
       | NIL  { A.NilExp }
-      | LPAREN seq = separated_list(SEMICOLON, e = exp { (e, $startpos) }) RPAREN { A.SeqExp(seq) }
+      | LPAREN s = seqexp RPAREN { s }
       | i = INT { A.IntExp(i) }
       | s = STRING { A.StringExp(s, $startpos) }
       | MINUS e = exp %prec negation { OpExp({ left = A.IntExp(0); oper = A.MinusOp; right = e; pos = $startpos }) }
@@ -110,5 +112,5 @@ exp:  | lval = lvalue { A.VarExp(lval) }
       | IF test = exp THEN e1 = exp ELSE e2 = exp { A.IfExp({ test = test; then' = e1; else' = Some(e2); pos = $startpos }) }
       | WHILE test = exp DO e = exp { A.WhileExp({ test = test; body = e; pos = $startpos }) }
       | FOR vname = ID ASSIGN lo = exp TO hi = exp DO b = exp { A.ForExp({ var = S.symbol(vname); escape = ref false; lo = lo; hi = hi; body = b; pos = $startpos }) }
-      | LET d = decs IN b = separated_list(SEMICOLON, exp) END { A.NilExp }
+      | LET d = decs IN s = seqexp END { A.LetExp({ decs = d; body = s; pos = $startpos}) }
       | BREAK { A.BreakExp($startpos) }
