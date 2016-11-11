@@ -107,8 +107,8 @@ exp:  | lval = lvalue { A.VarExp(lval) }
       | l = exp op = op r = exp { A.OpExp({ left = l; oper = op; right = r; pos = $startpos(op) }) }
       | l = exp op = AND r = exp { A.IfExp({ test = l; then' = r; else' = Some(A.IntExp(0)); pos = $startpos(op) }) }
       | l = exp op = OR r = exp { A.IfExp({ test = l; then' = A.IntExp(1); else' = Some(r); pos = $startpos }) }
-      | typeid LBRACE separated_list(COMMA, ID EQ exp { () }) RBRACE { A.NilExp }
-      | ID LBRACK exp RBRACK OF exp { A.NilExp }
+      | t = typeid LBRACE fs = separated_list(COMMA, i = ID EQ e = exp { (S.symbol i, e, $startpos) }) RBRACE { A.RecordExp({fields = fs; typ = S.symbol t; pos = $startpos}) }
+      | t = ID LBRACK s = exp RBRACK OF i = exp { A.ArrayExp({ typ = S.symbol t; size = s; init = i; pos = $startpos }) }
       | v = lvalue a = ASSIGN e = exp { A.AssignExp({ var = v; exp = e; pos = $startpos(a) }) }
       | IF test = exp THEN e = exp { A.IfExp({ test = test; then' = e; else' = None; pos = $startpos }) }
       | IF test = exp THEN e1 = exp ELSE e2 = exp { A.IfExp({ test = test; then' = e1; else' = Some(e2); pos = $startpos }) }
