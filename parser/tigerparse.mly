@@ -61,22 +61,24 @@ prog: e = exp EOF { e }
 
 decs: d = list(dec) { d }
 
-dec: tydec | vardec | fundec { A.VarDec({ name = S.symbol ""; escape = ref false; typ = None; init = A.NilExp; pos = $startpos }) }
+dec: | TYPE tname = typeid EQ t = ty
+     { A.TypeDec([{ name = S.symbol tname; ty = t; pos = $startpos }]) } 
+     | VAR vname = ID t = tannot ASSIGN i = exp 
+     { A.VarDec({ name = S.symbol vname; escape = ref false; typ = t; init = i; pos = $startpos }) } 
+     | FUNCTION fname = ID LPAREN p = typefields RPAREN r = tannot EQ b = exp 
+     { A.FunctionDec([{ name = S.symbol fname; params = p; result = r; body = b; pos = $startpos }]) }
+
+tannot: a = option(COLON t = typeid { (S.symbol t, $startpos(t)) }) { a }
 
 %inline typeid: s = ID { s }
 
-tydec: TYPE typeid EQ ty { A.NilExp }
-
-ty: typeid | LBRACE typefields RBRACE | ARRAY OF typeid { A.NilExp }
+ty: | tname = typeid { A.NameTy(S.symbol tname, $startpos) }
+    | LBRACE fs = typefields RBRACE { A.RecordTy(fs) }
+    | ARRAY OF tname = typeid { A.ArrayTy(S.symbol tname, $startpos) }
  
 typefield: fname = ID c = COLON tname = typeid { ({ name = S.symbol fname; escape = ref false; typ = S.symbol tname; pos = $startpos(c) } : A.field) }
 
 typefields: fs = separated_list(COMMA, typefield) { fs }
-
-vardec: VAR ID ASSIGN exp | VAR ID COLON typeid ASSIGN exp { A.NilExp }
-
-fundec: FUNCTION fname = ID LPAREN p = typefields RPAREN r = option(COLON t = typeid{ (S.symbol t, $startpos(t)) }) EQ b = exp 
-{ A.FunctionDec([{ name = S.symbol fname; params = p; result = r; body = b; pos = $startpos }]) }
 
 lvalue: | vname = ID { A.SimpleVar(S.symbol vname, $startpos) }
         | v = lvalue d = DOT fname = ID { A.FieldVar(v, S.symbol fname, $startpos(d)) }
