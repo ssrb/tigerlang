@@ -1,10 +1,6 @@
-structure PrintAbsyn : 
-     sig val print : TextIO.outstream * Absyn.exp -> unit end =
-struct
+module A = Absyn
 
-  structure A = Absyn
-
-fun print (outstream, e0) =
+let print (outstream, e0) =
  let fun say s =  TextIO.output(outstream,s)
   fun sayln s= (say s; say "\n") 
 
