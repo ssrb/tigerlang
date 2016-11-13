@@ -5,14 +5,14 @@ module S = Symbol
 
 type varhelper =  Field of S.symbol * A.pos | Subscript of A.exp * A.pos
 
-(* Little helper to convert from concrete syntax to abstract syntax: auxilliary production rules were introduce to solve a shift/reduce conflict (array init/lvalue) *)
+(* Little helper to convert from concrete syntax to abstract syntax: auxilliary production rules were introduced to solve a shift/reduce conflict (array init/lvalue) *)
 let rec build_lvalue head tails = List.fold tails ~init:head ~f:(fun v t -> 
   match t with 
   | Field(s, p) -> A.FieldVar(v, s, p)
   | Subscript(e, p) -> A.SubscriptVar(v, e, p)
 )
 
-(* This will group consecutive type (resp fun) declarations: these are potentially mutually recursive. Similar to ocaml "type ... and ... and" (resp let ... and
+(* This will group consecutive type (resp fun) declarations: these are potentially mutually recursive. Similar to ocaml "type ... and ... and ..." (resp let ... and
 ... and ... in ...) *)
 let group_recursive_decs decs = List.fold decs ~init:[] ~f:(fun gs d ->
 	match gs with
