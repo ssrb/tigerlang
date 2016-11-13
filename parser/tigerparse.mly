@@ -1,6 +1,15 @@
 %{
+open Core.Std
 module A = Absyn
 module S = Symbol
+
+type varhelper =  Field of S.symbol * A.pos | Subscript of A.exp * A.pos
+
+let rec build_lvalue head tails = List.fold tails ~init:head ~f:(fun v t -> 
+  match t with 
+  | Field(s, p) -> A.FieldVar(v, s, p)
+  | Subscript(e, p) -> A.SubscriptVar(v, e, p)
+) 
 %}
 
 %token <string> ID
@@ -81,8 +90,13 @@ typefield: fname = ID c = COLON tname = typeid { ({ name = S.symbol fname; escap
 typefields: fs = separated_list(COMMA, typefield) { fs }
 
 lvalue: | vname = ID { A.SimpleVar(S.symbol vname, $startpos) }
-        | v = lvalue d = DOT fname = ID { A.FieldVar(v, S.symbol fname, $startpos(d)) }
-        | v = lvalue LBRACK e = exp RBRACK { A.SubscriptVar(v, e, $startpos) }
+        | s = idsubscriptexp t = list(lvaluetail) { let (i, si, e, se) = s in build_lvalue (A.SubscriptVar( A.SimpleVar(S.symbol i, si), e, se)) t }
+        | vname = ID d = DOT fname = ID t = list(lvaluetail) { build_lvalue (A.FieldVar(A.SimpleVar(S.symbol vname, $startpos), S.symbol fname, $startpos(d))) t }
+
+idsubscriptexp: i = ID LBRACK e = exp RBRACK { (i, $startpos(i), e, $startpos(e)) }
+
+lvaluetail: | DOT fname = ID { Field(S.symbol fname, $startpos) }
+            | LBRACK e = exp RBRACK { Subscript(e, $startpos) }
 
 %inline op: | PLUS { A.PlusOp }
             | MINUS { A.MinusOp }
@@ -108,7 +122,7 @@ exp:  | lval = lvalue { A.VarExp(lval) }
       | l = exp op = AND r = exp { A.IfExp({ test = l; then' = r; else' = Some(A.IntExp(0)); pos = $startpos(op) }) }
       | l = exp op = OR r = exp { A.IfExp({ test = l; then' = A.IntExp(1); else' = Some(r); pos = $startpos }) }
       | t = typeid LBRACE fs = separated_list(COMMA, i = ID EQ e = exp { (S.symbol i, e, $startpos) }) RBRACE { A.RecordExp({fields = fs; typ = S.symbol t; pos = $startpos}) }
-      | t = ID LBRACK s = exp RBRACK OF i = exp { A.ArrayExp({ typ = S.symbol t; size = s; init = i; pos = $startpos }) }
+      | s = idsubscriptexp OF v = exp { let (i, si, s, _) = s in A.ArrayExp({ typ = S.symbol i; size = s; init = v; pos = si }) }
       | v = lvalue a = ASSIGN e = exp { A.AssignExp({ var = v; exp = e; pos = $startpos(a) }) }
       | IF test = exp THEN e = exp { A.IfExp({ test = test; then' = e; else' = None; pos = $startpos }) }
       | IF test = exp THEN e1 = exp ELSE e2 = exp { A.IfExp({ test = test; then' = e1; else' = Some(e2); pos = $startpos }) }
