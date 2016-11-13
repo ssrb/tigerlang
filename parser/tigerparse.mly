@@ -5,11 +5,24 @@ module S = Symbol
 
 type varhelper =  Field of S.symbol * A.pos | Subscript of A.exp * A.pos
 
+(* Little helper to convert from concrete syntax to abstract syntax: auxilliary production rules were introduce to solve a shift/reduce conflict (array init/lvalue) *)
 let rec build_lvalue head tails = List.fold tails ~init:head ~f:(fun v t -> 
   match t with 
   | Field(s, p) -> A.FieldVar(v, s, p)
   | Subscript(e, p) -> A.SubscriptVar(v, e, p)
-) 
+)
+
+(* This will group consecutive type (resp fun) declarations: these are potentially mutually recursive. Similar to ocaml "type ... and ... and" (resp let ... and
+... and ... in ...) *)
+let group_recursive_decs decs = List.fold decs ~init:[] ~f:(fun gs d ->
+	match gs with
+	| g::gs' ->
+		(match (g, d) with
+		| (A.TypeDec(g'), A.TypeDec(d')) -> A.TypeDec(g' @ d')::gs'
+		| (A.FunctionDec(g'), A.FunctionDec(d')) -> A.FunctionDec(g' @ d')::gs'
+		| _ -> d::gs)
+	| [] -> [d]
+) |> List.rev
 %}
 
 %token <string> ID
@@ -68,12 +81,12 @@ let rec build_lvalue head tails = List.fold tails ~init:head ~f:(fun v t ->
 
 prog: e = exp EOF { e }
 
-decs: d = list(dec) { d }
+decs: ds = list(dec) { group_recursive_decs ds }
 
 dec: | TYPE tname = typeid EQ t = ty
      { A.TypeDec([{ name = S.symbol tname; ty = t; pos = $startpos }]) } 
      | VAR vname = ID t = tannot ASSIGN i = exp 
-     { A.VarDec({ name = S.symbol vname; escape = ref false; typ = t; init = i; pos = $startpos }) } 
+     { A.VarDec({ name = S.symbol vname; escape = ref false; typ = t; init = i; pos = $startpos }) }
      | FUNCTION fname = ID LPAREN p = typefields RPAREN r = tannot EQ b = exp 
      { A.FunctionDec([{ name = S.symbol fname; params = p; result = r; body = b; pos = $startpos }]) }
 
@@ -93,11 +106,10 @@ lvalue: | vname = ID { A.SimpleVar(S.symbol vname, $startpos) }
         | s = idsubscriptexp t = list(lvaluetail) { let (i, si, e, se) = s in build_lvalue (A.SubscriptVar( A.SimpleVar(S.symbol i, si), e, se)) t }
         | vname = ID d = DOT fname = ID t = list(lvaluetail) { build_lvalue (A.FieldVar(A.SimpleVar(S.symbol vname, $startpos), S.symbol fname, $startpos(d))) t }
 
-idsubscriptexp: i = ID LBRACK e = exp RBRACK { (i, $startpos(i), e, $startpos(e)) }
-
 lvaluetail: | DOT fname = ID { Field(S.symbol fname, $startpos) }
             | LBRACK e = exp RBRACK { Subscript(e, $startpos) }
 
+idsubscriptexp: i = ID LBRACK e = exp RBRACK { (i, $startpos(i), e, $startpos(e)) }
 %inline op: | PLUS { A.PlusOp }
             | MINUS { A.MinusOp }
             | MUL { A.MulOp }
