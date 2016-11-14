@@ -1,2 +1,1 @@
- val print : TextIO.outstream * Absyn.exp -> unit
- 
+ val print : out_channel * Absyn.exp -> unit
