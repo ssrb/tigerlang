@@ -1,8 +1,10 @@
+open Core.Std
+
 module A = Absyn
 
 let print (outstream, e0) =
 
- let say s =  TextIO.output(outstream,s) in
+ let say s =  output_string outstream s in
 
  let sayln s = (say s; say "\n") in
 
@@ -14,8 +16,8 @@ let print (outstream, e0) =
  let opname = function 
  	| A.PlusOp -> "PlusOp"
     | A.MinusOp -> "MinusOp"
-    | A.TimesOp -> "TimesOp"
-    | A.DivideOp -> "DivideOp"
+    | A.MulOp -> "TimesOp"
+    | A.DivOp -> "DivideOp"
     | A.EqOp -> "EqOp"
     | A.NeqOp -> "NeqOp"
     | A.LtOp -> "LtOp"
@@ -24,7 +26,7 @@ let print (outstream, e0) =
     | A.GeOp -> "GeOp"
   in
 
-  let dolist d f a = 
+  let rec dolist d f a = 
   	match a with
   	| [] -> ()
   	| [ a ] -> (sayln ""; f(a,d+1))
@@ -41,7 +43,7 @@ let print (outstream, e0) =
 	match e with
 	| A.VarExp v -> (indent d; sayln "VarExp("; var(v,d+1); say ")")
     | A.NilExp -> (indent d; say "NilExp")
-    | A.IntExp i -> (indent d; say "IntExp("; say(Int.toString i); say ")")
+    | A.IntExp i -> (indent d; say "IntExp("; say(Int.to_string i); say ")")
     | A.StringExp (s,p) -> (indent d; say "StringExp(\""; say s; say "\")")
     | A.CallExp {func;args;pos} -> (indent d; say "CallExp("; say(Symbol.name func); say ",["; dolist d exp args; say "])")
     | A.OpExp {left;oper;right;pos} -> (indent d; say "OpExp("; say(opname oper); sayln ","; exp(left,d+1); sayln ","; exp(right,d+1); say ")")
@@ -60,7 +62,7 @@ let print (outstream, e0) =
   	| A.WhileExp {test;body;pos} -> (indent d; sayln "WhileExp("; exp(test,d+1); sayln ","; exp(body,d+1); say ")")
     | A.ForExp {var=v;escape=b;lo;hi;body;pos} ->
 		(indent d; sayln "ForExp(";
-		 say(Symbol.name v); say ","; say(Bool.toString (!b)); sayln ",";
+		 say(Symbol.name v); say ","; say(Bool.to_string (!b)); sayln ",";
 		 exp(lo,d+1); sayln ","; exp(hi,d+1); sayln ",";
 		 exp(body,d+1); say ")")
     | A.BreakExp p -> (indent d; say "BreakExp")
@@ -70,26 +72,27 @@ let print (outstream, e0) =
   and dec(e, d) = 
 	match e with    
 	| A.FunctionDec l ->
-	    (let field({name;escape;typ;pos},d) = 
+	   	let field(({name;escape;typ;pos} : A.field), d) = 
 			(indent d; say "("; say(Symbol.name name);
-			 say ","; say(Bool.toString(!escape)); 
+			 say ","; say(Bool.to_string(!escape)); 
 			 say ","; say(Symbol.name typ); say ")")
-		and f({name;params;result;body;pos},d) =
+		in
+		let f(({name;params;result;body;pos} : A.fundec),d) =
 		   (indent d; say "("; say (Symbol.name name); say ",[";
 		    dolist d field params; sayln "],";
 		    (match result with 
 	    	 | None -> say "NONE"
 			 | Some(s,_) -> (say "SOME("; say(Symbol.name s); say ")"));
 		    sayln ","; exp(body,d+1); say ")")
-	     in indent d; say "FunctionDec["; dolist d f l; say "]")
+	    in indent d; say "FunctionDec["; dolist d f l; say "]"
     | A.VarDec{name;escape;typ;init;pos} ->
 	   (indent d; say "VarDec("; say(Symbol.name name); say ",";
-	    say(Bool.toString (!escape)); say ",";
+	    say(Bool.to_string (!escape)); say ",";
 	    (match typ with 
     	| None -> say "NONE" 
 		| Some(s,p) -> (say "SOME("; say(Symbol.name s); say ")"); sayln ","; exp(init,d+1); say ")"))
     | A.TypeDec l ->
-	 (let tdec({name;ty=t;pos},d) = (indent d; say"("; 
+	 (let tdec(({name;ty=t;pos} : A.typedec),d) = (indent d; say"("; 
 				  	    say(Symbol.name name); sayln ",";
 					    ty(t,d+1); say ")")
 	  in indent d; say "TypeDec["; dolist d tdec l; say "]")
@@ -98,11 +101,11 @@ let print (outstream, e0) =
   	match t with
 	| A.NameTy(s,p) -> (indent d; say "NameTy("; say(Symbol.name s); say ")")
     | A.RecordTy l ->  
-		(let f({name;escape;typ;pos},d) =
+		(let f(({name;escape;typ;pos} : A.field),d) =
 			(indent d; say "("; say (Symbol.name name);
-		         say ","; say (Bool.toString (!escape)); say ",";
+		         say ","; say (Bool.to_string (!escape)); say ",";
 			 say (Symbol.name typ); say ")")
 	         in indent d; say "RecordTy["; dolist d f l; say "]")
     | A.ArrayTy(s,p) -> (indent d; say "ArrayTy("; say(Symbol.name s); say ")")
 
- in  exp(e0,0); sayln ""; TextIO.flushOut outstream
+ in  exp(e0,0); sayln ""; flush outstream
