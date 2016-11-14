@@ -12,7 +12,7 @@ let rec build_lvalue head tails = List.fold tails ~init:head ~f:(fun v t ->
   | Subscript(e, p) -> A.SubscriptVar(v, e, p)
 )
 
-(* This will group consecutive type (resp fun) declarations: these are potentially mutually recursive. Similar to ocaml "type ... and ... and ..." (resp let ... and
+(* This will group consecutive type (resp fun) declarations: these are potentially mutually recursive. Similar to ocaml "type ... and ... and ..." (resp let rec ... and
 ... and ... in ...) *)
 let group_recursive_decs decs = List.fold decs ~init:[] ~f:(fun gs d ->
 	match gs with

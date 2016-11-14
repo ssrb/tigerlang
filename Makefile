@@ -20,7 +20,7 @@ export PROJ_parser_tester
 
 define PROJ_absyn_tester
 	RESULT = absyn/absyn_tester
-	SOURCES = absyn/absyn.ml absyn/table.ml absyn/symbol.ml
+	SOURCES = absyn/absyn.ml absyn/table.ml absyn/symbol.ml parser/tigerparse.mly lexer/tigerlex_intf.ml lexer/tigerlex.mll parser/parsertokens.ml absyn/prabsyn.ml
 endef
 export PROJ_absyn_tester
 
