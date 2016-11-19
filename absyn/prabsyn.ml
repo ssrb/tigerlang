@@ -2,7 +2,7 @@ open Core.Std
 
 module A = Absyn
 
-let print (outstream, e0) =
+let print outstream e0 =
 
  let say s =  output_string outstream s in
 
