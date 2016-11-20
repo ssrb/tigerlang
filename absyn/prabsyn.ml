@@ -53,7 +53,7 @@ let print outstream e0 =
 			 sayln ","; exp(e,d+1);
 			 say ")")
 	     in (indent d; say "RecordExp("; say(Symbol.name typ); sayln ",["; dolist d f fields; say "])" )
-    | A.SeqExp l -> (indent d; say "SeqExp["; (*dolist d exp (map #1 l);*) say "]")
+    | A.SeqExp l -> (indent d; say "SeqExp["; dolist d exp (List.map ~f:fst l); say "]")
     | A.AssignExp {var=v;exp=e;pos} -> (indent d; sayln "AssignExp("; var(v,d+1); sayln ","; exp(e,d+1); say ")")
     | A.IfExp {test;then';else';pos} -> (indent d; sayln "IfExp("; exp(test,d+1); sayln ",";  exp(then',d+1);
      match else' with
@@ -90,7 +90,7 @@ let print outstream e0 =
 	    say(Bool.to_string (!escape)); say ",";
 	    (match typ with 
     	| None -> say "NONE" 
-		| Some(s,p) -> (say "SOME("; say(Symbol.name s); say ")"); sayln ","; exp(init,d+1); say ")"))
+		| Some(s,p) -> (say "SOME("; say(Symbol.name s); say ")")); sayln ","; exp(init,d+1); say ")")
     | A.TypeDec l ->
 	 (let tdec(({name;ty=t;pos} : A.typedec),d) = (indent d; say"("; 
 				  	    say(Symbol.name name); sayln ",";
