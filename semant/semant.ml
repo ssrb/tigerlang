@@ -2,7 +2,7 @@ open Core.Std
 
 module A = Absyn
 
-let print (outstream, e0) =
+let print outstream e0 =
 
  let say s =  output_string outstream s in
 
@@ -109,3 +109,6 @@ let print (outstream, e0) =
     | A.ArrayTy(s,p) -> (indent d; say "ArrayTy("; say(Symbol.name s); say ")")
 
  in  exp(e0,0); sayln ""; flush outstream
+
+
+let transProg e0 = print stdout e0
