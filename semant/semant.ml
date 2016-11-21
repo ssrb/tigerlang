@@ -110,5 +110,50 @@ let print outstream e0 =
 
  in  exp(e0,0); sayln ""; flush outstream
 
+type venv = Env.enventry Symbol.table
+type tenv = Types.ty Symbol.table
 
-let transProg e0 = print stdout e0
+module Translate = struct
+ type exp = unit
+end
+
+type expty = {exp: Translate.exp; ty: Types.ty}
+
+let transProg e0 = ()
+
+(* 
+val transVar: venv * tenv * Absyn.var -> expty
+val transExp: venv * tenv * Absyn.exp -> expty
+val transDec: venv * tenv * Absyn.dec -> { venv: venv, tenv: tenv}
+val transTy: tenv * Absyn.ty -> Types.ty
+
+
+let rec transExp (venv, tenv, exp) = 
+  match exp with
+  | A.VarExp v -> ()
+    | A.NilExp -> ()
+    | A.IntExp i -> ()
+    | A.StringExp (s,p) -> ()
+    | A.CallExp {func;args;pos} -> ()
+    | A.OpExp {left;oper;right;pos} ->
+      let {exp = _, ty = tyleft} = transExp (venv, tenv, left)
+      and {exp = _, ty = tyright} = transExp (venv, tenv, right)
+      in
+      if tyleft == Types.INT and tyright == Types.INT then
+        { exp = (), ty = Types.INT }
+      else
+        error pos "integer required"
+    | A.RecordExp {fields;typ;pos} -> ()    
+    | A.SeqExp l -> ()
+    | A.AssignExp {var=v;exp=e;pos} -> ()
+    | A.IfExp {test;then';else';pos} -> ();
+     match else' with
+      | None -> ()
+      | Some e -> ()
+    | A.WhileExp {test;body;pos} -> ()
+    | A.ForExp {var=v;escape=b;lo;hi;body;pos} -> ()
+    | A.BreakExp p -> ()
+    | A.LetExp {decs;body;pos} -> ()
+    | A.ArrayExp {typ;size;init;pos} -> ()
+
+*)
