@@ -27,7 +27,7 @@ export PROJ_absyn_tester
 
 define PROJ_semant_tester
 	RESULT = semant/semant_tester
-	SOURCES = absyn/absyn.ml absyn/table.ml absyn/symbol.ml parser/tigerparse.mly lexer/tigerlex_intf.ml lexer/tigerlex.mll parser/parsertokens.ml semant/semant.ml semant/types.ml
+	SOURCES = absyn/absyn.ml absyn/table.ml absyn/symbol.ml parser/tigerparse.mly lexer/tigerlex_intf.ml lexer/tigerlex.mll parser/parsertokens.ml semant/translate.mli semant/env.ml semant/types.mli semant/semant.ml semant/types.ml
 	YFLAGS = --explain --trace --dump
 endef
 export PROJ_semant_tester

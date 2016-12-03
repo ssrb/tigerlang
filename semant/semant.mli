@@ -1,1 +1,2 @@
-val transProg : Absyn.exp -> unit
+type expty = {exp: Translate.exp; ty: Types.ty}
+val transProg : Absyn.exp -> expty
