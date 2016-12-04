@@ -34,10 +34,20 @@ let rec transExp (venv, tenv, exp) =
   | A.BreakExp p -> { exp = (); ty = Types.NIL }
   | A.LetExp {decs; body; pos} -> { exp = (); ty = Types.NIL }
   | A.ArrayExp {typ; size; init; pos} -> { exp = (); ty = Types.NIL }
-and transVar (venv, tenv, var) = { exp = (); ty = Types.NIL }
+and transVar (venv, tenv, var) =
+  match var with 
+  | SimpleVar (symbol, pos) -> 
+    (match Symbol.look (venv, symbol) with
+    | Some(entry) -> 
+      (match entry with
+      | Env.Varentry {ty} ->  { exp = (); ty = ty }
+      | Env.FunEntry {formals; result} -> { exp = (); ty = result}) (* <= error *)
+    | None -> { exp = (); ty = Types.NIL })
+  | FieldVar (var, symbol, pos) -> { exp = (); ty = Types.NIL }
+  | SubscriptVar (var, exp, pos) -> { exp = (); ty = Types.NIL }
 
+ 
 let transProg e0 = transExp (Env.base_venv, Env.base_tenv, e0)
-
 (*val transExp: venv * tenv * Absyn.exp -> expty
 val transDec: venv * tenv * Absyn.dec -> { venv: venv, tenv: tenv}
 val transTy: tenv * Absyn.ty -> Types.ty
