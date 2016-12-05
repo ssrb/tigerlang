@@ -2,10 +2,14 @@ open Core.Std
 
 module A = Absyn
 
+exception Semantic_error of string
+
 type venv = Env.enventry Symbol.table
 type tenv = Types.ty Symbol.table
 
 type expty = {exp: Translate.exp; ty: Types.ty}
+
+let actual_ty ty = ty
 
 let rec transExp (venv, tenv, exp) = 
   match exp with
@@ -34,16 +38,19 @@ let rec transExp (venv, tenv, exp) =
   | A.BreakExp p -> { exp = (); ty = Types.NIL }
   | A.LetExp {decs; body; pos} -> { exp = (); ty = Types.NIL }
   | A.ArrayExp {typ; size; init; pos} -> { exp = (); ty = Types.NIL }
+
 and transVar (venv, tenv, var) =
   match var with 
   | SimpleVar (symbol, pos) -> 
     (match Symbol.look (venv, symbol) with
     | Some(entry) -> 
       (match entry with
-      | Env.Varentry {ty} ->  { exp = (); ty = ty }
-      | Env.FunEntry {formals; result} -> { exp = (); ty = result}) (* <= error *)
-    | None -> { exp = (); ty = Types.NIL })
-  | FieldVar (var, symbol, pos) -> { exp = (); ty = Types.NIL }
+      | Env.Varentry {ty} ->  { exp = (); ty = actual_ty ty }
+      | Env.FunEntry {formals; result} -> raise (Semantic_error ""))
+    | None -> raise (Semantic_error ""))
+  | FieldVar (var, symbol, pos) -> 
+    (let expty = transVar (venv, tenv, var) in
+    { exp = (); ty = Types.NIL })
   | SubscriptVar (var, exp, pos) -> { exp = (); ty = Types.NIL }
 
  
