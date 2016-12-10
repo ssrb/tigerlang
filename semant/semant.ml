@@ -22,7 +22,16 @@ let rec transExp (venv, tenv, exp) =
     | Some(entry) -> 
       (match entry with
       | Env.Varentry _ -> raise (Semantic_error "symbol is not a function")
-      | Env.FunEntry {formals; result} -> { exp = (); ty = Types.STRING })
+      | Env.FunEntry {formals; result} -> (
+        if (List.length args) <>  (List.length formals) then 
+          raise (Semantic_error "missing argument in function call");
+        List.zip_exn args formals |> List.iter ~f:(fun (a, ty) -> 
+          let { exp = _; ty = ty' } = transExp (venv, tenv, a) in 
+          if ty <> ty' then
+            (raise (Semantic_error "wrong type in function call"))
+        );
+        {exp = (); ty = actual_ty result }
+      ))
     | None -> raise (Semantic_error "unknown function name"))
   | A.OpExp {left; oper; right; pos} ->
     let {exp = _; ty = tyleft} = transExp (venv, tenv, left)
