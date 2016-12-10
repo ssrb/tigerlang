@@ -17,6 +17,7 @@ let rec transExp (venv, tenv, exp) =
   | A.NilExp -> { exp = (); ty = Types.NIL }
   | A.IntExp i -> { exp = (); ty = Types.INT }
   | A.StringExp (s,p) ->  { exp = (); ty = Types.STRING }
+  
   | A.CallExp {func; args; pos} ->
     (match Symbol.look (venv, func) with
     | Some(entry) -> 
@@ -33,6 +34,7 @@ let rec transExp (venv, tenv, exp) =
         {exp = (); ty = actual_ty result }
       ))
     | None -> raise (Semantic_error "unknown function name"))
+  
   | A.OpExp {left; oper; right; pos} ->
     let {exp = _; ty = tyleft} = transExp (venv, tenv, left)
     and {exp = _; ty = tyright} = transExp (venv, tenv, right)
@@ -41,7 +43,20 @@ let rec transExp (venv, tenv, exp) =
         { exp = (); ty = Types.INT }
     else
         raise (Semantic_error "integer expectec")
-  | A.RecordExp {fields; typ; pos} -> { exp = (); ty = Types.NIL } 
+  
+  | A.RecordExp {fields; typ; pos} ->
+    (match Symbol.look (tenv, typ) with
+    | Some rty -> (match rty with
+      | Types.RECORD (ftypes, _) -> (
+          List.iter fields ~f:(fun (sym, exp, pos) -> 
+            let { exp = _; ty } = transExp (venv, tenv, exp) in 
+            if not (List.exists ftypes (fun ft -> ft = (sym, ty))) then
+              raise (Semantic_error "not a record type"));
+          { exp = (); ty = rty }
+      )
+      | _ -> raise (Semantic_error "not a record type"))
+    | None -> raise (Semantic_error "unknown record type"))
+
   | A.SeqExp l -> { exp = (); ty = Types.NIL }
   | A.AssignExp {var = v; exp = e; pos} -> { exp = (); ty = Types.NIL }
   | A.IfExp {test; then'; else'; pos} ->
