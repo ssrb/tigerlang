@@ -42,7 +42,7 @@ let rec transExp (venv, tenv, exp) =
     if tyleft = Types.INT && tyright = Types.INT then
         { exp = (); ty = Types.INT }
     else
-        raise (Semantic_error "integer expectec")
+        raise (Semantic_error "integer expected")
   
   | A.RecordExp {fields; typ; pos} ->
     (match Symbol.look (tenv, typ) with
@@ -57,7 +57,13 @@ let rec transExp (venv, tenv, exp) =
       | _ -> raise (Semantic_error "not a record type"))
     | None -> raise (Semantic_error "unknown record type"))
 
-  | A.SeqExp l -> { exp = (); ty = Types.NIL }
+  | A.SeqExp l -> (
+    if List.is_empty l then
+      { exp = (); ty = Types.UNIT }
+    else
+      transExp (venv, tenv, fst (List.last_exn l))
+  )
+
   | A.AssignExp {var = v; exp = e; pos} -> { exp = (); ty = Types.NIL }
   | A.IfExp {test; then'; else'; pos} ->
       (match else' with
