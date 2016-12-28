@@ -75,8 +75,8 @@ let rec transExp (venv, tenv, exp) =
   )
 
   | A.IfExp {test = test ; then'= then'; else'= else'; pos} -> (
-    let { exp = _; ty = tytest} = transExp (venv, tenv, test)
-    and { exp = _; ty = tythen} = transExp (venv, tenv, then')
+    let { exp = _; ty = tytest } = transExp (venv, tenv, test)
+    and { exp = _; ty = tythen } = transExp (venv, tenv, then')
     in
       if tytest = Types.INT then
         (match else' with
@@ -88,10 +88,19 @@ let rec transExp (venv, tenv, exp) =
           else
             raise (Semantic_error "If-then-else type is inconsistent"))
       else
-        raise (Semantic_error "If test must be of integer type");
+        raise (Semantic_error "If test must be of integer type")
     )
 
-  | A.WhileExp {test; body; pos} -> { exp = (); ty = Types.NIL }
+  | A.WhileExp {test; body; pos} -> (
+    let { exp = _; ty = tytest } = transExp (venv, tenv, test)
+    and { exp = _; ty = tybody } = transExp (venv, tenv, body)
+    in 
+    if tytest = Types.INT then
+      { exp = (); ty = tybody }
+    else
+      raise (Semantic_error "Qhile test must be of integer type")
+  )
+
   | A.ForExp {var = v; escape = b; lo; hi; body; pos} -> { exp = (); ty = Types.NIL }
   | A.BreakExp p -> { exp = (); ty = Types.NIL }
   | A.LetExp {decs; body; pos} -> { exp = (); ty = Types.NIL }
