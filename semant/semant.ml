@@ -61,14 +61,24 @@ let rec transExp (venv, tenv, exp) =
     if List.is_empty l then
       { exp = (); ty = Types.UNIT }
     else
-      transExp (venv, tenv, fst (List.last_exn l))
+      List.map l (fun e -> transExp (venv, tenv, fst e)) |> List.last_exn
   )
 
-  | A.AssignExp {var = v; exp = e; pos} -> { exp = (); ty = Types.NIL }
+  | A.AssignExp {var = v; exp = e; pos} -> (
+    let { exp = _; ty = tyleft} = transVar (venv, tenv, v)
+    and { exp = _; ty = tyright} = transExp (venv, tenv, e)
+    in
+      if tyleft = tyright then 
+        { exp = (); ty = tyleft }
+      else
+        raise (Semantic_error "Incompatible type in assignment")
+  )
+
   | A.IfExp {test; then'; else'; pos} ->
       (match else' with
       | None -> { exp = (); ty = Types.NIL }
       | Some e -> { exp = (); ty = Types.NIL })
+
   | A.WhileExp {test; body; pos} -> { exp = (); ty = Types.NIL }
   | A.ForExp {var = v; escape = b; lo; hi; body; pos} -> { exp = (); ty = Types.NIL }
   | A.BreakExp p -> { exp = (); ty = Types.NIL }
