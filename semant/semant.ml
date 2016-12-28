@@ -111,7 +111,12 @@ let rec transExp (venv, tenv, exp) =
   | A.ArrayExp {typ; size; init; pos} -> { exp = (); ty = Types.NIL }
 
 
-and transDec (venv, tenv, dec) = (venv, tenv)
+and transDec (venv, tenv, dec) = 
+  match dec with
+  | FunctionDec l -> (venv, tenv)
+  | VarDec { name; escape; typ; init; pos } -> (venv, tenv)
+  | TypeDec l -> (venv, tenv)
+
 
 and transVar (venv, tenv, var) =
   match var with 
