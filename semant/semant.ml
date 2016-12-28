@@ -74,10 +74,22 @@ let rec transExp (venv, tenv, exp) =
         raise (Semantic_error "Incompatible type in assignment")
   )
 
-  | A.IfExp {test; then'; else'; pos} ->
-      (match else' with
-      | None -> { exp = (); ty = Types.NIL }
-      | Some e -> { exp = (); ty = Types.NIL })
+  | A.IfExp {test = test ; then'= then'; else'= else'; pos} -> (
+    let { exp = _; ty = tytest} = transExp (venv, tenv, test)
+    and { exp = _; ty = tythen} = transExp (venv, tenv, then')
+    in
+      if tytest = Types.INT then
+        (match else' with
+        | None -> { exp = (); ty = Types.NIL }
+        | Some e -> 
+          let { exp = _; ty = tyelse } = transExp (venv, tenv, e) in
+          if tythen = tyelse then
+            { exp = (); ty = tythen }
+          else
+            raise (Semantic_error "If-then-else type is inconsistent"))
+      else
+        raise (Semantic_error "If test must be of integer type");
+    )
 
   | A.WhileExp {test; body; pos} -> { exp = (); ty = Types.NIL }
   | A.ForExp {var = v; escape = b; lo; hi; body; pos} -> { exp = (); ty = Types.NIL }
