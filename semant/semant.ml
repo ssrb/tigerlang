@@ -98,13 +98,20 @@ let rec transExp (venv, tenv, exp) =
     if tytest = Types.INT then
       { exp = (); ty = tybody }
     else
-      raise (Semantic_error "Qhile test must be of integer type")
+      raise (Semantic_error "While test must be of integer type")
   )
 
-  | A.ForExp {var = v; escape = b; lo; hi; body; pos} -> { exp = (); ty = Types.NIL }
+  | A.ForExp {var = v; escape = b; lo = lo; hi = hi; body = body; pos = pos} -> (
+    let (venv', tenv') = transDec (venv, tenv, A.VarDec { name =  v; escape = b; typ = None; init = lo; pos = pos } ) in
+    transExp (venv', tenv', body)
+  )
+
   | A.BreakExp p -> { exp = (); ty = Types.NIL }
   | A.LetExp {decs; body; pos} -> { exp = (); ty = Types.NIL }
   | A.ArrayExp {typ; size; init; pos} -> { exp = (); ty = Types.NIL }
+
+
+and transDec (venv, tenv, dec) = (venv, tenv)
 
 and transVar (venv, tenv, var) =
   match var with 
