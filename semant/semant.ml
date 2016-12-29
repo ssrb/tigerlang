@@ -1,6 +1,8 @@
 open Core.Std
 
 module A = Absyn
+module S = Symbol
+module E = Env
 
 exception Semantic_error of string
 
@@ -64,9 +66,9 @@ let rec transExp (venv, tenv, exp) =
       List.map l (fun e -> transExp (venv, tenv, fst e)) |> List.last_exn
   )
 
-  | A.AssignExp {var = v; exp = e; pos} -> (
-    let { exp = _; ty = tyleft} = transVar (venv, tenv, v)
-    and { exp = _; ty = tyright} = transExp (venv, tenv, e)
+  | A.AssignExp {var; exp; pos} -> (
+    let { exp = _; ty = tyleft} = transVar (venv, tenv, var)
+    and { exp = _; ty = tyright} = transExp (venv, tenv, exp)
     in
       if tyleft = tyright then 
         { exp = (); ty = tyleft }
@@ -74,7 +76,7 @@ let rec transExp (venv, tenv, exp) =
         raise (Semantic_error "Incompatible type in assignment")
   )
 
-  | A.IfExp {test = test ; then'= then'; else'= else'; pos} -> (
+  | A.IfExp {test; then'; else'; pos} -> (
     let { exp = _; ty = tytest } = transExp (venv, tenv, test)
     and { exp = _; ty = tythen } = transExp (venv, tenv, then')
     in
@@ -114,7 +116,18 @@ let rec transExp (venv, tenv, exp) =
 and transDec (venv, tenv, dec) = 
   match dec with
   | FunctionDec l -> (venv, tenv)
-  | VarDec { name; escape; typ; init; pos } -> (venv, tenv)
+  | VarDec { name; escape; typ; init; pos } -> 
+    let { exp = _; ty = tyinit } = transExp (venv, tenv, init) in
+    (match typ with
+    | Some (symbol, pos) ->
+      (match Symbol.look (tenv, symbol) with
+      | Some ty ->
+        if ty = tyinit then
+          (S.enter (venv, name, E.Varentry {ty = tyinit}), tenv)
+        else
+          raise (Semantic_error "Type of initiialyzer does not match type annotation")
+      | None -> raise (Semantic_error "unknown type name"))
+    | None -> (S.enter (venv, name, E.Varentry {ty = tyinit}), tenv))
   | TypeDec l -> (venv, tenv)
 
 
