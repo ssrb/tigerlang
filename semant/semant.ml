@@ -105,11 +105,17 @@ let rec transExp (venv, tenv, exp) =
 
   | A.ForExp {var = v; escape = b; lo = lo; hi = hi; body = body; pos = pos} -> (
     let (venv', tenv') = transDec (venv, tenv, A.VarDec { name =  v; escape = b; typ = None; init = lo; pos = pos } ) in
-    transExp (venv', tenv', body)
+    let { exp = _; ty = tybody } = transExp (venv', tenv', body) in
+      { exp = (); ty = tybody }
   )
 
   | A.BreakExp p -> { exp = (); ty = Types.NIL }
-  | A.LetExp {decs; body; pos} -> { exp = (); ty = Types.NIL }
+
+  | A.LetExp {decs; body; pos} -> (
+  	let (venv', tenv') = List.fold decs ~init:(venv, tenv) ~f:(fun (v,t) d -> transDec (v, t, d)) in
+  	  transExp (venv', tenv', body)
+  )
+  
   | A.ArrayExp {typ; size; init; pos} -> { exp = (); ty = Types.NIL }
 
 
