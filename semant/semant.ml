@@ -3,6 +3,7 @@ open Core.Std
 module A = Absyn
 module S = Symbol
 module E = Env
+module T = Types
 
 exception Semantic_error of string
 
@@ -14,15 +15,17 @@ type expty = {exp: Translate.exp; ty: Types.ty}
 let actual_ty ty = ty
 
 let rec transExp (venv, tenv, exp) = 
+  let open A in
   match exp with
-  | A.VarExp v -> transVar (venv, tenv, v)
-  | A.NilExp -> { exp = (); ty = Types.NIL }
-  | A.IntExp i -> { exp = (); ty = Types.INT }
-  | A.StringExp (s,p) ->  { exp = (); ty = Types.STRING }
+  | VarExp v -> transVar (venv, tenv, v)
+  | NilExp -> { exp = (); ty = Types.NIL }
+  | IntExp i -> { exp = (); ty = Types.INT }
+  | StringExp (s,p) ->  { exp = (); ty = Types.STRING }
   
-  | A.CallExp {func; args; pos} ->
+  | CallExp {func; args; pos} ->
     (match Symbol.look (venv, func) with
     | Some(entry) -> 
+      let open Env in
       (match entry with
       | Env.Varentry _ -> raise (Semantic_error "symbol is not a function")
       | Env.FunEntry {formals; result} -> (
@@ -37,7 +40,7 @@ let rec transExp (venv, tenv, exp) =
       ))
     | None -> raise (Semantic_error "unknown function name"))
   
-  | A.OpExp {left; oper; right; pos} ->
+  | OpExp {left; oper; right; pos} ->
     let {exp = _; ty = tyleft} = transExp (venv, tenv, left)
     and {exp = _; ty = tyright} = transExp (venv, tenv, right)
     in
@@ -46,7 +49,7 @@ let rec transExp (venv, tenv, exp) =
     else
         raise (Semantic_error "integer expected")
   
-  | A.RecordExp {fields; typ; pos} ->
+  | RecordExp {fields; typ; pos} ->
     (match Symbol.look (tenv, typ) with
     | Some rty -> (match rty with
       | Types.RECORD (ftypes, _) -> (
@@ -59,14 +62,14 @@ let rec transExp (venv, tenv, exp) =
       | _ -> raise (Semantic_error "not a record type"))
     | None -> raise (Semantic_error "unknown record type"))
 
-  | A.SeqExp l -> (
+  | SeqExp l -> (
     if List.is_empty l then
       { exp = (); ty = Types.UNIT }
     else
       List.map l (fun e -> transExp (venv, tenv, fst e)) |> List.last_exn
   )
 
-  | A.AssignExp {var; exp; pos} -> (
+  | AssignExp {var; exp; pos} -> (
     let { exp = _; ty = tyleft} = transVar (venv, tenv, var)
     and { exp = _; ty = tyright} = transExp (venv, tenv, exp)
     in
@@ -76,7 +79,7 @@ let rec transExp (venv, tenv, exp) =
         raise (Semantic_error "Incompatible type in assignment")
   )
 
-  | A.IfExp {test; then'; else'; pos} -> (
+  | IfExp {test; then'; else'; pos} -> (
     let { exp = _; ty = tytest } = transExp (venv, tenv, test)
     and { exp = _; ty = tythen } = transExp (venv, tenv, then')
     in
@@ -93,7 +96,7 @@ let rec transExp (venv, tenv, exp) =
         raise (Semantic_error "If test must be of integer type")
     )
 
-  | A.WhileExp {test; body; pos} -> (
+  | WhileExp {test; body; pos} -> (
     let { exp = _; ty = tytest } = transExp (venv, tenv, test)
     and { exp = _; ty = tybody } = transExp (venv, tenv, body)
     in 
@@ -103,69 +106,83 @@ let rec transExp (venv, tenv, exp) =
       raise (Semantic_error "While test must be of integer type")
   )
 
-  | A.ForExp {var = v; escape = b; lo = lo; hi = hi; body = body; pos = pos} -> (
+  | ForExp {var = v; escape = b; lo = lo; hi = hi; body = body; pos = pos} -> (
     let (venv', tenv') = transDec (venv, tenv, A.VarDec { name =  v; escape = b; typ = None; init = lo; pos = pos } ) in
     let { exp = _; ty = tybody } = transExp (venv', tenv', body) in
       { exp = (); ty = tybody }
   )
 
-  | A.BreakExp p -> { exp = (); ty = Types.NIL }
+  | BreakExp p -> { exp = (); ty = Types.NIL }
 
-  | A.LetExp {decs; body; pos} -> (
-  	let (venv', tenv') = List.fold decs ~init:(venv, tenv) ~f:(fun (v,t) d -> transDec (v, t, d)) in
+  | LetExp {decs; body; pos} -> (
+  	let (venv', tenv') = List.fold decs ~init:(venv, tenv) ~f:(fun (v, t) d -> transDec (v, t, d)) in
   	  transExp (venv', tenv', body)
   )
   
-  | A.ArrayExp {typ; size; init; pos} -> { exp = (); ty = Types.NIL }
+  | ArrayExp {typ; size; init; pos} -> { exp = (); ty = Types.NIL }
 
+and transTy (tenv, ty) = T.UNIT
 
 and transDec (venv, tenv, dec) = 
+  let open A in
   match dec with
   | FunctionDec l -> (venv, tenv)
   | VarDec { name; escape; typ; init; pos } -> 
     let { exp = _; ty = tyinit } = transExp (venv, tenv, init) in
+    let open E in
     (match typ with
     | Some (symbol, pos) ->
       (match Symbol.look (tenv, symbol) with
       | Some ty ->
         if ty = tyinit then
-          (S.enter (venv, name, E.Varentry {ty = tyinit}), tenv)
+          (S.enter (venv, name, Varentry {ty = tyinit}), tenv)
         else
           raise (Semantic_error "Type of initiialyzer does not match type annotation")
       | None -> raise (Semantic_error "unknown type name"))
-    | None -> (S.enter (venv, name, E.Varentry {ty = tyinit}), tenv))
-  | TypeDec l -> (venv, tenv)
+    | None -> (S.enter (venv, name, Varentry {ty = tyinit}), tenv))
 
+  | TypeDec l ->
+    let open T in
+    (match l with
+      | [ {name; ty; pos} ] -> 
+        (venv, S.enter (tenv, name, transTy(tenv, ty)))
+      | _ -> 
+        let tenv' = List.fold l ~init:tenv ~f:(fun t {name; _} -> 
+          S.enter (t, name, NAME(name, ref None))
+        ) in
+        (List.iter l ~f:(fun {name; ty; pos} -> 
+          let typlaceholder = S.look(tenv', name) in
+          match typlaceholder with
+          | Some NAME(name, tyref) -> 
+            tyref := Some (transTy(tenv', ty))
+          | _ -> ()
+        );
+        (venv, tenv')))
 
 and transVar (venv, tenv, var) =
-  match var with 
-  | A.SimpleVar (symbol, pos) -> 
+  let open A in
+  match var with
+  | SimpleVar (symbol, pos) -> 
+    let open Env in
     (match Symbol.look (venv, symbol) with
     | Some(entry) -> 
       (match entry with
-      | Env.Varentry {ty} ->  { exp = (); ty = actual_ty ty }
-      | Env.FunEntry {formals; result} -> raise (Semantic_error "function is not value"))
+      | Varentry {ty} ->  { exp = (); ty = actual_ty ty }
+      | FunEntry {formals; result} -> raise (Semantic_error "function is not value"))
     | None -> raise (Semantic_error "unknown variable name"))
-  | A.FieldVar (var, sym, pos) -> 
+  | FieldVar (var, sym, pos) -> 
     (let {exp; ty} = transVar (venv, tenv, var) in
+      let open A in
       match ty with
-      | RECORD (fields, _) -> 
+      | T.RECORD (fields, _) ->
         (match List.find fields (fun (sym', _) -> sym == sym')  with
         | Some (_, ty) -> { exp = (); ty = actual_ty ty }
         | None -> raise (Semantic_error "unknown field for record")) 
       | _ -> raise (Semantic_error "var isn't a record"))
-  | A.SubscriptVar (var, exp, pos) -> 
+  | SubscriptVar (var, exp, pos) -> 
     (let {exp; ty} = transVar (venv, tenv, var) in
       match ty with
-      | ARRAY (ty, _) -> { exp = (); ty = actual_ty ty }
+      | T.ARRAY (ty, _) -> { exp = (); ty = actual_ty ty }
       | _ -> raise (Semantic_error "subscripted is not an array"))
 
 let transProg e0 = transExp (Env.base_venv, Env.base_tenv, e0)
-(*val transExp: venv * tenv * Absyn.exp -> expty
-val transDec: venv * tenv * Absyn.dec -> { venv: venv, tenv: tenv}
-val transTy: tenv * Absyn.ty -> Types.ty
-
-
-
-
-*)
