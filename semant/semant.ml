@@ -121,7 +121,22 @@ let rec transExp (venv, tenv, exp) =
   
   | ArrayExp {typ; size; init; pos} -> { exp = (); ty = Types.NIL }
 
-and transTy (tenv, ty) = T.UNIT
+and transTy (tenv, ty) = 
+  let open A in
+  let open T in
+  match ty with 
+  | NameTy (symbol, pos) -> 
+    (match S.look (tenv, symbol) with
+    | Some ty' -> ty'
+    | None -> raise (Semantic_error "Unknown type"))
+  | RecordTy fields -> let ftypes =  List.map fields ~f:(fun {typ; _} -> 
+    match S.look (tenv, typ) with
+    | Some ty' -> (typ, ty')
+    | None -> raise (Semantic_error "Unknown type")
+  ) in RECORD (ftypes, ref ())
+  | ArrayTy (symbol, pos) ->  (match S.look (tenv, symbol) with
+    | Some ty' -> ARRAY (ty', ref ())
+    | None -> raise (Semantic_error "Unknown type"))
 
 and transDec (venv, tenv, dec) = 
   let open A in
@@ -140,7 +155,6 @@ and transDec (venv, tenv, dec) =
           raise (Semantic_error "Type of initiialyzer does not match type annotation")
       | None -> raise (Semantic_error "unknown type name"))
     | None -> (S.enter (venv, name, Varentry {ty = tyinit}), tenv))
-
   | TypeDec l ->
     let open T in
     (match l with
