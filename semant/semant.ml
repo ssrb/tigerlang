@@ -12,11 +12,11 @@ type tenv = Types.ty Symbol.table
 
 type expty = {exp: Translate.exp; ty: Types.ty}
 
-let actual_ty ty =
+let rec actual_ty ty =
   match ty with
   | T.NAME (sym, tyref) ->
     (match !tyref with
-    | Some ty' -> ty'
+    | Some ty' -> actual_ty ty'
     | None -> raise (Semantic_error "Incomplete type"))
   | _ -> ty
 
@@ -33,7 +33,7 @@ let rec transExp (venv, tenv, exp) =
     | Some(entry) -> 
       let open Env in
       (match entry with
-      | Env.Varentry _ -> raise (Semantic_error "symbol is not a function")
+      | Env.VarEntry _ -> raise (Semantic_error "symbol is not a function")
       | Env.FunEntry {formals; result} -> (
         if (List.length args) <>  (List.length formals) then 
           raise (Semantic_error "missing argument in function call");
@@ -147,7 +147,43 @@ and transTy (tenv, ty) =
 and transDec (venv, tenv, dec) = 
   let open A in
   match dec with
-  | FunctionDec l -> (venv, tenv)
+  | FunctionDec l ->
+    let open T in
+    let open E in
+    let venv' = List.fold l ~init:venv ~f:(fun v { name; params; result; _ } ->
+      let params' = List.map params ~f:(fun { typ; _ } ->
+        match S.look (tenv, typ) with
+        | Some ty' -> ty'
+        | None -> raise (Semantic_error "Unknown type")
+      ) in
+      let result' =  
+        match result with
+        | Some (res, pos) -> 
+          (match S.look (tenv, res) with
+          | Some ty' -> ty'
+          | None -> raise (Semantic_error "Unknown type"))
+        | None -> UNIT
+      in S.enter (v, name, FunEntry {formals = params'; result = result'})
+    )
+    in
+    (List.iter l ~f:(fun { name; params; result; body; pos} -> 
+      let venv'' = List.fold params ~init:venv' ~f:(fun v { name; typ; _ } ->
+        match S.look (tenv, typ) with
+        | Some ty' -> S.enter (v, name, VarEntry {ty = ty'})
+        | None -> raise (Semantic_error "Unknown type")
+      )
+      in
+      match result with
+      | Some (res, pos) -> 
+        (match S.look (tenv, res) with
+        | Some ty' ->
+          let {exp = _; ty = ty''} = transExp(venv'' , tenv, body) in
+          if ty' <> ty'' then
+            raise (Semantic_error "Wrong return type")
+        | None -> raise (Semantic_error "Unknown type"))
+      | None -> ()
+    );
+    (venv', tenv))
   | VarDec { name; escape; typ; init; pos } -> 
     let { exp = _; ty = tyinit } = transExp (venv, tenv, init) in
     let open E in
@@ -156,28 +192,24 @@ and transDec (venv, tenv, dec) =
       (match Symbol.look (tenv, symbol) with
       | Some ty ->
         if ty = tyinit then
-          (S.enter (venv, name, Varentry {ty = tyinit}), tenv)
+          (S.enter (venv, name, VarEntry {ty = tyinit}), tenv)
         else
           raise (Semantic_error "Type of initiialyzer does not match type annotation")
       | None -> raise (Semantic_error "unknown type name"))
-    | None -> (S.enter (venv, name, Varentry {ty = tyinit}), tenv))
+    | None -> (S.enter (venv, name, VarEntry {ty = tyinit}), tenv))
   | TypeDec l ->
     let open T in
-    (match l with
-      | [ {name; ty; pos} ] -> 
-        (venv, S.enter (tenv, name, transTy(tenv, ty)))
-      | _ -> 
-        let tenv' = List.fold l ~init:tenv ~f:(fun t {name; _} -> 
-          S.enter (t, name, NAME(name, ref None))
-        ) in
-        (List.iter l ~f:(fun {name; ty; pos} -> 
-          let typlaceholder = S.look(tenv', name) in
-          match typlaceholder with
-          | Some NAME(name, tyref) -> 
-            tyref := Some (transTy(tenv', ty))
-          | _ -> ()
-        );
-        (venv, tenv')))
+    let tenv' = List.fold l ~init:tenv ~f:(fun t {name; _} -> 
+      S.enter (t, name, NAME(name, ref None))
+    ) in
+    (List.iter l ~f:(fun {name; ty; pos} -> 
+      let typlaceholder = S.look(tenv', name) in
+      match typlaceholder with
+      | Some NAME(name, tyref) -> 
+        tyref := Some (transTy(tenv', ty))
+      | _ -> ()
+    );
+    (venv, tenv'))
 
 and transVar (venv, tenv, var) =
   let open A in
@@ -187,7 +219,7 @@ and transVar (venv, tenv, var) =
     (match Symbol.look (venv, symbol) with
     | Some(entry) -> 
       (match entry with
-      | Varentry {ty} ->  { exp = (); ty = actual_ty ty }
+      | VarEntry {ty} ->  { exp = (); ty = actual_ty ty }
       | FunEntry {formals; result} -> raise (Semantic_error "function is not value"))
     | None -> raise (Semantic_error "unknown variable name"))
   | FieldVar (var, sym, pos) -> 
