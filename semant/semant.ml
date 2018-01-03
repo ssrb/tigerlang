@@ -20,7 +20,7 @@ let rec actual_ty ty =
     | None -> raise (Semantic_error "Incomplete type"))
   | _ -> ty
 
-let rec transExp (venv, tenv, exp) = 
+let rec transExp (venv, tenv, exp, break) = 
   let open A in
   match exp with
   | VarExp v -> transVar (venv, tenv, v)
@@ -38,7 +38,7 @@ let rec transExp (venv, tenv, exp) =
         if (List.length args) <>  (List.length formals) then 
           raise (Semantic_error "missing argument in function call");
         List.zip_exn args formals |> List.iter ~f:(fun (a, ty) -> 
-          let { exp = _; ty = ty' } = transExp (venv, tenv, a) in 
+          let { exp = _; ty = ty' } = transExp (venv, tenv, a, break) in 
           if ty <> ty' then
             (raise (Semantic_error "wrong type in function call"))
         );
@@ -47,8 +47,8 @@ let rec transExp (venv, tenv, exp) =
     | None -> raise (Semantic_error "unknown function name"))
   
   | OpExp {left; oper; right; pos} ->
-    let {exp = _; ty = tyleft} = transExp (venv, tenv, left)
-    and {exp = _; ty = tyright} = transExp (venv, tenv, right)
+    let {exp = _; ty = tyleft} = transExp (venv, tenv, left, break)
+    and {exp = _; ty = tyright} = transExp (venv, tenv, right, break)
     in
     if tyleft = Types.INT && tyright = Types.INT then
         { exp = (); ty = Types.INT }
@@ -60,7 +60,7 @@ let rec transExp (venv, tenv, exp) =
     | Some rty -> (match rty with
       | Types.RECORD (ftypes, _) -> (
           List.iter fields ~f:(fun (sym, exp, pos) -> 
-            let { exp = _; ty } = transExp (venv, tenv, exp) in 
+            let { exp = _; ty } = transExp (venv, tenv, exp, break) in 
             if not (List.exists ftypes (fun ft -> ft = (sym, ty))) then
               raise (Semantic_error "not a record type"));
           { exp = (); ty = rty }
@@ -72,12 +72,12 @@ let rec transExp (venv, tenv, exp) =
     if List.is_empty l then
       { exp = (); ty = Types.UNIT }
     else
-      List.map l (fun e -> transExp (venv, tenv, fst e)) |> List.last_exn
+      List.map l (fun e -> transExp (venv, tenv, fst e, break)) |> List.last_exn
   )
 
   | AssignExp {var; exp; pos} -> (
     let { exp = _; ty = tyleft} = transVar (venv, tenv, var)
-    and { exp = _; ty = tyright} = transExp (venv, tenv, exp)
+    and { exp = _; ty = tyright} = transExp (venv, tenv, exp, break)
     in
       if tyleft = tyright then 
         { exp = (); ty = tyleft }
@@ -86,14 +86,14 @@ let rec transExp (venv, tenv, exp) =
   )
 
   | IfExp {test; then'; else'; pos} -> (
-    let { exp = _; ty = tytest } = transExp (venv, tenv, test)
-    and { exp = _; ty = tythen } = transExp (venv, tenv, then')
+    let { exp = _; ty = tytest } = transExp (venv, tenv, test, break)
+    and { exp = _; ty = tythen } = transExp (venv, tenv, then', break)
     in
       if tytest = Types.INT then
         (match else' with
         | None -> { exp = (); ty = Types.NIL }
         | Some e -> 
-          let { exp = _; ty = tyelse } = transExp (venv, tenv, e) in
+          let { exp = _; ty = tyelse } = transExp (venv, tenv, e, break) in
           if tythen = tyelse then
             { exp = (); ty = tythen }
           else
@@ -103,8 +103,8 @@ let rec transExp (venv, tenv, exp) =
     )
 
   | WhileExp {test; body; pos} -> (
-    let { exp = _; ty = tytest } = transExp (venv, tenv, test)
-    and { exp = _; ty = tybody } = transExp (venv, tenv, body)
+    let { exp = _; ty = tytest } = transExp (venv, tenv, test, break)
+    and { exp = _; ty = tybody } = transExp (venv, tenv, body, true)
     in 
     if tytest = Types.INT then
       { exp = (); ty = tybody }
@@ -113,16 +113,20 @@ let rec transExp (venv, tenv, exp) =
   )
 
   | ForExp {var = v; escape = b; lo = lo; hi = hi; body = body; pos = pos} -> (
-    let (venv', tenv') = transDec (venv, tenv, A.VarDec { name =  v; escape = b; typ = None; init = lo; pos = pos } ) in
-    let { exp = _; ty = tybody } = transExp (venv', tenv', body) in
+    let (venv', tenv') = transDec (venv, tenv, A.VarDec { name =  v; escape = b; typ = None; init = lo; pos = pos }, break) in
+    let { exp = _; ty = tybody } = transExp (venv', tenv', body, true) in
       { exp = (); ty = tybody }
   )
 
-  | BreakExp p -> { exp = (); ty = Types.NIL }
+  | BreakExp p -> 
+    if break = true then{
+      exp = (); ty = Types.NIL }
+    else
+      raise (Semantic_error "No loop to break from")
 
   | LetExp {decs; body; pos} -> (
-  	let (venv', tenv') = List.fold decs ~init:(venv, tenv) ~f:(fun (v, t) d -> transDec (v, t, d)) in
-  	  transExp (venv', tenv', body)
+  	let (venv', tenv') = List.fold decs ~init:(venv, tenv) ~f:(fun (v, t) d -> transDec (v, t, d, break)) in
+  	  transExp (venv', tenv', body, break)
   )
   
   | ArrayExp {typ; size; init; pos} -> { exp = (); ty = Types.NIL }
@@ -144,7 +148,7 @@ and transTy (tenv, ty) =
     | Some ty' -> ARRAY (ty', ref ())
     | None -> raise (Semantic_error "Unknown type"))
 
-and transDec (venv, tenv, dec) = 
+and transDec (venv, tenv, dec, break) = 
   let open A in
   match dec with
   | FunctionDec l ->
@@ -177,7 +181,7 @@ and transDec (venv, tenv, dec) =
       | Some (res, pos) -> 
         (match S.look (tenv, res) with
         | Some ty' ->
-          let {exp = _; ty = ty''} = transExp(venv'' , tenv, body) in
+          let {exp = _; ty = ty''} = transExp(venv'' , tenv, body, false) in
           if ty' <> ty'' then
             raise (Semantic_error "Wrong return type")
         | None -> raise (Semantic_error "Unknown type"))
@@ -185,7 +189,7 @@ and transDec (venv, tenv, dec) =
     );
     (venv', tenv))
   | VarDec { name; escape; typ; init; pos } -> 
-    let { exp = _; ty = tyinit } = transExp (venv, tenv, init) in
+    let { exp = _; ty = tyinit } = transExp (venv, tenv, init, break) in
     let open E in
     (match typ with
     | Some (symbol, pos) ->
@@ -237,4 +241,4 @@ and transVar (venv, tenv, var) =
       | T.ARRAY (ty, _) -> { exp = (); ty = actual_ty ty }
       | _ -> raise (Semantic_error "subscripted is not an array"))
 
-let transProg e0 = transExp (Env.base_venv, Env.base_tenv, e0)
+let transProg e0 = transExp (Env.base_venv, Env.base_tenv, e0, false)
