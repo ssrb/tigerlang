@@ -12,7 +12,13 @@ type tenv = Types.ty Symbol.table
 
 type expty = {exp: Translate.exp; ty: Types.ty}
 
-let actual_ty ty = ty
+let actual_ty ty =
+  match ty with
+  | T.NAME (sym, tyref) ->
+    (match !tyref with
+    | Some ty' -> ty'
+    | None -> raise (Semantic_error "Incomplete type"))
+  | _ -> ty
 
 let rec transExp (venv, tenv, exp) = 
   let open A in
