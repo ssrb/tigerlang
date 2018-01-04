@@ -1,4 +1,3 @@
-open Lexing
 module Lexer = Tigerlex.F(Parsertokens)
 
 let _ =
