@@ -18,7 +18,6 @@ let type_equal tyleft tyright =
   | (T.NIL, _) | (_, T.NIL)-> false
   | _ -> tyleft = tyright
 
-
 let rec actual_ty ty =
   match ty with
   | T.NAME (sym, tyref) ->
@@ -177,6 +176,8 @@ and transTy (tenv, ty) =
     | Some ty' -> ARRAY (ty', ref ())
     | None -> raise (Semantic_error "Unknown type"))
 
+and checkCyclicTy (tenv, symbol) = ()
+  
 and transDec (venv, tenv, dec, break) = 
   let open A in
   match dec with
@@ -249,6 +250,7 @@ and transDec (venv, tenv, dec, break) =
         tyref := Some (transTy(tenv', ty))
       | _ -> ()
     );
+    List.iter l ~f:(fun {name; ty; pos} -> checkCyclicTy(tenv', name));
     (venv, tenv'))
 
 and transVar (venv, tenv, var) =
