@@ -224,7 +224,11 @@ and transDec (venv, tenv, dec, break) =
         else
           raise (Semantic_error "Type of initiialyzer does not match type annotation")
       | None -> raise (Semantic_error "unknown type name"))
-    | None -> (S.enter (venv, name, VarEntry {ty = tyinit}), tenv))
+    | None -> 
+      if tyinit = T.NIL then
+        raise (Semantic_error "A variable declaration initialized with nil must beconstrained to be a structure")
+      else
+        (S.enter (venv, name, VarEntry {ty = tyinit}), tenv))
   
   | TypeDec l ->
     let open T in
