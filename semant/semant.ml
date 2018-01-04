@@ -23,9 +23,13 @@ let rec actual_ty ty =
 let rec transExp (venv, tenv, exp, break) = 
   let open A in
   match exp with
+  
   | VarExp v -> transVar (venv, tenv, v)
+
   | NilExp -> { exp = (); ty = Types.NIL }
+
   | IntExp i -> { exp = (); ty = Types.INT }
+
   | StringExp (s,p) ->  { exp = (); ty = Types.STRING }
   
   | CallExp {func; args; pos} ->
@@ -119,8 +123,8 @@ let rec transExp (venv, tenv, exp, break) =
   )
 
   | BreakExp p -> 
-    if break = true then{
-      exp = (); ty = Types.NIL }
+    if break = true then
+    { exp = (); ty = Types.NIL }
     else
       raise (Semantic_error "No loop to break from")
 
@@ -129,7 +133,27 @@ let rec transExp (venv, tenv, exp, break) =
   	  transExp (venv', tenv', body, break)
   )
   
-  | ArrayExp {typ; size; init; pos} -> { exp = (); ty = Types.NIL }
+  | ArrayExp {typ; size; init; pos} ->
+    let {exp = _; ty = tysize} = transExp(venv, tenv, size, break) in
+    if tysize = T.INT then
+      let {exp = _; ty = tyinit} = transExp(venv, tenv, init, break) in
+      match S.look(tenv, typ) with
+      | Some tyarray ->
+        (match tyarray with
+        | T.ARRAY (tyelem, unique) -> 
+          if tyelem = tyinit then
+            { exp = (); ty = tyarray }
+          else
+            raise (Semantic_error "Incompoatible initializer type")
+        | _ ->
+            raise (Semantic_error "Not an array type")
+        )
+      | None ->
+        raise (Semantic_error "Unknown array type")
+    else
+      raise (Semantic_error "Array size expression must have type int")
+  
+  { exp = (); ty = Types.NIL }
 
 and transTy (tenv, ty) = 
   let open A in
@@ -151,6 +175,7 @@ and transTy (tenv, ty) =
 and transDec (venv, tenv, dec, break) = 
   let open A in
   match dec with
+  
   | FunctionDec l ->
     let open T in
     let open E in
@@ -188,6 +213,7 @@ and transDec (venv, tenv, dec, break) =
       | None -> ()
     );
     (venv', tenv))
+  
   | VarDec { name; escape; typ; init; pos } -> 
     let { exp = _; ty = tyinit } = transExp (venv, tenv, init, break) in
     let open E in
@@ -201,6 +227,7 @@ and transDec (venv, tenv, dec, break) =
           raise (Semantic_error "Type of initiialyzer does not match type annotation")
       | None -> raise (Semantic_error "unknown type name"))
     | None -> (S.enter (venv, name, VarEntry {ty = tyinit}), tenv))
+  
   | TypeDec l ->
     let open T in
     let tenv' = List.fold l ~init:tenv ~f:(fun t {name; _} -> 
