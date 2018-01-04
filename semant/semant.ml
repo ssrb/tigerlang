@@ -12,6 +12,13 @@ type tenv = Types.ty Symbol.table
 
 type expty = {exp: Translate.exp; ty: Types.ty}
 
+let type_equal tyleft tyright =
+  match (tyleft,tyright) with
+  | (T.RECORD _, T.NIL) | (T.NIL, T.RECORD _) -> true
+  | (T.NIL, _) | (_, T.NIL)-> false
+  | _ -> tyleft = tyright
+
+
 let rec actual_ty ty =
   match ty with
   | T.NAME (sym, tyref) ->
@@ -43,7 +50,7 @@ let rec transExp (venv, tenv, exp, break) =
           raise (Semantic_error "missing argument in function call");
         List.zip_exn args formals |> List.iter ~f:(fun (a, ty) -> 
           let { exp = _; ty = ty' } = transExp (venv, tenv, a, break) in 
-          if ty <> ty' then
+          if not (type_equal ty ty') then
             (raise (Semantic_error "wrong type in function call"))
         );
         {exp = (); ty = actual_ty result }
@@ -54,7 +61,7 @@ let rec transExp (venv, tenv, exp, break) =
     let {exp = _; ty = tyleft} = transExp (venv, tenv, left, break)
     and {exp = _; ty = tyright} = transExp (venv, tenv, right, break)
     in
-    if tyleft = Types.INT && tyright = Types.INT then
+    if (type_equal tyleft Types.INT) && (type_equal tyright Types.INT) then
         { exp = (); ty = Types.INT }
     else
         raise (Semantic_error "integer expected")
@@ -83,7 +90,7 @@ let rec transExp (venv, tenv, exp, break) =
     let { exp = _; ty = tyleft} = transVar (venv, tenv, var)
     and { exp = _; ty = tyright} = transExp (venv, tenv, exp, break)
     in
-      if tyleft = tyright then 
+      if type_equal tyleft tyright then 
         { exp = (); ty = tyleft }
       else
         raise (Semantic_error "Incompatible type in assignment")
@@ -93,12 +100,12 @@ let rec transExp (venv, tenv, exp, break) =
     let { exp = _; ty = tytest } = transExp (venv, tenv, test, break)
     and { exp = _; ty = tythen } = transExp (venv, tenv, then', break)
     in
-      if tytest = Types.INT then
+      if type_equal tytest Types.INT then
         (match else' with
         | None -> { exp = (); ty = Types.NIL }
         | Some e -> 
           let { exp = _; ty = tyelse } = transExp (venv, tenv, e, break) in
-          if tythen = tyelse then
+          if type_equal tythen tyelse then
             { exp = (); ty = tythen }
           else
             raise (Semantic_error "If-then-else type is inconsistent"))
@@ -110,7 +117,7 @@ let rec transExp (venv, tenv, exp, break) =
     let { exp = _; ty = tytest } = transExp (venv, tenv, test, break)
     and { exp = _; ty = tybody } = transExp (venv, tenv, body, true)
     in 
-    if tytest = Types.INT then
+    if type_equal tytest Types.INT then
       { exp = (); ty = tybody }
     else
       raise (Semantic_error "While test must be of integer type")
@@ -135,13 +142,13 @@ let rec transExp (venv, tenv, exp, break) =
   
   | ArrayExp {typ; size; init; pos} ->
     let {exp = _; ty = tysize} = transExp(venv, tenv, size, break) in
-    if tysize = T.INT then
+    if type_equal tysize T.INT then
       let {exp = _; ty = tyinit} = transExp(venv, tenv, init, break) in
       match S.look(tenv, typ) with
       | Some tyarray ->
         (match tyarray with
         | T.ARRAY (tyelem, unique) -> 
-          if tyelem = tyinit then
+          if type_equal tyelem tyinit then
             { exp = (); ty = tyarray }
           else
             raise (Semantic_error "Incompoatible initializer type")
@@ -205,7 +212,7 @@ and transDec (venv, tenv, dec, break) =
         (match S.look (tenv, res) with
         | Some ty' ->
           let {exp = _; ty = ty''} = transExp(venv'' , tenv, body, false) in
-          if ty' <> ty'' then
+          if not (type_equal ty' ty'') then
             raise (Semantic_error "Wrong return type")
         | None -> raise (Semantic_error "Unknown type"))
       | None -> ()
@@ -219,7 +226,7 @@ and transDec (venv, tenv, dec, break) =
     | Some (symbol, pos) ->
       (match Symbol.look (tenv, symbol) with
       | Some ty ->
-        if ty = tyinit then
+        if type_equal ty tyinit then
           (S.enter (venv, name, VarEntry {ty = tyinit}), tenv)
         else
           raise (Semantic_error "Type of initiialyzer does not match type annotation")
