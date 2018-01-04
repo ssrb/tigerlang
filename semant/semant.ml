@@ -176,8 +176,33 @@ and transTy (tenv, ty) =
     | Some ty' -> ARRAY (ty', ref ())
     | None -> raise (Semantic_error "Unknown type"))
 
-and checkCyclicTy (tenv, symbol) = ()
-  
+and checkCyclicTy (tenv, symbol) =
+  let step1 sym =
+    match sym with 
+    | Some sym ->
+      (match S.look (tenv, sym) with
+      | Some ty ->
+        (match ty with
+        | T.NAME (_, tyref) ->
+          (match !tyref with
+          | Some T.NAME (sym', _) -> Some sym'
+          | Some _ -> None 
+          | None -> 
+            raise (Semantic_error "Incomplete type")  
+          )
+        | _ -> None)
+      | None -> raise (Semantic_error "Unknown type"))
+    | None -> None
+
+  in let rec followCycle sym1 sym2 = 
+    match (sym1, sym2) with 
+    | (None, _) | (_, None) -> ()
+    | (Some sym1, Some sym2) when sym1 = sym2 ->
+      raise (Semantic_error "cycle detected") 
+    | _ -> followCycle (sym1 |> step1) (sym2 |> step1 |> step1)
+ 
+  in followCycle (Some symbol) ((Some symbol) |> step1 |>step1)
+
 and transDec (venv, tenv, dec, break) = 
   let open A in
   match dec with
