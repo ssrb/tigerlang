@@ -152,8 +152,6 @@ let rec transExp (venv, tenv, exp, break) =
         raise (Semantic_error "Unknown array type")
     else
       raise (Semantic_error "Array size expression must have type int")
-  
-  { exp = (); ty = Types.NIL }
 
 and transTy (tenv, ty) = 
   let open A in
