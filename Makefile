@@ -13,17 +13,10 @@ export PROJ_lexer_tester
 
 define PROJ_parser_tester
 	RESULT = parser/parser_tester
-	SOURCES = absyn/absyn.ml absyn/table.ml absyn/symbol.ml parser/tigerparse.mly lexer/tigerlex_intf.ml lexer/tigerlex.mll parser/parsertokens.ml parser/parser_tester.ml
+	SOURCES = absyn/absyn.ml absyn/table.ml absyn/symbol.ml absyn/prabsyn.ml parser/tigerparse.mly lexer/tigerlex_intf.ml lexer/tigerlex.mll parser/parsertokens.ml parser/parser_tester.ml
 	YFLAGS = --explain --trace --dump
 endef
 export PROJ_parser_tester
-
-define PROJ_absyn_tester
-	RESULT = absyn/absyn_tester
-	SOURCES = absyn/absyn.ml absyn/table.ml absyn/symbol.ml parser/tigerparse.mly lexer/tigerlex_intf.ml lexer/tigerlex.mll parser/parsertokens.ml absyn/prabsyn.ml absyn/absyn_tester.ml
-	YFLAGS = --explain --trace --dump
-endef
-export PROJ_absyn_tester
 
 define PROJ_semant_tester
 	RESULT = semant/semant_tester
