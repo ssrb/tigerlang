@@ -1,0 +1,1 @@
+val print : out_channel -> Types.ty -> unit
