@@ -21,9 +21,11 @@ let type_equal tyleft tyright =
 let rec actual_ty ty =
   match ty with
   | NAME (sym, actual) ->
-    (match !actual with
-    | Some ty' -> actual_ty ty'
-    | None -> raise (Semantic_error "Incomplete type"))
+    begin
+      match !actual with
+      | Some ty' -> actual_ty ty'
+      | None -> assert(false)
+    end
   | _ -> ty
 
 let rec transExp (venv, tenv, exp, break) =
@@ -180,32 +182,31 @@ and transTy (tenv, ty) =
     | Some ty' -> ARRAY (ty', ref ())
     | None -> raise (Semantic_error "Unknown type"))
 
-and checkCyclicTy (tenv, symbol) =
-  let step1 sym =
-    match sym with 
-    | Some sym ->
-      (match S.look (tenv, sym) with
-      | Some ty ->
-        (match ty with
-        | NAME (_, tyref) ->
-          (match !tyref with
-          | Some NAME (sym', _) -> Some sym'
-          | Some _ -> None 
-          | None -> 
-            raise (Semantic_error "Incomplete type")  
-          )
-        | _ -> None)
-      | None -> raise (Semantic_error "Unknown type"))
-    | None -> None
-
-  in let rec followCycle sym1 sym2 = 
+and checkForCyclicType (tenv, symbol) =
+  let open Option.Monad_infix in
+  
+  let step symopt =
+    symopt >>= (fun sym ->
+    S.look (tenv, sym) >>= (fun ty ->
+    match ty with
+    | NAME (_, tyref) -> !tyref >>= (function
+        | NAME (sym', _) -> Some sym'
+        | _ -> None
+      )
+    | _ -> None))
+  in 
+  
+  let rec followCycle sym1 sym2 = 
     match (sym1, sym2) with 
     | (None, _) | (_, None) -> ()
     | (Some sym1, Some sym2) when sym1 = sym2 ->
       raise (Semantic_error "cycle detected") 
-    | _ -> followCycle (sym1 |> step1) (sym2 |> step1 |> step1)
- 
-  in followCycle (Some symbol) ((Some symbol) |> step1 |>step1)
+    | _ -> followCycle (sym1 |> step) (sym2 |> step |> step)
+  in
+  
+  let sym = Some symbol in
+
+  followCycle sym (sym |> step |>step)
 
 and transDec (venv, tenv, dec, break) = 
   match dec with
@@ -233,7 +234,7 @@ and transDec (venv, tenv, dec, break) =
       in
 
       let v' = S.enter (v, name, FunEntry {
-        formals = typarams |> List.map ~f:(fun (n,t) -> t) ; 
+        formals = typarams |> List.map ~f:(fun (n,t) -> t); 
         result = match tyresopt with Some ty -> ty | None -> UNIT
       })
       in
@@ -260,36 +261,43 @@ and transDec (venv, tenv, dec, break) =
       (venv', tenv)
     end
   
-  | VarDec { name; escape; typ; init; pos } -> 
-    let { exp = _; ty = tyinit } = transExp (venv, tenv, init, break) in
-    (match typ with
-    | Some (symbol, pos) ->
-      (match Symbol.look (tenv, symbol) with
-      | Some ty ->
-        if type_equal ty tyinit then
-          (S.enter (venv, name, VarEntry {ty = tyinit}), tenv)
-        else
-          raise (Semantic_error "Type of initiialyzer does not match type annotation")
-      | None -> raise (Semantic_error "unknown type name"))
-    | None -> 
-      if tyinit = NIL then
-        raise (Semantic_error "A variable declaration initialized with nil must beconstrained to be a structure")
-      else
-        (S.enter (venv, name, VarEntry {ty = tyinit}), tenv))
-  
+  | VarDec {name; escape; typ; init; pos} -> 
+    
+    let {exp = _; ty = tyinit} = transExp (venv, tenv, init, break) in
+    begin
+      match typ with
+      | Some (symbol, pos) ->
+        begin
+          match Symbol.look (tenv, symbol) with
+          | Some ty ->
+            if not (type_equal ty tyinit) then
+              raise (Semantic_error "Type of initiialyzer does not match type annotation")
+          | None -> raise (Semantic_error "unknown type name")
+        end
+      | None -> 
+        if tyinit = NIL then
+          raise (Semantic_error "A variable declaration initialized with nil must beconstrained to be a structure")
+    end;
+
+    (S.enter (venv, name, VarEntry {ty = tyinit}), tenv)
+
   | TypeDec l ->
-    let tenv' = List.fold l ~init:tenv ~f:(fun t {name; _} -> 
-      S.enter (t, name, NAME(name, ref None))
+    
+    let (fdecs, tenv') = List.fold l ~init:([], tenv) ~f:(fun (fdecs, te) {name; ty} ->
+      let fdec = NAME(name, ref None) in
+      ((fdec, ty)::fdecs, S.enter (te, name, fdec))
     ) in
-    (List.iter l ~f:(fun {name; ty; pos} -> 
-      let typlaceholder = S.look(tenv', name) in
-      match typlaceholder with
-      | Some NAME(name, tyref) -> 
+
+    fdecs |> List.rev |> List.iter ~f:(fun (fdec, ty) -> 
+      match fdec with
+      | NAME (name, tyref) -> 
         tyref := Some (transTy(tenv', ty))
-      | _ -> ()
+      | _ -> assert(false)
     );
-    List.iter l ~f:(fun {name; ty; pos} -> checkCyclicTy(tenv', name));
-    (venv, tenv'))
+
+    List.iter l ~f:(fun {name; ty; pos} -> checkForCyclicType(tenv', name));
+
+    (venv, tenv')
 
 and transVar (venv, tenv, var) =
   match var with
@@ -304,7 +312,7 @@ and transVar (venv, tenv, var) =
     (let {exp; ty} = transVar (venv, tenv, var) in
       match ty with
       | RECORD (fields, _) ->
-        (match List.find fields (fun (sym', _) -> sym == sym')  with
+        (match List.find fields (fun (sym', _) -> sym = sym')  with
         | Some (_, ty) -> { exp = (); ty = actual_ty ty }
         | None -> raise (Semantic_error "unknown field for record")) 
       | _ -> raise (Semantic_error "var isn't a record"))
