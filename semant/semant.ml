@@ -173,17 +173,22 @@ let rec transExp (venv, tenv, exp, break) =
 and transTy (tenv, ty) = 
   match ty with 
   | NameTy (symbol, pos) -> 
-    (match S.look (tenv, symbol) with
-    | Some ty' -> ty'
-    | None -> raise (Semantic_error "Unknown type"))
+    begin
+      match S.look (tenv, symbol) with
+      | Some ty' -> ty'
+      | None -> raise (Semantic_error "Unknown type")
+    end
   | RecordTy fields -> let ftypes =  List.map fields ~f:(fun {typ; _} -> 
     match S.look (tenv, typ) with
     | Some ty' -> (typ, ty')
     | None -> raise (Semantic_error "Unknown type")
   ) in RECORD (ftypes, ref ())
-  | ArrayTy (symbol, pos) ->  (match S.look (tenv, symbol) with
-    | Some ty' -> ARRAY (ty', ref ())
-    | None -> raise (Semantic_error "Unknown type"))
+  | ArrayTy (symbol, pos) ->  
+    begin
+      match S.look (tenv, symbol) with
+      | Some ty' -> ARRAY (ty', ref ())
+      | None -> raise (Semantic_error "Unknown type")
+    end
 
 and checkForCyclicType (tenv, symbol) =
   let open Option.Monad_infix in

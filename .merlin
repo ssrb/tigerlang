@@ -2,8 +2,10 @@ S parser
 S lexer
 S absyn
 S semant
+S irtrans
 B parser
 B lexer
 B absyn
 B semant
+B irtrans
 PKG core
