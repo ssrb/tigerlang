@@ -1,3 +1,6 @@
+include Frame_intf
+module F = functor (Frame: frame) -> struct  
+
 open Core.Std
 open Absyn
 open Symbol
@@ -31,7 +34,7 @@ let rec actual_ty ty =
 let rec transExp (venv, tenv, exp, break) =
 
   let trexp (e, break) = transExp (venv, tenv, e, break) in
-
+  
   match exp with
   
   | VarExp v -> transVar (venv, tenv, v)
@@ -286,7 +289,8 @@ and transDec (venv, tenv, dec, break) =
     let (fdecs, tenv') = List.fold l ~init:([], tenv) ~f:(fun (fdecs, te) {name; ty} ->
       let fdec = NAME(name, ref None) in
       ((fdec, ty)::fdecs, S.enter (te, name, fdec))
-    ) in
+    ) 
+    in
 
     fdecs |> List.rev |> List.iter ~f:(fun (fdec, ty) -> 
       match fdec with
@@ -300,26 +304,42 @@ and transDec (venv, tenv, dec, break) =
     (venv, tenv')
 
 and transVar (venv, tenv, var) =
+
   match var with
+
   | SimpleVar (symbol, pos) -> 
-    (match S.look (venv, symbol) with
-    | Some(entry) -> 
-      (match entry with
-      | VarEntry {ty} ->  { exp = (); ty = actual_ty ty }
-      | FunEntry {formals; result} -> raise (Semantic_error "function is not value"))
-    | None -> raise (Semantic_error "unknown variable name"))
+    begin
+      match S.look (venv, symbol) with
+      | Some(entry) -> 
+        begin
+        match entry with
+          | VarEntry {ty} ->  {exp = (); ty = actual_ty ty}
+          | FunEntry {formals; result} -> raise (Semantic_error "function is not value")
+        end
+      | None -> raise (Semantic_error "unknown variable name")
+    end
+
   | FieldVar (var, sym, pos) ->
-    (let {exp; ty} = transVar (venv, tenv, var) in
+    let {exp; ty} = transVar (venv, tenv, var) in
+    begin
       match ty with
       | RECORD (fields, _) ->
-        (match List.find fields (fun (sym', _) -> sym = sym')  with
-        | Some (_, ty) -> { exp = (); ty = actual_ty ty }
-        | None -> raise (Semantic_error "unknown field for record")) 
-      | _ -> raise (Semantic_error "var isn't a record"))
+        begin
+          match List.find fields (fun (sym', _) -> sym = sym')  with
+          | Some (_, ty) -> { exp = (); ty = actual_ty ty }
+          | None -> raise (Semantic_error "unknown field for record")
+        end
+      | _ -> raise (Semantic_error "var isn't a record")
+    end
+
   | SubscriptVar (var, exp, pos) -> 
-    (let {exp; ty} = transVar (venv, tenv, var) in
+    let {exp; ty} = transVar (venv, tenv, var) in
+    begin
       match ty with
       | ARRAY (ty, _) -> { exp = (); ty = actual_ty ty }
-      | _ -> raise (Semantic_error "subscripted is not an array"))
+      | _ -> raise (Semantic_error "subscripted is not an array")
+    end
 
 let transProg e0 = transExp (Env.base_venv, Env.base_tenv, e0, false)
+
+end
