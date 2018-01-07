@@ -1,5 +1,5 @@
 {
-module F = functor (T: Tigerlex_intf.T) -> struct  
+module F = functor (T: TokenCBs.T) -> struct  
 open Lexing
 open T
 

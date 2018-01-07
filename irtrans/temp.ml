@@ -2,7 +2,7 @@ type temp = int
 type label = Symbol.symbol
 
 let temps = ref 100
-let newtemp () = let t = !temps in begin temps := t + 1; t end
+let newtemp () = let t = !temps in temps := t + 1; t
 let makestring t = "t" ^ (string_of_int t)
 let newlabel () = Symbol.symbol ""
 let namedlabel = Symbol.symbol

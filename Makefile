@@ -7,7 +7,7 @@ export THREADS = yes
 
 define PROJ_lexer_tester
 	RESULT = lexer/lexer_tester
-	SOURCES = lexer/tigerlex_intf.ml \
+	SOURCES = lexer/tokenCBs.ml \
 	lexer/tigerlex.mll \
 	lexer/testtokens.ml \
 	lexer/lexer_tester.ml
@@ -21,7 +21,7 @@ define PROJ_parser_tester
 	absyn/symbol.ml \
 	absyn/prabsyn.ml \
 	parser/tigerparse.mly \
-	lexer/tigerlex_intf.ml \
+	lexer/tokenCBs.ml \
 	lexer/tigerlex.mll \
 	parser/parsertokens.ml \
 	parser/parser_tester.ml
@@ -35,7 +35,7 @@ define PROJ_semant_tester
 	absyn/table.ml \
 	absyn/symbol.ml \
 	parser/tigerparse.mly \
-	lexer/tigerlex_intf.ml \
+	lexer/tokenCBs.ml \
 	lexer/tigerlex.mll \
 	parser/parsertokens.ml \
 	irtrans/translate.mli \
