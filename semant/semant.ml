@@ -241,6 +241,8 @@ and transDec (venv, tenv, dec, break) =
       in
 
       let v' = S.enter (v, name, FunEntry {
+        level = Translate.outermost;
+        label = Temp.newlabel ();
         formals = typarams |> List.map ~f:(fun (n,t) -> t); 
         result = match tyresopt with Some ty -> ty | None -> UNIT
       })
@@ -252,7 +254,7 @@ and transDec (venv, tenv, dec, break) =
     let trans_body (name, typarams, tyresopt, body) =
 
       let venv'' = List.fold typarams ~init:venv' ~f:(fun v (n, t) ->
-        S.enter (v, n, VarEntry {ty = t})
+        S.enter (v, n, VarEntry {access = Translate.allocLocal Translate.outermost true; ty = t})
       )
       in
       
@@ -286,7 +288,7 @@ and transDec (venv, tenv, dec, break) =
           raise (Semantic_error "A variable declaration initialized with nil must beconstrained to be a structure")
     end;
 
-    (S.enter (venv, name, VarEntry {ty = tyinit}), tenv)
+    (S.enter (venv, name, VarEntry {access = Translate.allocLocal Translate.outermost true; ty = tyinit}), tenv)
 
   | TypeDec l ->
     

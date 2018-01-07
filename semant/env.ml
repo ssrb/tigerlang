@@ -1,7 +1,5 @@
-(*type access =*)  
-
-type varentry = {ty : Types.ty}
-type funentry = {formals : Types.ty list; result: Types.ty}
+type varentry = {access: Translate.access; ty : Types.ty}
+type funentry = {level: Translate.level; label: Temp.label; formals : Types.ty list; result: Types.ty}
 type enventry = VarEntry of varentry | FunEntry of funentry
 
 let base_tenv = 
