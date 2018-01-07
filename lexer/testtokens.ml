@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 type linenum = int
 type token = string
 let _TYPE (i,j) = "TYPE   " ^ Int.to_string(i)

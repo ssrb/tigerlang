@@ -1,6 +1,6 @@
 module F = functor (Frame: Frame.T) -> struct  
 
-open Core.Std
+open Core
 open Absyn
 open Symbol
 open Env
