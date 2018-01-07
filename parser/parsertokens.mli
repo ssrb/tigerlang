@@ -1,1 +1,1 @@
-include Tigerlex.tokens with type token = Tigerparse.token
+include Tigerlex_intf.T with type token = Tigerparse.token

@@ -1,1 +1,1 @@
-include Tigerlex.tokens with type token = string
+include Tigerlex_intf.T with type token = string

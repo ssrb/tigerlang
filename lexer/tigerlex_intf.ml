@@ -1,4 +1,4 @@
-module type tokens = sig
+module type T = sig
 type linenum = int
 type token
 val _TYPE : linenum * linenum -> token

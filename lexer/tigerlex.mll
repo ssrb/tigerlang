@@ -1,6 +1,5 @@
 {
-include Tigerlex_intf
-module F = functor (T: tokens) -> struct  
+module F = functor (T: Tigerlex_intf.T) -> struct  
 open Lexing
 open T
 
