@@ -1,4 +1,3 @@
-open Core.Std
 open Tigerparse
 type linenum = int
 type token = Tigerparse.token

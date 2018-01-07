@@ -1,18 +1,11 @@
+open Core.Std
+
 type temp = int
 type label = Symbol.symbol
 
 let temps = ref 100
+let labs = ref 0
 let newtemp () = let t = !temps in temps := t + 1; t
 let makestring t = "t" ^ (string_of_int t)
-let newlabel () = Symbol.symbol ""
+let newlabel () = let l = !labs in labs := l + 1; Symbol.symbol (sprintf "L%d" l)  
 let namedlabel = Symbol.symbol
-
-(*structure Table = IntMapTable(type key = int
-				  fun getInt n = n)
-
-local structure F = Format
-      fun postinc x = let val i = !x in x := i+1; i end
-      val labs = ref 0
-in
-    fun newlabel() = Symbol.symbol(F.format "L%d" [F.INT(postinc labs)])
-end*)
