@@ -1,6 +1,7 @@
 type frame = unit
 type access = unit
-(* val newFrame: {name: Temp.label; formals: bool list} -> frame*)
-(*val name: frame -> Temp.label*)
+type nfparams = {name: Temp.label; formals: bool list} 
+let newFrame {name; formals} = ()
+let name frame = Temp.newlabel ()
 let formals f = []
 let allocLocal  f  escape = ()

@@ -1,6 +1,5 @@
-include module type of Frame_intf
 module F :
- functor (Frame : frame) ->
+ functor (Frame : Frame.T) ->
   sig
    exception Semantic_error of string
    type expty = {exp: Translate.exp; ty: Types.ty}

@@ -1,5 +1,4 @@
-include Frame_intf
-module F = functor (Frame: frame) -> struct  
+module F = functor (Frame: Frame.T) -> struct  
 
 open Core.Std
 open Absyn

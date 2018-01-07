@@ -39,7 +39,7 @@ define PROJ_semant_tester
 	lexer/tigerlex.mll \
 	parser/parsertokens.ml \
 	irtrans/translate.mli \
-	irtrans/frame_intf.ml \
+	irtrans/temp.ml \
 	semant/types.ml \
 	semant/env.ml \
 	semant/semant.ml \

@@ -1,23 +1,18 @@
-(* make this an abstraction sometime *)
+type temp = int
+type label = Symbol.symbol
 
-    type temp = int
-    val temps = ref 100
-    fun newtemp() = let val t = !temps in temps := t+1; t end
+let temps = ref 100
+let newtemp () = let t = !temps in begin temps := t + 1; t end
+let makestring t = "t" ^ (string_of_int t)
+let newlabel () = Symbol.symbol ""
+let namedlabel = Symbol.symbol
 
-    structure Table = IntMapTable(type key = int
+(*structure Table = IntMapTable(type key = int
 				  fun getInt n = n)
-
-    fun makestring t = "t" ^ Int.toString t
-
-  type label = Symbol.symbol
 
 local structure F = Format
       fun postinc x = let val i = !x in x := i+1; i end
       val labs = ref 0
- in
+in
     fun newlabel() = Symbol.symbol(F.format "L%d" [F.INT(postinc labs)])
-    val namedlabel = Symbol.symbol
-end
-
-
-end
+end*)
