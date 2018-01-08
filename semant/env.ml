@@ -1,3 +1,5 @@
+module F = functor (Translate : Translate.T) ->
+struct
 type varentry = {access: Translate.access; ty : Types.ty}
 type funentry = {level: Translate.level; label: Temp.label; formals : Types.ty list; result: Types.ty}
 type enventry = VarEntry of varentry | FunEntry of funentry
@@ -10,3 +12,4 @@ let base_tenv =
     tenv
 
 let base_venv = Symbol.empty
+end

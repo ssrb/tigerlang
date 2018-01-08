@@ -1,7 +1,8 @@
-module F = functor (Frame: Frame.T) -> struct  
+module F = functor (Translate: Translate.T) -> struct  
 
 module S = Symbol
 module T = Translate
+module Env = Env.F(Translate)
 
 open Core
 open Absyn

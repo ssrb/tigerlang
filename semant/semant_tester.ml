@@ -1,5 +1,5 @@
 module Lexer = Tigerlex.F(Parsertokens)
-module M68KSemant = Semant.F(M68kFrame)
+module M68KSemant = Semant.F(Translate.F)
 
 let {M68KSemant.exp = _; ty } =
 	let lexbuf = Lexing.from_channel stdin in
