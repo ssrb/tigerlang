@@ -9,7 +9,7 @@ val formals: level -> access list
 val allocLocal: level -> bool -> access
 end
 
-module F : T =
+module F = functor(Frame : Frame.T) ->
 struct
 type exp = unit
 type level = unit
