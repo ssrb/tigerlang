@@ -1,4 +1,5 @@
 module type T = sig
+module Temp : Temp.T
 type exp = unit
 type level
 type access
@@ -11,6 +12,7 @@ end
 
 module F = functor(Frame : Frame.T) ->
 struct
+module Temp = Frame.Temp
 type exp = unit
 type level = unit
 type access = unit

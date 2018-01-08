@@ -1,4 +1,5 @@
 module type T = sig
+module Temp : Temp.T
 type exp = unit
 type level
 type access
@@ -9,4 +10,4 @@ val formals: level -> access list
 val allocLocal: level -> bool -> access
 end
 
-module F : functor(Frame : Frame.T) -> T
+module F : functor(Frame: Frame.T) -> T

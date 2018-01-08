@@ -45,6 +45,7 @@ define PROJ_semant_tester
 	semant/env.ml \
 	semant/semant.ml \
 	semant/prtype.ml \
+	irtrans/m68kTemp.ml \
 	irtrans/m68kFrame.ml \
 	semant/semant_tester.ml
 	YFLAGS = --explain --trace --dump

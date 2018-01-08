@@ -1,3 +1,4 @@
+module Temp = M68kTemp
 type frame = unit
 type access = unit
 type nfparams = {name: Temp.label; formals: bool list} 

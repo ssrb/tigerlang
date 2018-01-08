@@ -1,4 +1,5 @@
 module type T = sig
+module Temp : Temp.T
 type frame
 type access
 type nfparams = {name: Temp.label; formals: bool list} 
