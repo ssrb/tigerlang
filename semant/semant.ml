@@ -1,12 +1,14 @@
 module F = functor (Frame: Frame.T) -> struct  
 
+module S = Symbol
+module T = Translate
+
 open Core
 open Absyn
-open Symbol
+open S
+open T
 open Env
 open Types
-
-module S = Symbol
 
 type venv = Env.enventry Symbol.table
 type tenv = Types.ty Symbol.table
@@ -30,9 +32,9 @@ let rec actual_ty ty =
     end
   | _ -> ty
 
-let rec transExp (venv, tenv, exp, break) =
+let rec transExp (venv, tenv, lvl, exp, break) =
 
-  let trexp (e, break) = transExp (venv, tenv, e, break) in
+  let trexp (e, break) = transExp (venv, tenv, lvl, e, break) in
   
   match exp with
   
@@ -134,8 +136,8 @@ let rec transExp (venv, tenv, exp, break) =
       raise (Semantic_error "While test must be of integer type")
 
   | ForExp {var = v; escape = b; lo = lo; hi = hi; body = body; pos = pos} ->
-    let (venv', tenv') = transDec (venv, tenv, VarDec { name =  v; escape = b; typ = None; init = lo; pos = pos }, break) in
-    let { exp = _; ty = tybody } = transExp (venv', tenv', body, true) in
+    let (venv', tenv') = transDec (venv, tenv, lvl, VarDec { name =  v; escape = b; typ = None; init = lo; pos = pos }, break) in
+    let { exp = _; ty = tybody } = transExp (venv', tenv', lvl, body, true) in
     {exp = (); ty = tybody}
 
   | BreakExp p ->
@@ -145,8 +147,8 @@ let rec transExp (venv, tenv, exp, break) =
       raise (Semantic_error "No loop to break from")
 
   | LetExp {decs; body; pos} ->
-  	let (venv', tenv') = List.fold decs ~init:(venv, tenv) ~f:(fun (v, t) d -> transDec (v, t, d, break)) in
-  	transExp (venv', tenv', body, break)
+  	let (venv', tenv') = List.fold decs ~init:(venv, tenv) ~f:(fun (v, t) d -> transDec (v, t, lvl, d, break)) in
+  	transExp (venv', tenv', lvl, body, break)
   
   | ArrayExp {typ; size; init; pos} ->
     let {exp = _; ty = tysize} = trexp(size, break) in
@@ -215,12 +217,12 @@ and checkForCyclicType (tenv, symbol) =
 
   followCycle sym (sym |> step |>step)
 
-and transDec (venv, tenv, dec, break) = 
+and transDec (venv, tenv, lvl, dec, break) = 
   match dec with
 
   | FunctionDec l ->
 
-    let forward_declare (fdecs, v) { name; params; result; body } =
+    let forward_declare (fdecs, v) {name; params; result; body} =
       
       let typarams = List.map params ~f:(fun {typ = pname; _} ->
         match S.look (tenv, pname) with
@@ -229,6 +231,9 @@ and transDec (venv, tenv, dec, break) =
       )
       in
       
+      let lab = Temp.newlabel () in
+      let lvl' = T.newLevel  {parent = lvl; name = lab; formals = List.map params ~f:(fun t -> true)} in
+
       let tyresopt =
         match result with
         | Some (res, pos) ->
@@ -241,24 +246,24 @@ and transDec (venv, tenv, dec, break) =
       in
 
       let v' = S.enter (v, name, FunEntry {
-        level = Translate.outermost;
-        label = Temp.newlabel ();
+        level = lvl';
+        label = lab;
         formals = typarams |> List.map ~f:(fun (n,t) -> t); 
         result = match tyresopt with Some ty -> ty | None -> UNIT
       })
       in
 
-      ((name, typarams, tyresopt, body)::fdecs, v') 
+      ((name, lvl', typarams, tyresopt, body)::fdecs, v') 
     in
     let (fdecs, venv') = List.fold l ~init:([], venv) ~f:forward_declare in
-    let trans_body (name, typarams, tyresopt, body) =
+    let trans_body (name, lvl', typarams, tyresopt, body) =
 
       let venv'' = List.fold typarams ~init:venv' ~f:(fun v (n, t) ->
-        S.enter (v, n, VarEntry {access = Translate.allocLocal Translate.outermost true; ty = t})
+        S.enter (v, n, VarEntry {access = T.allocLocal lvl' true; ty = t})
       )
       in
       
-      let {exp = _; ty = tybody} = transExp(venv'' , tenv, body, false) in
+      let {exp = _; ty = tybody} = transExp(venv'' , tenv, lvl', body, false) in
       match tyresopt with
       | Some tyresult ->
         if not (type_equal tybody tyresult) then
@@ -272,7 +277,7 @@ and transDec (venv, tenv, dec, break) =
   
   | VarDec {name; escape; typ; init; pos} -> 
     
-    let {exp = _; ty = tyinit} = transExp (venv, tenv, init, break) in
+    let {exp = _; ty = tyinit} = transExp (venv, tenv, lvl, init, break) in
     begin
       match typ with
       | Some (symbol, pos) ->
@@ -288,7 +293,7 @@ and transDec (venv, tenv, dec, break) =
           raise (Semantic_error "A variable declaration initialized with nil must beconstrained to be a structure")
     end;
 
-    (S.enter (venv, name, VarEntry {access = Translate.allocLocal Translate.outermost true; ty = tyinit}), tenv)
+    (S.enter (venv, name, VarEntry {access = T.allocLocal T.outermost true; ty = tyinit}), tenv)
 
   | TypeDec l ->
     
@@ -346,6 +351,6 @@ and transVar (venv, tenv, var) =
       | _ -> raise (Semantic_error "subscripted is not an array")
     end
 
-let transProg e0 = transExp (Env.base_venv, Env.base_tenv, e0, false)
+let transProg e0 = transExp (Env.base_venv, Env.base_tenv, T.outermost, e0, false)
 
 end
