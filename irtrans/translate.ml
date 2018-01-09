@@ -14,27 +14,22 @@ module F = functor(Frame : Frame.T) ->
 struct
 module Temp = Frame.Temp
 
+open Core
 open Frame
 open Temp
 
 type exp = unit
-type level = Outermost | Level of int * Frame.frame
+type level = int * Frame.frame
 type access = level * Frame.access
 type nlparams = {parent: level; name: Temp.label; formals: bool list}
 
-let outermost = Outermost
+let outermost = (0, Frame.newFrame {name = Temp.newlabel (); formals = []})
 
-let newLevel {parent; name; formals} = 
-let frame = Frame.newFrame {name; formals = true::formals} in
-match parent with
-| Outermost -> Level (0, frame)
-| Level (depth, _) -> Level (succ depth, frame)
+let newLevel {parent = (depth, _); name; formals} = 
+let frame = Frame.newFrame {name; formals = true::formals} in (succ depth, frame)
 
-let formals lvl = []
+let formals ((depth, frame) as lvl) = frame |> Frame.formals |> List.map ~f:(fun acc -> (lvl, acc))
 
-let allocLocal lvl escape = 
-match lvl with
-| Outermost -> assert(false)
-| Level (depth, frame) -> (lvl, Frame.allocLocal frame escape)
+let allocLocal ((depth, frame) as lvl) escape = (lvl, Frame.allocLocal frame escape)
 
 end
