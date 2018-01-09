@@ -18,17 +18,22 @@ open Frame
 open Temp
 
 type exp = unit
-type level = int * Frame.frame
+type level = Outermost | Level of {level: level; frame: Frame.frame}
 type access = level * Frame.access
 
-let outermost = (0, Frame.newFrame ~name:(Temp.newlabel ()) ~formals:[ true ])
+let outermost = Outermost
 
 let newLevel ~parent ~name ~formals =
-let (depth, _) = parent in
-let frame = Frame.newFrame ~name ~formals:(true::formals) in (succ depth, frame)
+Level {level = parent; frame = Frame.newFrame ~name ~formals:(true::formals)}
 
-let formals ((depth, frame) as lvl) = frame |> Frame.formals |> List.tl_exn |> List.map ~f:(fun acc -> (lvl, acc))
+let formals lvl = 
+match lvl with
+| Outermost -> assert(false)
+| Level {frame; _} -> frame |> Frame.formals |> List.tl_exn |> List.map ~f:(fun acc -> (lvl, acc))
 
-let allocLocal ((depth, frame) as lvl) escape = (lvl, Frame.allocLocal frame escape)
+let allocLocal lvl escape = 
+match lvl with
+| Outermost -> assert(false)
+| Level {frame; _} -> (lvl, Frame.allocLocal frame escape)
 
 end
