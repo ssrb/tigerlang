@@ -23,12 +23,12 @@ type level = int * Frame.frame
 type access = level * Frame.access
 type nlparams = {parent: level; name: Temp.label; formals: bool list}
 
-let outermost = (0, Frame.newFrame {name = Temp.newlabel (); formals = []})
+let outermost = (0, Frame.newFrame {name = Temp.newlabel (); formals = [ true ]})
 
 let newLevel {parent = (depth, _); name; formals} = 
 let frame = Frame.newFrame {name; formals = true::formals} in (succ depth, frame)
 
-let formals ((depth, frame) as lvl) = frame |> Frame.formals |> List.map ~f:(fun acc -> (lvl, acc))
+let formals ((depth, frame) as lvl) = frame |> Frame.formals |> List.tl_exn |> List.map ~f:(fun acc -> (lvl, acc))
 
 let allocLocal ((depth, frame) as lvl) escape = (lvl, Frame.allocLocal frame escape)
 
