@@ -13,4 +13,3 @@ let name frame = Temp.newlabel ()
 let formals {faccess; _} = faccess
 
 let allocLocal  (f: frame)  (escape: bool) = InFrame 0
-
