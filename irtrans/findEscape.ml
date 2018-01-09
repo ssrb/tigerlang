@@ -1,6 +1,7 @@
 type depth = int
 type escEnv = (depth * bool ref) Symbol.table
-fun traverseVar(env: escEnv, d: depth, s: Absyn.var): unit
-fun traverseExp(env: escEnv, d: depth, s: Absyn.exp): unit
-fun traverseDecs(env: escEnv, d: depth, s: Absyn.dec list): escEnv
-fun findEscape(prog: Abyn.exp) : unit
+
+let traverseExp (env, d, s) = Symbol.empty
+and traverseDecs (env, d, s) = Symbol.empty
+and traverseVar (env, d, s) = Symbol.empty
+let findEscape prog = traverseExp (Symbol.empty, 0, prog)
