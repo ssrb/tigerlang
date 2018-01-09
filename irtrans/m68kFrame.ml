@@ -3,13 +3,12 @@ open Core
 module Temp = M68kTemp
 
 type access = InFrame of int | InReg of Temp.temp
-type frame = {name: Temp.label; faccess: access list}
-type nfparams = {name: Temp.label; formals: bool list} 
+type frame = {name: Temp.label; formals: access list}
 
-let newFrame {name; formals} = {name; faccess = formals |> List.map ~f:(fun f -> InFrame 0)}
+let newFrame ~name ~formals = {name; formals = formals |> List.map ~f:(fun f -> InFrame 0)}
 
-let name frame = Temp.newlabel ()
+let name {name; _} = name
 
-let formals {faccess; _} = faccess
+let formals {formals; _} = formals
 
 let allocLocal  (f: frame)  (escape: bool) = InFrame 0

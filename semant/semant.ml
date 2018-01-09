@@ -233,7 +233,7 @@ and transDec (venv, tenv, lvl, dec, break) =
       in
       
       let lab = Temp.newlabel () in
-      let lvl' = T.newLevel  {parent = lvl; name = lab; formals = List.map params ~f:(fun t -> true)} in
+      let lvl' = T.newLevel ~parent:lvl ~name:lab ~formals:(List.map params ~f:(fun t -> true)) in
 
       let tyresopt =
         match result with
