@@ -39,7 +39,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
   
   match exp with
   
-  | VarExp v -> transVar (venv, tenv, v)
+  | VarExp v -> transVar (venv, tenv, lvl, v, break)
 
   | NilExp -> {exp = (); ty = Types.NIL}
 
@@ -106,7 +106,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     )
 
   | AssignExp {var; exp; pos} ->
-    let {exp = _; ty = tyleft} = transVar (venv, tenv, var) in
+    let {exp = _; ty = tyleft} = transVar (venv, tenv, lvl, var, break) in
     let {exp = _; ty = tyright} = trexp (exp, break) in
     if type_equal tyleft tyright then 
       {exp = (); ty = tyleft}
@@ -315,7 +315,7 @@ and transDec (venv, tenv, lvl, dec, break) =
 
     (venv, tenv')
 
-and transVar (venv, tenv, var) =
+and transVar (venv, tenv, lvl, var, break) =
 
   match var with
 
@@ -332,7 +332,7 @@ and transVar (venv, tenv, var) =
     end
 
   | FieldVar (var, sym, pos) ->
-    let {exp; ty} = transVar (venv, tenv, var) in
+    let {exp; ty} = transVar (venv, tenv, lvl, var, break) in
     begin
       match ty with
       | RECORD (fields, _) ->
@@ -344,11 +344,14 @@ and transVar (venv, tenv, var) =
       | _ -> raise (Semantic_error "var isn't a record")
     end
 
-  | SubscriptVar (var, exp, pos) -> 
-    let {exp; ty} = transVar (venv, tenv, var) in
+  | SubscriptVar (var, sub, pos) -> 
+    let {exp; ty} = transVar (venv, tenv, lvl, var, break) in
     begin
       match ty with
-      | ARRAY (ty, _) -> { exp = (); ty = actual_ty ty }
+      | ARRAY (ty, _) -> 
+      let {exp; ty} = transExp (venv, tenv, lvl, sub, break) in
+      if not (type_equal ty INT) then raise (Semantic_error "subscript must have int type");
+      { exp = (); ty = actual_ty ty }
       | _ -> raise (Semantic_error "subscripted is not an array")
     end
 
