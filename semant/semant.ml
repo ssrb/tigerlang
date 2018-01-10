@@ -136,10 +136,10 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     else
       raise (Semantic_error "While test must be of integer type")
 
-  | ForExp {var = v; escape = b; lo = lo; hi = hi; body = body; pos = pos} ->
-    let (venv', tenv') = transDec (venv, tenv, lvl, VarDec { name =  v; escape = b; typ = None; init = lo; pos = pos }, break) in
+  | ForExp {var; escape; lo; hi; body = body; pos} ->
+    let (venv', tenv') = transDec (venv, tenv, lvl, VarDec {name =  var; escape; typ = None; init = lo; pos}, break) in
     (* TODO: assert INT*)
-    let {exp; ty = tyhi} = transExp (venv', tenv', lvl, hi, break) in
+    let {exp; ty = tyhi} = transExp (venv, tenv, lvl, hi, break) in
     if not (type_equal tyhi INT) then raise (Semantic_error "For loop upper bound must have int type");
     let {exp; ty = tybody} = transExp (venv', tenv', lvl, body, true) in
     {exp = (); ty = tybody}
