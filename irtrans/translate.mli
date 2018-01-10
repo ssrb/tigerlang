@@ -1,6 +1,7 @@
 module type T = sig
 module Temp : Temp.T
-type exp = unit
+module Tree: Tree.T
+type exp = Ex of Tree.exp | Nx of Tree.stm | Cx of (Tree.label * Tree.label -> Tree.stm)
 type level
 type access
 val outermost: level

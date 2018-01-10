@@ -39,6 +39,7 @@ define PROJ_semant_tester
 	lexer/tigerlex.mll \
 	parser/parsertokens.ml \
 	irtrans/temp.ml \
+	irtrans/tree.ml \
 	irtrans/frame.ml \
 	irtrans/translate.ml \
 	irtrans/findEscape.ml \

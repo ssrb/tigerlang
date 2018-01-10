@@ -1,6 +1,7 @@
 module type T = sig
 module Temp : Temp.T
-type exp = unit
+module Tree: Tree.T
+type exp = Ex of Tree.exp | Nx of Tree.stm | Cx of (Tree.label * Tree.label -> Tree.stm)
 type level
 type access
 val outermost: level
@@ -12,12 +13,13 @@ end
 module F = functor(Frame : Frame.T) ->
 struct
 module Temp = Frame.Temp
+module Tree = Tree.F(Temp)
 
 open Core
 open Frame
 open Temp
 
-type exp = unit
+type exp = Ex of Tree.exp | Nx of Tree.stm | Cx of (Tree.label * Tree.label -> Tree.stm)
 type level = Outermost | Level of {level: level; frame: Frame.frame}
 type access = level * Frame.access
 

@@ -1,4 +1,5 @@
-module F : functor(Temp: Temp.T) -> sig 
+module type T = sig
+module Temp: Temp.T
 
 type label = Temp.label
 type size
@@ -28,5 +29,6 @@ and relop = EQ | NE | LT | GT | LE | GE
 
 val notRel : relop -> relop
 val commute: relop -> relop
-
 end
+
+module F : functor(Temp: Temp.T) -> T
