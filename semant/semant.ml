@@ -358,6 +358,7 @@ and transVar (venv, tenv, lvl, var, break) =
       | _ -> raise (Semantic_error "subscripted is not an array")
     end
 
-let transProg e0 = transExp (Env.base_venv, Env.base_tenv, T.outermost, e0, false)
-
+let transProg e0 = 
+  FindEscape.findEscape e0;
+  transExp (Env.base_venv, Env.base_tenv, T.outermost, e0, false)
 end

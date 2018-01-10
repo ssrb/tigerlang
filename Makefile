@@ -41,13 +41,13 @@ define PROJ_semant_tester
 	irtrans/temp.ml \
 	irtrans/frame.ml \
 	irtrans/translate.ml \
+	irtrans/findEscape.ml \
 	semant/types.ml \
 	semant/env.ml \
 	semant/semant.ml \
 	semant/prtype.ml \
 	irtrans/m68kTemp.ml \
 	irtrans/m68kFrame.ml \
-	irtrans/findEscape.ml \
 	semant/semant_tester.ml
 	YFLAGS = --explain --trace --dump
 endef
