@@ -12,8 +12,8 @@ val formals: level -> access list
 val allocLocal: level -> bool -> access
 
 val unEx: exp -> Tree.exp
-(*val unNx: exp -> Tree.stm
-val unCx: exp -> Temp.label * Temp.label -> Tree.stm*)
+val unNx: exp -> Tree.stm
+(*val unCx: exp -> Temp.label * Temp.label -> Tree.stm*)
 end
 
 module F = functor(Frame : Frame.T) ->
@@ -68,14 +68,15 @@ let unEx exp =
             T.LABEL t], 
             T.TEMP r)
 
-(* let unNx exp =
+let unNx exp =
+    let module T = Tree in
     match exp with 
-    | Ex ex ->
-    | Nx nx ->
-    | Cx cx ->
-Tree.stm
-
-let unCx exp = 
+    | Ex ex -> T.EXP ex
+    | Nx nx -> nx
+    | Cx cx -> 
+        let l = Temp.newlabel() in
+        seq [cx(l, l); T.LABEL l]
+(*let unCx exp = 
     match exp with 
     | Ex ex ->
     | Nx nx ->
