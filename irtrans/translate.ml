@@ -47,7 +47,7 @@ match lvl with
 let rec seq stms =
     let module T = Tree in
     match stms with
-    | [] -> T.EXP (T.CONST 0)
+    | [] -> assert(false)
     | [ stm ] -> stm
     | stm::stms' -> T.SEQ(stm, seq stms')
 
@@ -60,7 +60,13 @@ let unEx exp =
         let r = Temp.newtemp () in
         let t = Temp.newlabel () in
         let f = Temp.newlabel () in
-        T.ESEQ(seq [T.MOVE(Tree.TEMP r, T.CONST 1); cx (t, f); T.LABEL f; T.MOVE(Tree.TEMP r, T.CONST 0); T.LABEL t], T.TEMP r)
+        T.ESEQ(seq [
+            T.MOVE(Tree.TEMP r, T.CONST 1); 
+            cx (t, f); 
+            T.LABEL f; 
+            T.MOVE(Tree.TEMP r, T.CONST 0); 
+            T.LABEL t], 
+            T.TEMP r)
 
 (* let unNx exp =
     match exp with 
