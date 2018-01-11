@@ -2,7 +2,7 @@ module type T = sig
 module Temp : Temp.T
 module Tree: Tree.T
 
-type exp = Ex of Tree.exp | Nx of Tree.stm | Cx of (Tree.label * Tree.label -> Tree.stm)
+type exp
 type level
 type access
 
@@ -10,6 +10,8 @@ val outermost: level
 val newLevel: parent:level -> name:Temp.label -> formals:bool list -> level
 val formals: level -> access list
 val allocLocal: level -> bool -> access
+val transVar: access * level -> Tree.exp
+val toDo: unit -> exp
 end
 
 module F = functor(Frame : Frame.T) ->
@@ -39,6 +41,10 @@ let allocLocal lvl escape =
 match lvl with
 | Outermost -> assert(false)
 | Level ({frame; _}, _) -> (lvl, Frame.allocLocal frame escape)
+
+let transVar ((access : access), (level : level)) = Tree.CONST 0
+    
+let toDo () = Ex (Tree.CONST 0)
 
 let rec seq stms =
     let module T = Tree in

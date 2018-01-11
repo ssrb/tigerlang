@@ -41,11 +41,11 @@ let rec transExp (venv, tenv, lvl, exp, break) =
   
   | VarExp v -> transVar (venv, tenv, lvl, v, break)
 
-  | NilExp -> {exp = (T.Ex (T.Tree.CONST 0)); ty = Types.NIL}
+  | NilExp -> {exp = T.toDo (); ty = Types.NIL}
 
-  | IntExp i -> {exp = (T.Ex (T.Tree.CONST 0)); ty = Types.INT}
+  | IntExp i -> {exp = T.toDo (); ty = Types.INT}
 
-  | StringExp (s, p) ->  {exp = (T.Ex (T.Tree.CONST 0)); ty = Types.STRING}
+  | StringExp (s, p) ->  {exp = T.toDo (); ty = Types.STRING}
   
   | CallExp {func; args; pos} ->
     begin
@@ -61,7 +61,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
 
               let exp = List.map args ~f:(fun a -> trexp (a, break))
               |> List.zip_exn formals 
-              |> List.fold ~init:(T.Ex (T.Tree.CONST 0)) ~f:(fun exp (f, {ty; _}) ->
+              |> List.fold ~init:(T.toDo ()) ~f:(fun exp (f, {ty; _}) ->
                 if not (type_equal f ty) then
                   raise (Semantic_error "wrong type in function call");
                 exp
@@ -77,7 +77,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     let {exp = _; ty = tyleft} = trexp (left, break) in
     let {exp = _; ty = tyright} = trexp (right, break) in
     if (type_equal tyleft Types.INT) && (type_equal tyright Types.INT) then
-     {exp = (T.Ex (T.Tree.CONST 0)); ty = Types.INT}
+     {exp = T.toDo (); ty = Types.INT}
     else
      raise (Semantic_error "integer expected")
   
@@ -88,7 +88,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
         begin
           match rty with
           | Types.RECORD (ftypes, _) ->
-            let exp = List.fold fields ~init:(T.Ex (T.Tree.CONST 0)) ~f:(fun e (sym, exp, pos) ->
+            let exp = List.fold fields ~init:(T.toDo ()) ~f:(fun e (sym, exp, pos) ->
               let {exp = _; ty} = trexp (exp, break) in 
               if not (List.exists ftypes (fun ft -> ft = (sym, ty))) then
                 raise (Semantic_error "not a record type");
@@ -101,7 +101,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     end
 
   | SeqExp l ->
-    List.fold l ~init:{exp = (T.Ex (T.Tree.CONST 0)); ty = Types.UNIT} ~f:(fun _ exp -> 
+    List.fold l ~init:{exp = T.toDo (); ty = Types.UNIT} ~f:(fun _ exp -> 
       trexp (fst exp, break)
     )
 
@@ -109,7 +109,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     let {exp = _; ty = tyleft} = transVar (venv, tenv, lvl, var, break) in
     let {exp = _; ty = tyright} = trexp (exp, break) in
     if type_equal tyleft tyright then 
-      {exp = (T.Ex (T.Tree.CONST 0)); ty = tyleft}
+      {exp = T.toDo (); ty = tyleft}
     else
       raise (Semantic_error "Incompatible type in assignment")
 
@@ -118,11 +118,11 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     let {exp = _; ty = tythen} = trexp (then', break) in
     if type_equal tytest Types.INT then
       match else' with
-      | None -> {exp = (T.Ex (T.Tree.CONST 0)); ty = Types.NIL}
+      | None -> {exp = T.toDo (); ty = Types.NIL}
       | Some e -> 
         let {exp = _; ty = tyelse} = trexp (e, break) in
         if type_equal tythen tyelse then
-          {exp = (T.Ex (T.Tree.CONST 0)); ty = tythen}
+          {exp = T.toDo (); ty = tythen}
         else
           raise (Semantic_error "If-then-else type is inconsistent")
     else
@@ -132,7 +132,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     let {exp = _; ty = tytest} = trexp (test, break) in
     let {exp = _; ty = tybody} = trexp (body, true) in
     if type_equal tytest Types.INT then
-      {exp = (T.Ex (T.Tree.CONST 0)); ty = tybody}
+      {exp = T.toDo (); ty = tybody}
     else
       raise (Semantic_error "While test must be of integer type")
 
@@ -142,11 +142,11 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     let {exp; ty = tyhi} = transExp (venv, tenv, lvl, hi, break) in
     if not (type_equal tyhi INT) then raise (Semantic_error "For loop upper bound must have int type");
     let {exp; ty = tybody} = transExp (venv', tenv', lvl, body, true) in
-    {exp = (T.Ex (T.Tree.CONST 0)); ty = tybody}
+    {exp = T.toDo (); ty = tybody}
 
   | BreakExp p ->
     if break then
-      {exp = (T.Ex (T.Tree.CONST 0)); ty = Types.NIL}
+      {exp = T.toDo (); ty = Types.NIL}
     else
       raise (Semantic_error "No loop to break from")
 
@@ -164,7 +164,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
           match tyarray with
           | ARRAY (tyelem, unique) -> 
             if type_equal tyelem tyinit then
-              {exp = (T.Ex (T.Tree.CONST 0)); ty = tyarray}
+              {exp = T.toDo (); ty = tyarray}
             else
               raise (Semantic_error "Incompoatible initializer type")
           | _ ->
@@ -328,7 +328,7 @@ and transVar (venv, tenv, lvl, var, break) =
       | Some(entry) -> 
         begin
         match entry with
-          | VarEntry {ty} ->  {exp = (T.Ex (T.Tree.CONST 0)); ty = actual_ty ty}
+          | VarEntry {ty} ->  {exp = T.toDo (); ty = actual_ty ty}
           | FunEntry {formals; result} -> raise (Semantic_error "function is not value")
         end
       | None -> raise (Semantic_error "unknown variable name")
@@ -341,7 +341,7 @@ and transVar (venv, tenv, lvl, var, break) =
       | RECORD (fields, _) ->
         begin
           match List.find fields (fun (sym', _) -> sym = sym')  with
-          | Some (_, ty) -> { exp = (T.Ex (T.Tree.CONST 0)); ty = actual_ty ty }
+          | Some (_, ty) -> { exp = T.toDo (); ty = actual_ty ty }
           | None -> raise (Semantic_error "unknown field for record")
         end
       | _ -> raise (Semantic_error "var isn't a record")
@@ -354,7 +354,7 @@ and transVar (venv, tenv, lvl, var, break) =
       | ARRAY (ty, _) -> 
       let {exp; ty} = transExp (venv, tenv, lvl, sub, break) in
       if not (type_equal ty INT) then raise (Semantic_error "subscript must have int type");
-      { exp = (T.Ex (T.Tree.CONST 0)); ty = actual_ty ty }
+      { exp = T.toDo (); ty = actual_ty ty }
       | _ -> raise (Semantic_error "subscripted is not an array")
     end
 
