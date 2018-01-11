@@ -15,7 +15,7 @@ end
 module F = functor(Frame : Frame.T) ->
 struct
 
-module Tree = Tree.F(Frame.Temp)
+module Tree = Frame.Tree
 module Temp = Tree.Temp
 
 open Core

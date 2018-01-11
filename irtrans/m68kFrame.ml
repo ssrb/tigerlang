@@ -1,6 +1,7 @@
 open Core
 
-module Temp = M68kTemp
+module Tree = Tree.F(M68kTemp)
+module Temp = Tree.Temp
 
 type access = InFrame of int | InReg of Temp.temp
 type frame = {name: Temp.label; formals: access list; offset: int ref}
@@ -17,3 +18,5 @@ let name {name; _} = name
 let formals {formals; _} = formals
 
 let allocLocal f  escape = InFrame (f.offset ++ 4)
+
+let exp (acces, exp) = Tree.CONST 0
