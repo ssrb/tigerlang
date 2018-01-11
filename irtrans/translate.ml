@@ -76,11 +76,17 @@ let unNx exp =
     | Cx cx -> 
         let l = Temp.newlabel() in
         seq [cx(l, l); T.LABEL l]
-(*let unCx exp = 
+
+let unCx exp = 
+    let module T = Tree in
     match exp with 
     | Ex ex ->
-    | Nx nx ->
-    | Cx cx ->
-Temp.label * Temp.label -> Tree.stm *)
-
+    begin
+        match ex with
+        | T.CONST 0 -> (fun (t, f) -> T.JUMP ((T.NAME f), [f]))
+        | T.CONST _ -> (fun (t, f) -> T.JUMP ((T.NAME t), [t]))
+        | ex -> (fun (t, f) -> T.CJUMP (T.EQ, (T.CONST 0), ex, f, t))
+    end
+    | Nx nx -> assert(false)
+    | Cx cx -> cx
 end
