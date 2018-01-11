@@ -3,6 +3,8 @@ module Tree : Tree.T
 module Temp = Tree.Temp
 type frame
 type access
+val fp: Temp.temp
+val wordSize: int
 val newFrame: name:Temp.label -> formals:bool list -> frame
 val name: frame -> Temp.label
 val formals: frame -> access list

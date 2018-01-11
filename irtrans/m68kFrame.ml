@@ -3,6 +3,9 @@ open Core
 module Tree = Tree.F(M68kTemp)
 module Temp = Tree.Temp
 
+let fp = Temp.newtemp ()
+let wordSize = 4
+
 type access = InFrame of int | InReg of Temp.temp
 type frame = {name: Temp.label; formals: access list; offset: int ref}
 
