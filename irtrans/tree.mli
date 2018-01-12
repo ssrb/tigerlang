@@ -2,7 +2,6 @@ module type T = sig
 module Temp: Temp.T
 
 type label = Temp.label
-type size
 
 type stm = 
 | SEQ of stm * stm

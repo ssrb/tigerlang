@@ -1,4 +1,5 @@
 module type T = sig
+
 module Temp : Temp.T
 
 type exp
@@ -9,8 +10,14 @@ val outermost: level
 val newLevel: parent:level -> name:Temp.label -> formals:bool list -> level
 val formals: level -> access list
 val allocLocal: level -> bool -> access
+
+val transNil: unit -> exp
+val transInt: int -> exp
+val transOp: Absyn.oper * exp * exp -> exp
 val transVar: access * level -> exp
+
 val toDo: unit -> exp
+
 end
 
 module F = functor(Frame : Frame.T) ->
@@ -40,29 +47,6 @@ let allocLocal lvl escape =
 match lvl with
 | Outermost -> assert(false)
 | Level ({frame; _}, _) -> (lvl, Frame.allocLocal frame escape)
-
-let level_equal left right =
-    match (left, right) with 
-    | (Outermost, Outermost) -> true
-    | (Outermost, _) | (_, Outermost) -> false
-    | (Level (_, left), Level (_, right)) -> left = right
-
-let transVar ((declvl ,  access), uselvl) = 
-    let module T = Tree in
-
-    let rec follow_static_link lvl fp =
-        if level_equal declvl lvl then
-            fp
-        else
-            match lvl with
-            | Outermost -> assert(false)
-            | Level ({level = lvl'; frame}, _) -> 
-                let static_link = Frame.formals frame |> List.hd_exn in
-                follow_static_link lvl' (Frame.exp (static_link, fp))
-
-    in Ex (Frame.exp (access, follow_static_link uselvl (T.TEMP Frame.fp)))
-    
-let toDo () = Ex (Tree.CONST 0)
 
 let rec seq stms =
     let module T = Tree in
@@ -109,4 +93,50 @@ let unCx exp =
     end
     | Nx nx -> assert(false)
     | Cx cx -> cx
+
+let transNil i = Ex (Tree.CONST 0)
+let transInt i = Ex (Tree.CONST i)
+
+let transOp (op, left, right) =
+    let module A = Absyn in
+    let module T = Tree in
+    let leftEx = unEx left in
+    let rightEx = unEx left in
+    match op with 
+    | A.PlusOp -> Ex (T.BINOP (T.PLUS, leftEx, rightEx))
+    | A.MinusOp -> Ex (T.BINOP (T.MINUS, leftEx, rightEx))
+    | A.MulOp -> Ex (T.BINOP (T.MUL, leftEx, rightEx))
+    | A.DivOp -> Ex (T.BINOP (T.DIV, leftEx, rightEx))
+    | A.EqOp -> Ex (T.CONST 0)
+    | A.NeqOp -> Ex (T.CONST 0)
+    | A.LtOp -> Ex (T.CONST 0)
+    | A.LeOp ->Ex (T.CONST 0)
+    | A.GtOp -> Ex (T.CONST 0)
+    | A.GeOp -> Ex (T.CONST 0)
+
+let transVar (((declvl ,  access) : access), uselvl) = 
+    let module T = Tree in
+
+    let level_equal left right =
+        match (left, right) with 
+        | (Outermost, Outermost) -> true
+        | (Outermost, _) | (_, Outermost) -> false
+        | (Level (_, left), Level (_, right)) -> left = right
+    in
+
+    let rec follow_static_link lvl fp =
+        if level_equal declvl lvl then
+            fp
+        else
+            match lvl with
+            | Outermost -> assert(false)
+            | Level ({level = lvl'; frame}, _) -> 
+                let static_link = Frame.formals frame |> List.hd_exn in
+                follow_static_link lvl' (Frame.exp (static_link, fp))
+    in 
+    
+    Ex (Frame.exp (access, follow_static_link uselvl (T.TEMP Frame.fp)))
+    
+let toDo () = Ex (Tree.CONST 0)
+
 end

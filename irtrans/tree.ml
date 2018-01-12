@@ -3,7 +3,6 @@ module type T = sig
 module Temp: Temp.T
 
 type label = Temp.label
-type size
 
 type stm = 
 | SEQ of stm * stm
@@ -37,7 +36,6 @@ module F  = functor(Temp: Temp.T) -> struct
 module Temp  = Temp
 
 type label = Temp.label
-type size
 
 type stm = 
 | SEQ of stm * stm

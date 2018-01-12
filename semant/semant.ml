@@ -41,9 +41,9 @@ let rec transExp (venv, tenv, lvl, exp, break) =
   
   | VarExp v -> transVar (venv, tenv, lvl, v, break)
 
-  | NilExp -> {exp = T.toDo (); ty = Types.NIL}
+  | NilExp -> {exp = T.transNil (); ty = Types.NIL}
 
-  | IntExp i -> {exp = T.toDo (); ty = Types.INT}
+  | IntExp i -> {exp = T.transInt i; ty = Types.INT}
 
   | StringExp (s, p) ->  {exp = T.toDo (); ty = Types.STRING}
   
@@ -74,10 +74,10 @@ let rec transExp (venv, tenv, lvl, exp, break) =
   
   | OpExp {left; oper; right; pos} ->
 
-    let {exp = _; ty = tyleft} = trexp (left, break) in
-    let {exp = _; ty = tyright} = trexp (right, break) in
+    let {exp = expLeft; ty = tyleft} = trexp (left, break) in
+    let {exp = expRight; ty = tyright} = trexp (right, break) in
     if (type_equal tyleft Types.INT) && (type_equal tyright Types.INT) then
-     {exp = T.toDo (); ty = Types.INT}
+     {exp = T.transOp (oper, expLeft, expRight); ty = Types.INT}
     else
      raise (Semantic_error "integer expected")
   
