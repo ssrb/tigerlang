@@ -1,6 +1,5 @@
 module type T = sig
 module Temp : Temp.T
-module Tree: Tree.T
 
 type exp
 type level
