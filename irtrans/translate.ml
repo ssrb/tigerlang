@@ -107,12 +107,12 @@ let transOp (op, left, right) =
     | A.MinusOp -> Ex (T.BINOP (T.MINUS, leftEx, rightEx))
     | A.MulOp -> Ex (T.BINOP (T.MUL, leftEx, rightEx))
     | A.DivOp -> Ex (T.BINOP (T.DIV, leftEx, rightEx))
-    | A.EqOp -> Ex (T.CONST 0)
-    | A.NeqOp -> Ex (T.CONST 0)
-    | A.LtOp -> Ex (T.CONST 0)
-    | A.LeOp ->Ex (T.CONST 0)
-    | A.GtOp -> Ex (T.CONST 0)
-    | A.GeOp -> Ex (T.CONST 0)
+    | A.EqOp -> Cx (fun (t, f) -> (T.CJUMP (T.EQ, leftEx, rightEx, t, f)))
+    | A.NeqOp -> Cx (fun (t, f) -> (T.CJUMP (T.NE, leftEx, rightEx, t, f)))
+    | A.LtOp -> Cx (fun (t, f) -> (T.CJUMP (T.LT, leftEx, rightEx, t, f)))
+    | A.LeOp -> Cx (fun (t, f) -> (T.CJUMP (T.LE, leftEx, rightEx, t, f)))
+    | A.GtOp -> Cx (fun (t, f) -> (T.CJUMP (T.LE, rightEx, leftEx, t, f)))
+    | A.GeOp -> Cx (fun (t, f) -> (T.CJUMP (T.LT, rightEx, leftEx, t, f)))
 
 let transVar (((declvl ,  access) : access), uselvl) = 
     let module T = Tree in
