@@ -328,7 +328,7 @@ and transVar (venv, tenv, lvl, var, break) =
       | Some(entry) -> 
         begin
         match entry with
-          | VarEntry {ty} ->  {exp = T.toDo (); ty = actual_ty ty}
+          | VarEntry {access; ty} ->  {exp = T.transVar (access , lvl); ty = actual_ty ty}
           | FunEntry {formals; result} -> raise (Semantic_error "function is not value")
         end
       | None -> raise (Semantic_error "unknown variable name")
