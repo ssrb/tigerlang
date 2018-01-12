@@ -22,4 +22,8 @@ let formals {formals; _} = formals
 
 let allocLocal f  escape = InFrame (f.offset ++ 4)
 
-let exp (acces, exp) = Tree.CONST 0
+let exp (access, exp) =
+    let module T = Tree in
+    match access with
+    | InFrame off -> T.MEM (T.BINOP (T.PLUS, exp, (T.CONST off)))
+    | InReg temp -> T.TEMP temp

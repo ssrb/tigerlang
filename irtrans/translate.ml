@@ -41,7 +41,9 @@ match lvl with
 | Outermost -> assert(false)
 | Level ({frame; _}, _) -> (lvl, Frame.allocLocal frame escape)
 
-let transVar ((access : access), (level : level)) = Ex (Tree.CONST 0)
+let transVar ((declvl ,  access), uselvl) = 
+    let module T = Tree in
+    Ex (Frame.exp (access, (T.TEMP Frame.fp)))
     
 let toDo () = Ex (Tree.CONST 0)
 
