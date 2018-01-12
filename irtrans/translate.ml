@@ -41,9 +41,26 @@ match lvl with
 | Outermost -> assert(false)
 | Level ({frame; _}, _) -> (lvl, Frame.allocLocal frame escape)
 
+let level_equal left right =
+    match (left, right) with 
+    | (Outermost, Outermost) -> true
+    | (Outermost, _) | (_, Outermost) -> false
+    | (Level (_, left), Level (_, right)) -> left = right
+
 let transVar ((declvl ,  access), uselvl) = 
     let module T = Tree in
-    Ex (Frame.exp (access, (T.TEMP Frame.fp)))
+
+    let rec follow_static_link lvl fp =
+        if level_equal declvl lvl then
+            fp
+        else
+            match lvl with
+            | Outermost -> assert(false)
+            | Level ({level = lvl'; frame}, _) -> 
+                let static_link = Frame.formals frame |> List.hd_exn in
+                follow_static_link lvl' (Frame.exp (static_link, fp))
+
+    in Ex (Frame.exp (access, follow_static_link uselvl (T.TEMP Frame.fp)))
     
 let toDo () = Ex (Tree.CONST 0)
 
