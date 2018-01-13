@@ -73,13 +73,11 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     end
   
   | OpExp {left; oper; right; pos} ->
-
     let {exp = expLeft; ty = tyleft} = trexp (left, break) in
     let {exp = expRight; ty = tyright} = trexp (right, break) in
-    if (type_equal tyleft Types.INT) && (type_equal tyright Types.INT) then
-     {exp = T.transOp (oper, expLeft, expRight); ty = Types.INT}
-    else
-     raise (Semantic_error "integer expected")
+    if not (type_equal tyleft Types.INT) || not (type_equal tyright Types.INT) then
+     raise (Semantic_error "integer expected");
+    {exp = T.transOp (oper, expLeft, expRight); ty = Types.INT}
   
   | RecordExp {fields; typ; pos} ->
     begin
@@ -101,9 +99,8 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     end
 
   | SeqExp l ->
-    List.fold l ~init:{exp = T.toDo (); ty = Types.UNIT} ~f:(fun _ exp -> 
-      trexp (fst exp, break)
-    )
+    let ts = List.fold l ~init:[] ~f:(fun ts (t, _) -> (trexp (t, break))::ts) in
+    {exp = T.transSeq(ts |> List.rev_map ~f:(fun x -> x.exp)); ty = (ts |> List.hd_exn).ty} 
 
   | AssignExp {var; exp; pos} ->
     let {exp = _; ty = tyleft} = transVar (venv, tenv, lvl, var, break) in

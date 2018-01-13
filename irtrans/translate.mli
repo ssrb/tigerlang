@@ -15,6 +15,7 @@ val transNil: unit -> exp
 val transInt: int -> exp
 val transOp: Absyn.oper * exp * exp -> exp
 val transVar: access * level -> exp
+val transSeq: exp list -> exp
 
 val toDo: unit -> exp
 

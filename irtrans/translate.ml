@@ -15,6 +15,7 @@ val transNil: unit -> exp
 val transInt: int -> exp
 val transOp: Absyn.oper * exp * exp -> exp
 val transVar: access * level -> exp
+val transSeq: exp list -> exp
 
 val toDo: unit -> exp
 
@@ -48,12 +49,21 @@ match lvl with
 | Outermost -> assert(false)
 | Level ({frame; _}, _) -> (lvl, Frame.allocLocal frame escape)
 
-let rec seq stms =
+let seq stms =
     let module T = Tree in
+    
+    let rec aux stms res =
+        match stms with
+        | [] -> assert(false)
+        | [ stm ] -> T.SEQ (res, stm)
+        | stm::stms' -> aux stms' (T.SEQ (res, stm))
+    in
+
     match stms with
     | [] -> assert(false)
     | [ stm ] -> stm
-    | stm::stms' -> T.SEQ(stm, seq stms')
+    | stm::stms' -> aux stms' stm
+
 
 let unEx exp = 
     let module T = Tree in
@@ -113,6 +123,21 @@ let transOp (op, left, right) =
     | A.LeOp -> Cx (fun (t, f) -> (T.CJUMP (T.LE, leftEx, rightEx, t, f)))
     | A.GtOp -> Cx (fun (t, f) -> (T.CJUMP (T.LE, rightEx, leftEx, t, f)))
     | A.GeOp -> Cx (fun (t, f) -> (T.CJUMP (T.LT, rightEx, leftEx, t, f)))
+
+let transSeq exps =
+    let module T = Tree in
+    
+    let rec aux exps res =
+        match exps with
+        | [] -> assert(false)
+        | [ exp ] -> T.ESEQ (res, unEx exp)
+        | exp::exps' -> aux exps' (T.SEQ (res,unNx exp))
+    in
+
+    match exps with 
+    | [] -> assert(false)
+    | [ exp ] -> exp
+    | exp::exps' -> Ex (aux exps' (unNx exp))
 
 let transVar (((declvl ,  access) : access), uselvl) = 
     let module T = Tree in
