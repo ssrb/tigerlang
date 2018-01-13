@@ -8,13 +8,14 @@ let wordSize = 4
 
 type access = InFrame of int | InReg of Temp.temp
 type frame = {name: Temp.label; formals: access list; offset: int ref}
+type frag = PROC of {body: Tree.stm; frame: frame} | STRING of Temp.label * string
 
 let (++) r inc = let x = !r in r := x + inc; x
 
 let newFrame ~name ~formals = 
-let off = ref 0 in
-let formals = formals |> List.map ~f:(fun f -> InFrame (off ++ 4)) in
-{name; formals; offset = off}
+    let off = ref 0 in
+    let formals = formals |> List.map ~f:(fun f -> InFrame (off ++ 4)) in
+    {name; formals; offset = off}
 
 let name {name; _} = name
 

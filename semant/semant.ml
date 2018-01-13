@@ -45,7 +45,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
 
   | IntExp i -> {exp = T.transInt i; ty = Types.INT}
 
-  | StringExp (s, p) ->  {exp = T.toDo (); ty = Types.STRING}
+  | StringExp (s, p) ->  {exp = T.transString s; ty = Types.STRING}
   
   | CallExp {func; args; pos} ->
     begin

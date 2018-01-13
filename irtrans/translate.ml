@@ -1,5 +1,6 @@
 module type T = sig
 
+module Frame: Frame.T
 module Temp : Temp.T
 
 type exp
@@ -10,12 +11,14 @@ val outermost: level
 val newLevel: parent:level -> name:Temp.label -> formals:bool list -> level
 val formals: level -> access list
 val allocLocal: level -> bool -> access
+val getResult: unit -> Frame.frag list
 
 val transNil: unit -> exp
 val transInt: int -> exp
 val transOp: Absyn.oper * exp * exp -> exp
-val transVar: access * level -> exp
 val transSeq: exp list -> exp
+val transString: string -> exp
+val transVar: access * level -> exp
 
 val toDo: unit -> exp
 
@@ -24,6 +27,7 @@ end
 module F = functor(Frame : Frame.T) ->
 struct
 
+module Frame = Frame
 module Tree = Frame.Tree
 module Temp = Tree.Temp
 
@@ -36,18 +40,22 @@ type access = level * Frame.access
 
 let outermost = Outermost
 
+let fragments = ref []
+
 let newLevel ~parent ~name ~formals =
 Level ({level = parent; frame = Frame.newFrame ~name ~formals:(true::formals)}, ref ())
 
 let formals lvl = 
-match lvl with
-| Outermost -> assert(false)
-| Level ({frame; _}, _) -> frame |> Frame.formals |> List.tl_exn |> List.map ~f:(fun acc -> (lvl, acc))
+    match lvl with
+    | Outermost -> assert(false)
+    | Level ({frame; _}, _) -> frame |> Frame.formals |> List.tl_exn |> List.map ~f:(fun acc -> (lvl, acc))
 
 let allocLocal lvl escape = 
-match lvl with
-| Outermost -> assert(false)
-| Level ({frame; _}, _) -> (lvl, Frame.allocLocal frame escape)
+    match lvl with
+    | Outermost -> assert(false)
+    | Level ({frame; _}, _) -> (lvl, Frame.allocLocal frame escape)
+
+let getResult () = !fragments
 
 let seq stms =
     let module T = Tree in
@@ -138,6 +146,12 @@ let transSeq exps =
     | [] -> assert(false)
     | [ exp ] -> exp
     | exp::exps' -> Ex (aux exps' (unNx exp))
+
+let transString lit =
+    let module T = Tree in
+    let lab = Temp.newlabel () in
+    fragments := (Frame.STRING (lab, lit))::!fragments;
+    Ex (T.NAME (lab))
 
 let transVar (((declvl ,  access) : access), uselvl) = 
     let module T = Tree in
