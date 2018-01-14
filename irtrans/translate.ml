@@ -18,6 +18,7 @@ val transInt: int -> exp
 val transOp: Absyn.oper * exp * exp -> exp
 val transSeq: exp list -> exp
 val transString: string -> exp
+val transCall: level * level * Temp.label * exp list -> exp
 val transVar: access * level -> exp
 
 val toDo: unit -> exp
@@ -152,6 +153,8 @@ let transString lit =
     let lab = Temp.newlabel () in
     fragments := (Frame.STRING (lab, lit))::!fragments;
     Ex (T.NAME (lab))
+
+let transCall _ = Ex (Tree.CONST 0)
 
 let transVar (((declvl ,  access) : access), uselvl) = 
     let module T = Tree in

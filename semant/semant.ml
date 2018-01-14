@@ -47,37 +47,39 @@ let rec transExp (venv, tenv, lvl, exp, break) =
 
   | StringExp (s, p) ->  {exp = T.transString s; ty = Types.STRING}
   
-  | CallExp {func; args; pos} ->
+  | CallExp call ->
     begin
-      match Symbol.look (venv, func) with
+      match Symbol.look (venv, call.func) with
       | Some(entry) ->
         begin
           match entry with
           | VarEntry _ -> raise (Semantic_error "symbol is not a function")
-          | FunEntry {formals; result} ->
+          | FunEntry fentry ->
             begin
-              if (List.length args) <>  (List.length formals) then 
+
+              if (List.length call.args) <> (List.length fentry.formals) then 
                 raise (Semantic_error "missing argument in function call");
 
-              let exp = List.map args ~f:(fun a -> trexp (a, break))
-              |> List.zip_exn formals 
-              |> List.fold ~init:(T.toDo ()) ~f:(fun exp (f, {ty; _}) ->
-                if not (type_equal f ty) then
+              let args = List.map call.args ~f:(fun a -> trexp (a, break)) in
+
+              args |>  List.zip_exn fentry.formals |> List.iter ~f:(fun(f, a) ->
+                if not (type_equal f a.ty) then
                   raise (Semantic_error "wrong type in function call");
-                exp
-              )
-              in {exp = exp; ty = actual_ty result}
+              );
+
+              {exp = T.transCall (lvl, fentry.level, fentry.label, (args |> List.map ~f:(fun a -> a.exp))); ty = actual_ty fentry.result}
+              
             end
         end
       | None -> raise (Semantic_error "unknown function name")
     end
   
-  | OpExp {left; oper; right; pos} ->
-    let {exp = expLeft; ty = tyleft} = trexp (left, break) in
-    let {exp = expRight; ty = tyright} = trexp (right, break) in
-    if not (type_equal tyleft Types.INT) || not (type_equal tyright Types.INT) then
-     raise (Semantic_error "integer expected");
-    {exp = T.transOp (oper, expLeft, expRight); ty = Types.INT}
+  | OpExp op ->
+    let left = trexp (op.left, break) in
+    let right = trexp (op.right, break) in
+    if not (type_equal left.ty Types.INT) || not (type_equal right.ty Types.INT) then
+      raise (Semantic_error "integer expected");
+    {exp = T.transOp (op.oper, left.exp, right.exp); ty = Types.INT}
   
   | RecordExp {fields; typ; pos} ->
     begin
