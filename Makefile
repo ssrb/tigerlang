@@ -38,12 +38,12 @@ define PROJ_semant_tester
 	lexer/tokenCBs.ml \
 	lexer/tigerlex.mll \
 	parser/parsertokens.ml \
+	semant/types.ml \
 	irtrans/temp.ml \
 	irtrans/tree.ml \
 	irtrans/frame.ml \
 	irtrans/translate.ml \
 	irtrans/findEscape.ml \
-	semant/types.ml \
 	semant/env.ml \
 	semant/semant.ml \
 	semant/prtype.ml \

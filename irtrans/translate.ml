@@ -18,7 +18,7 @@ val transInt: int -> exp
 val transOp: Absyn.oper * exp * exp -> exp
 val transSeq: exp list -> exp
 val transString: string -> exp
-val transCall: level * level * Temp.label * exp list -> exp
+val transCall: level * level * Temp.label * exp list * Types.ty -> exp
 val transVar: access * level -> exp
 
 val toDo: unit -> exp
@@ -154,30 +154,42 @@ let transString lit =
     fragments := (Frame.STRING (lab, lit))::!fragments;
     Ex (T.NAME (lab))
 
-let transCall _ = Ex (Tree.CONST 0)
+let level_equal left right =
+    match (left, right) with 
+    | (Outermost, Outermost) -> true
+    | (Outermost, _) | (_, Outermost) -> false
+    | (Level (_, left), Level (_, right)) -> left = right
 
-let transVar (((declvl ,  access) : access), uselvl) = 
+let follow_static_link declvl uselvl =
+    
     let module T = Tree in
-
-    let level_equal left right =
-        match (left, right) with 
-        | (Outermost, Outermost) -> true
-        | (Outermost, _) | (_, Outermost) -> false
-        | (Level (_, left), Level (_, right)) -> left = right
-    in
-
-    let rec follow_static_link lvl fp =
+    let rec aux lvl fp =
         if level_equal declvl lvl then
             fp
         else
             match lvl with
             | Outermost -> assert(false)
-            | Level ({level = lvl'; frame}, _) -> 
-                let static_link = Frame.formals frame |> List.hd_exn in
-                follow_static_link lvl' (Frame.exp (static_link, fp))
-    in 
-    
-    Ex (Frame.exp (access, follow_static_link uselvl (T.TEMP Frame.fp)))
+            | Level (parent, _) ->
+            begin
+                let sl = Frame.formals parent.frame |> List.hd_exn in
+                aux parent.level (Frame.exp (sl, fp))
+            end
+    in
+
+    aux uselvl (T.TEMP Frame.fp)
+
+let transCall (declvl, uselvl, lbl, args, rtype) = 
+    let module T = Tree in
+    let sl = follow_static_link declvl uselvl in
+    let call = T.CALL ((T.NAME lbl), sl::(List.map args ~f:unEx)) in
+    match rtype with
+    | Types.UNIT -> Nx (T.EXP call)
+    | _ -> Ex call
+
+let transVar ((declvl ,  access), uselvl) = 
+    let module T = Tree in 
+    let sl = follow_static_link declvl uselvl in
+    Ex (Frame.exp (access, sl))
     
 let toDo () = Ex (Tree.CONST 0)
 

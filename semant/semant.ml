@@ -61,13 +61,14 @@ let rec transExp (venv, tenv, lvl, exp, break) =
                 raise (Semantic_error "missing argument in function call");
 
               let args = List.map call.args ~f:(fun a -> trexp (a, break)) in
+              let rtype = actual_ty fentry.result in
 
               args |>  List.zip_exn fentry.formals |> List.iter ~f:(fun(f, a) ->
                 if not (type_equal f a.ty) then
                   raise (Semantic_error "wrong type in function call");
               );
 
-              {exp = T.transCall (lvl, fentry.level, fentry.label, (args |> List.map ~f:(fun a -> a.exp))); ty = actual_ty fentry.result}
+              {exp = T.transCall (lvl, fentry.level, fentry.label, (args |> List.map ~f:(fun a -> a.exp)), rtype); ty = rtype}
               
             end
         end
