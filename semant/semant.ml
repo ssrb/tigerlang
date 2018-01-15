@@ -61,41 +61,53 @@ let rec transExp (venv, tenv, lvl, exp, break) =
                 raise (Semantic_error "missing argument in function call");
 
               let args = List.map call.args ~f:(fun a -> trexp (a, break)) in
-              let rtype = actual_ty fentry.result in
+              let rty = actual_ty fentry.result in
 
               args |>  List.zip_exn fentry.formals |> List.iter ~f:(fun(f, a) ->
                 if not (type_equal f a.ty) then
                   raise (Semantic_error "wrong type in function call");
               );
 
-              {exp = T.transCall (lvl, fentry.level, fentry.label, (args |> List.map ~f:(fun a -> a.exp)), rtype); ty = rtype}
+              {exp = T.transCall (lvl, fentry.level, fentry.label, (args |> List.map ~f:(fun a -> a.exp)), rty); ty = rty}
               
             end
         end
       | None -> raise (Semantic_error "unknown function name")
     end
   
-  | OpExp op ->
-    let left = trexp (op.left, break) in
-    let right = trexp (op.right, break) in
+  | OpExp exp ->
+    let left = trexp (exp.left, break) in
+    let right = trexp (exp.right, break) in
     if not (type_equal left.ty Types.INT) || not (type_equal right.ty Types.INT) then
       raise (Semantic_error "integer expected");
-    {exp = T.transOp (op.oper, left.exp, right.exp); ty = Types.INT}
+    {exp = T.transOp (exp.oper, left.exp, right.exp); ty = Types.INT}
   
-  | RecordExp {fields; typ; pos} ->
+  | RecordExp exp ->
     begin
-      match Symbol.look (tenv, typ) with
+      match Symbol.look (tenv, exp.typ) with
       | Some rty -> 
         begin
           match rty with
           | Types.RECORD (ftypes, _) ->
-            let exp = List.fold fields ~init:(T.toDo ()) ~f:(fun e (sym, exp, pos) ->
-              let {exp = _; ty} = trexp (exp, break) in 
-              if not (List.exists ftypes (fun ft -> ft = (sym, ty))) then
-                raise (Semantic_error "not a record type");
-              e
-            ) 
-            in {exp = exp; ty = rty}
+          begin
+            
+            (* Check for duplicate fields *)
+
+            let f es (sym, exp, pos) =
+              match List.find ftypes ~f:(fun (sym',  _) -> sym = sym') with
+              | Some (_,  fty) ->
+                let expty = trexp (exp, break) in
+                if not (type_equal fty expty.ty)  then
+                  raise (Semantic_error "wrong type for record field");
+                expty.exp  
+              | None -> raise (Semantic_error "Unknow field in record")
+            in
+ 
+            let _ = List.map exp.fields ~f:f in 
+
+            {exp = T.toDo (); ty = rty}
+
+          end
           | _ -> raise (Semantic_error "not a record type")
         end
       | None -> raise (Semantic_error "unknown record type")
