@@ -187,11 +187,20 @@ let transCall (declvl, uselvl, lbl, args, rtype) =
     | Types.UNIT -> Nx (T.EXP call)
     | _ -> Ex call
 
-let transRecord exps =
+let transRecord fldxp =
     let module T = Tree in
+
     let r = Temp.newtemp () in
-    let s = [] in
-    Ex (T.ESEQ (seq s, T.TEMP r))
+
+    let init woffset xp =
+        let xp = match xp with Some xp -> unEx xp | None -> T.CONST 0 in
+        T.MOVE (T.MEM (T.BINOP (T.PLUS, (T.TEMP r), (T.CONST (woffset * Frame.wordSize)))), xp)
+    in
+
+    let alloc = T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "malloc")), [ T.CONST ((List.length fldxp) * Frame.wordSize) ]))) in        
+    let inits = List.mapi fldxp ~f:init in
+    
+    Ex (T.ESEQ (seq (alloc::inits), T.TEMP r))
 
 let transVar ((declvl ,  access), uselvl) = 
     let module T = Tree in 
