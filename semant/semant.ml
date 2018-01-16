@@ -84,7 +84,6 @@ let rec transExp (venv, tenv, lvl, exp, break) =
   
   | RecordExp exp ->
     begin
-
       match List.find_a_dup exp.fields ~compare:(fun (left, _, _) (right,_, _) -> compare left right) with
       | Some dup -> raise (Semantic_error "duplicate record field iniitialization")
       | None -> ();

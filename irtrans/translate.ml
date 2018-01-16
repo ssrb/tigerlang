@@ -189,7 +189,9 @@ let transCall (declvl, uselvl, lbl, args, rtype) =
 
 let transRecord exps =
     let module T = Tree in
-    Ex (T.CONST 0)
+    let r = Temp.newtemp () in
+    let s = [] in
+    Ex (T.ESEQ (seq s, T.TEMP r))
 
 let transVar ((declvl ,  access), uselvl) = 
     let module T = Tree in 
