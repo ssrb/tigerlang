@@ -20,6 +20,7 @@ val transOp: Absyn.oper * exp * exp -> exp
 val transSeq: exp list -> exp
 val transString: string -> exp
 val transCall: level * level * Temp.label * exp list * Types.ty -> exp
+val transRecord: exp option list -> exp
 val transVar: access * level -> exp
 
 val toDo: unit -> exp

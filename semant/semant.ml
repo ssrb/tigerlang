@@ -84,28 +84,34 @@ let rec transExp (venv, tenv, lvl, exp, break) =
   
   | RecordExp exp ->
     begin
+
+      match List.find_a_dup exp.fields ~compare:(fun (left, _, _) (right,_, _) -> compare left right) with
+      | Some dup -> raise (Semantic_error "duplicate record field iniitialization")
+      | None -> ();
+
       match Symbol.look (tenv, exp.typ) with
       | Some rty -> 
         begin
           match rty with
           | Types.RECORD (ftypes, _) ->
           begin
-            
-            (* Check for duplicate fields *)
 
-            let f es (sym, exp, pos) =
-              match List.find ftypes ~f:(fun (sym',  _) -> sym = sym') with
-              | Some (_,  fty) ->
-                let expty = trexp (exp, break) in
-                if not (type_equal fty expty.ty)  then
+            List.iter exp.fields ~f:(fun (sym, _, _) ->
+            if not (List.exists ftypes ~f:(fun (sym', _) -> sym = sym')) then
+              raise (Semantic_error "unknown record field")
+            );
+
+            let f (sym, ty) =
+              match List.find exp.fields ~f:(fun (sym', _, _) -> sym = sym') with
+              | Some (_, field, _) ->
+                let expty = trexp (field, break) in
+                if not (type_equal ty expty.ty)  then
                   raise (Semantic_error "wrong type for record field");
-                expty.exp  
-              | None -> raise (Semantic_error "Unknow field in record")
+                Some expty.exp  
+              | None -> None
             in
  
-            let _ = List.map exp.fields ~f:f in 
-
-            {exp = T.toDo (); ty = rty}
+            {exp = T.transRecord (List.map ftypes ~f:f); ty = rty}
 
           end
           | _ -> raise (Semantic_error "not a record type")

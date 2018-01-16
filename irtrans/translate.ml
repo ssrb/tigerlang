@@ -19,6 +19,7 @@ val transOp: Absyn.oper * exp * exp -> exp
 val transSeq: exp list -> exp
 val transString: string -> exp
 val transCall: level * level * Temp.label * exp list * Types.ty -> exp
+val transRecord: exp option list -> exp
 val transVar: access * level -> exp
 
 val toDo: unit -> exp
@@ -185,6 +186,10 @@ let transCall (declvl, uselvl, lbl, args, rtype) =
     match rtype with
     | Types.UNIT -> Nx (T.EXP call)
     | _ -> Ex call
+
+let transRecord exps =
+    let module T = Tree in
+    Ex (T.CONST 0)
 
 let transVar ((declvl ,  access), uselvl) = 
     let module T = Tree in 
