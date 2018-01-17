@@ -216,23 +216,77 @@ let transVar ((declvl ,  access), uselvl) =
 let transIf (test, then', else') =
     let module T = Tree in
     let t = Temp.newlabel () in
-    let f = Temp.newlabel () in
     let j = Temp.newlabel () in
-    let r = Temp.newtemp () in
-
+    
     match else' with 
     | Some else' ->
-        Ex (T.ESEQ (seq [
-            (unCx test) (t, f);
+    begin
+        let f = Temp.newlabel () in
+        match (then', else') with
+        | (Nx then' , Nx else') ->
+            Nx (seq [
+                (unCx test) (t, f);
+                T.LABEL t;
+                then';
+                T.JUMP ((T.NAME j), [j]);
+                T.LABEL f;
+                else';
+                T.JUMP ((T.NAME j), [j]);
+                T.LABEL j ])
+
+        | (Cx _ , _) | (_ , Cx _) ->
+        begin
+            let t1 = Temp.newlabel () in
+            let r = Temp.newtemp () in
+            let optimizeCx exp = 
+                match exp with
+                | Cx exp -> [ exp(t1, j) ]
+                | _ -> [ T.MOVE ((T.TEMP r), (unEx exp)); T.JUMP ((T.NAME j), [j])]
+            in
+            Ex (T.ESEQ (seq ([
+                T.MOVE ((T.TEMP r), (T.CONST 0));
+                (unCx test) (t, f);
+                T.LABEL t] 
+                @ (optimizeCx then')
+                @ [ T.LABEL f ] 
+                @ (optimizeCx else')
+                @ [T.LABEL t1;
+                T.MOVE ((T.TEMP r), (T.CONST 1));
+                T.LABEL j]),
+                T.TEMP r))
+        end
+        | _ ->
+            let r = Temp.newtemp () in
+            Ex (T.ESEQ (seq [
+                (unCx test) (t, f);
+                T.LABEL t;
+                T.MOVE ((T.TEMP r), (unEx then'));
+                T.JUMP ((T.NAME j), [j]);
+                T.LABEL f;
+                T.MOVE ((T.TEMP r), (unEx else'));
+                T.JUMP ((T.NAME j), [j]);
+                T.LABEL j ],
+                T.TEMP r))
+
+    end
+    | None ->
+    begin
+        match then' with 
+        | Cx then' ->
+            Nx (seq [
+            (unCx test) (t, j);
             T.LABEL t;
-            T.MOVE ((T.TEMP r), (unEx then'));
-            T.JUMP ((T.NAME j), [j]);
-            T.LABEL f;
-            T.MOVE ((T.TEMP r), (unEx else'));
-            (* T.JUMP ((T.NAME j), [j]); *)
-            T.LABEL j ],
-            T.TEMP r))
-    | None -> assert(false)
+            then' (j, j);
+            T.LABEL j ])
+
+        | _ ->
+            Nx (seq [
+                (unCx test) (t, j);
+                T.LABEL t;
+                unNx then';
+                T.JUMP ((T.NAME j), [j]);
+                T.LABEL j ])
+    end
         
 let toDo () = Ex (Tree.CONST 0)
 
