@@ -21,6 +21,7 @@ val transString: string -> exp
 val transCall: level * level * Temp.label * exp list * Types.ty -> exp
 val transRecord: exp option list -> exp
 val transAssign: exp * exp -> exp
+val transIf: exp * exp * exp option -> exp
 val transVar: access * level -> exp
 
 val toDo: unit -> exp
@@ -211,7 +212,11 @@ let transVar ((declvl ,  access), uselvl) =
     let module T = Tree in 
     let sl = follow_static_link declvl uselvl in
     Ex (Frame.exp (access, sl))
-    
+
+let transIf (test, then', else') =
+    let module T = Tree in
+    Ex (T.CONST 0)
+
 let toDo () = Ex (Tree.CONST 0)
 
 end

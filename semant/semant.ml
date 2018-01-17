@@ -122,24 +122,24 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     let ts = List.fold l ~init:[] ~f:(fun ts (t, _) -> (trexp (t, break))::ts) in
     {exp = T.transSeq(ts |> List.rev_map ~f:(fun x -> x.exp)); ty = (ts |> List.hd_exn).ty} 
 
-  | AssignExp {var; exp; pos} ->
-    let left = transVar (venv, tenv, lvl, var, break) in
-    let right = trexp (exp, break) in
-    if type_equal left.ty right.ty then 
-      {exp = T.transAssign (left.exp, right.exp); ty = Types.UNIT}
+  | AssignExp exp ->
+    let var = transVar (venv, tenv, lvl, exp.var, break) in
+    let exp = trexp (exp.exp, break) in
+    if type_equal var.ty exp.ty then 
+      {exp = T.transAssign (var.exp, exp.exp); ty = Types.UNIT}
     else
       raise (Semantic_error "Incompatible type in assignment")
 
-  | IfExp {test; then'; else'; pos} ->
-    let {exp = _; ty = tytest} = trexp (test, break) in
-    let {exp = _; ty = tythen} = trexp (then', break) in
-    if type_equal tytest Types.INT then
-      match else' with
-      | None -> {exp = T.toDo (); ty = Types.UNIT}
-      | Some e -> 
-        let {exp = _; ty = tyelse} = trexp (e, break) in
-        if type_equal tythen tyelse then
-          {exp = T.toDo (); ty = tythen}
+  | IfExp exp ->
+    let test = trexp (exp.test, break) in
+    let then' = trexp (exp.then', break) in
+    if type_equal test.ty Types.INT then
+      match exp.else' with
+      | None -> {exp = T.transIf (test.exp, then'.exp, None); ty = Types.UNIT}
+      | Some else' -> 
+        let else' = trexp (else', break) in
+        if type_equal then'.ty else'.ty then
+          {exp = T.transIf (test.exp, then'.exp, Some else'.exp); ty = then'.ty}
         else
           raise (Semantic_error "If-then-else type is inconsistent")
     else
