@@ -123,10 +123,10 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     {exp = T.transSeq(ts |> List.rev_map ~f:(fun x -> x.exp)); ty = (ts |> List.hd_exn).ty} 
 
   | AssignExp {var; exp; pos} ->
-    let {exp = _; ty = tyleft} = transVar (venv, tenv, lvl, var, break) in
-    let {exp = _; ty = tyright} = trexp (exp, break) in
-    if type_equal tyleft tyright then 
-      {exp = T.toDo (); ty = tyleft}
+    let left = transVar (venv, tenv, lvl, var, break) in
+    let right = trexp (exp, break) in
+    if type_equal left.ty right.ty then 
+      {exp = T.transAssign (left.exp, right.exp); ty = Types.UNIT}
     else
       raise (Semantic_error "Incompatible type in assignment")
 
@@ -135,7 +135,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     let {exp = _; ty = tythen} = trexp (then', break) in
     if type_equal tytest Types.INT then
       match else' with
-      | None -> {exp = T.toDo (); ty = Types.NIL}
+      | None -> {exp = T.toDo (); ty = Types.UNIT}
       | Some e -> 
         let {exp = _; ty = tyelse} = trexp (e, break) in
         if type_equal tythen tyelse then
@@ -163,7 +163,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
 
   | BreakExp p ->
     if break then
-      {exp = T.toDo (); ty = Types.NIL}
+      {exp = T.toDo (); ty = Types.UNIT}
     else
       raise (Semantic_error "No loop to break from")
 

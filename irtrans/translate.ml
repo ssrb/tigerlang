@@ -20,6 +20,7 @@ val transSeq: exp list -> exp
 val transString: string -> exp
 val transCall: level * level * Temp.label * exp list * Types.ty -> exp
 val transRecord: exp option list -> exp
+val transAssign: exp * exp -> exp
 val transVar: access * level -> exp
 
 val toDo: unit -> exp
@@ -201,6 +202,10 @@ let transRecord fldxp =
     let inits = List.mapi fldxp ~f:init in
     
     Ex (T.ESEQ (seq (alloc::inits), T.TEMP r))
+
+let transAssign (left, right) =
+    let module T = Tree in
+    Nx (T.MOVE ((unEx left), (unEx right)))
 
 let transVar ((declvl ,  access), uselvl) = 
     let module T = Tree in 
