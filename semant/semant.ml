@@ -165,8 +165,8 @@ let rec transExp (venv, tenv, lvl, exp, break) =
   | BreakExp p ->
     begin
       match break with
-      | Some label -> {exp = T.toDo (); ty = Types.UNIT}
-      | None -> {exp = T.toDo (); ty = Types.UNIT}
+      | Some label -> {exp = T.transBreak label; ty = Types.UNIT}
+      | None -> raise (Semantic_error "No loop to break from")
     end
 
   | LetExp {decs; body; pos} ->

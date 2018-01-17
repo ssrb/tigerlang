@@ -23,6 +23,7 @@ val transRecord: exp option list -> exp
 val transAssign: exp * exp -> exp
 val transIf: exp * exp * exp option -> exp
 val transWhile: exp * exp * Temp.label -> exp
+val transBreak: Temp.label -> exp
 val transVar: access * level -> exp
 
 val toDo: unit -> exp
@@ -303,6 +304,9 @@ let transWhile (test, body, finish) =
         T.LABEL finish ],
         T.TEMP r))
  
+let transBreak label =
+    Nx (Tree.JUMP (Tree.NAME label, [label]))
+
 let toDo () = Ex (Tree.CONST 0)
 
 end
