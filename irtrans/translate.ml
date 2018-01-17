@@ -215,8 +215,25 @@ let transVar ((declvl ,  access), uselvl) =
 
 let transIf (test, then', else') =
     let module T = Tree in
-    Ex (T.CONST 0)
+    let t = Temp.newlabel () in
+    let f = Temp.newlabel () in
+    let j = Temp.newlabel () in
+    let r = Temp.newtemp () in
 
+    match else' with 
+    | Some else' ->
+        Ex (T.ESEQ (seq [
+            (unCx test) (t, f);
+            T.LABEL t;
+            T.MOVE ((T.TEMP r), (unEx then'));
+            T.JUMP ((T.NAME j), [j]);
+            T.LABEL f;
+            T.MOVE ((T.TEMP r), (unEx else'));
+            (* T.JUMP ((T.NAME j), [j]); *)
+            T.LABEL j ],
+            T.TEMP r))
+    | None -> assert(false)
+        
 let toDo () = Ex (Tree.CONST 0)
 
 end
