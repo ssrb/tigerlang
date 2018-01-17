@@ -35,7 +35,7 @@ let rec actual_ty ty =
 
 let rec transExp (venv, tenv, lvl, exp, break) =
 
-  let trexp (e, break) = transExp (venv, tenv, lvl, e, break) in
+  let trexp (e) = transExp (venv, tenv, lvl, e, break) in
   
   match exp with
   
@@ -60,7 +60,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
               if (List.length call.args) <> (List.length fentry.formals) then 
                 raise (Semantic_error "missing argument in function call");
 
-              let args = List.map call.args ~f:(fun a -> trexp (a, break)) in
+              let args = List.map call.args ~f:(fun a -> trexp (a)) in
               let rty = actual_ty fentry.result in
 
               args |>  List.zip_exn fentry.formals |> List.iter ~f:(fun(f, a) ->
@@ -76,8 +76,9 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     end
   
   | OpExp exp ->
-    let left = trexp (exp.left, break) in
-    let right = trexp (exp.right, break) in
+    let left = trexp (exp.left) in
+    let right = trexp (exp.right) in
+    
     if not (type_equal left.ty Types.INT) || not (type_equal right.ty Types.INT) then
       raise (Semantic_error "integer expected");
     {exp = T.transOp (exp.oper, left.exp, right.exp); ty = Types.INT}
@@ -103,7 +104,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
             let f (sym, ty) =
               match List.find exp.fields ~f:(fun (sym', _, _) -> sym = sym') with
               | Some (_, field, _) ->
-                let expty = trexp (field, break) in
+                let expty = trexp (field) in
                 if not (type_equal ty expty.ty)  then
                   raise (Semantic_error "wrong type for record field");
                 Some expty.exp  
@@ -119,25 +120,25 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     end
 
   | SeqExp l ->
-    let ts = List.fold l ~init:[] ~f:(fun ts (t, _) -> (trexp (t, break))::ts) in
+    let ts = List.fold l ~init:[] ~f:(fun ts (t, _) -> (trexp (t))::ts) in
     {exp = T.transSeq(ts |> List.rev_map ~f:(fun x -> x.exp)); ty = (ts |> List.hd_exn).ty} 
 
   | AssignExp exp ->
     let var = transVar (venv, tenv, lvl, exp.var, break) in
-    let exp = trexp (exp.exp, break) in
+    let exp = trexp (exp.exp) in
     if type_equal var.ty exp.ty then 
       {exp = T.transAssign (var.exp, exp.exp); ty = Types.UNIT}
     else
       raise (Semantic_error "Incompatible type in assignment")
 
   | IfExp exp ->
-    let test = trexp (exp.test, break) in
-    let then' = trexp (exp.then', break) in
+    let test = trexp (exp.test) in
+    let then' = trexp (exp.then') in
     if type_equal test.ty Types.INT then
       match exp.else' with
       | None -> {exp = T.transIf (test.exp, then'.exp, None); ty = Types.UNIT}
       | Some else' -> 
-        let else' = trexp (else', break) in
+        let else' = trexp (else') in
         if type_equal then'.ty else'.ty then
           {exp = T.transIf (test.exp, then'.exp, Some else'.exp); ty = then'.ty}
         else
@@ -146,35 +147,36 @@ let rec transExp (venv, tenv, lvl, exp, break) =
       raise (Semantic_error "If test must be of integer type")
 
   | WhileExp exp ->
-    let test = trexp (exp.test, break) in
-    let body = trexp (exp.body, true) in
+    let test = trexp (exp.test) in
+    let finish = Temp.newlabel() in
+    let body = transExp (venv, tenv, lvl, exp.body, Some finish) in
     if not (type_equal test.ty Types.INT) then
       raise (Semantic_error "While test must be of integer type");
-    {exp = T.transWhile (test.exp, body.exp); ty = body.ty}
+    {exp = T.transWhile (test.exp, body.exp, finish); ty = body.ty}
       
-
   | ForExp {var; escape; lo; hi; body = body; pos} ->
     let (venv', tenv') = transDec (venv, tenv, lvl, VarDec {name =  var; escape; typ = None; init = lo; pos}, break) in
     (* TODO: assert INT*)
     let {exp; ty = tyhi} = transExp (venv, tenv, lvl, hi, break) in
     if not (type_equal tyhi INT) then raise (Semantic_error "For loop upper bound must have int type");
-    let {exp; ty = tybody} = transExp (venv', tenv', lvl, body, true) in
+    let {exp; ty = tybody} = transExp (venv', tenv', lvl, body, break) in
     {exp = T.toDo (); ty = tybody}
 
   | BreakExp p ->
-    if break then
-      {exp = T.toDo (); ty = Types.UNIT}
-    else
-      raise (Semantic_error "No loop to break from")
+    begin
+      match break with
+      | Some label -> {exp = T.toDo (); ty = Types.UNIT}
+      | None -> {exp = T.toDo (); ty = Types.UNIT}
+    end
 
   | LetExp {decs; body; pos} ->
   	let (venv', tenv') = List.fold decs ~init:(venv, tenv) ~f:(fun (v, t) d -> transDec (v, t, lvl, d, break)) in
   	transExp (venv', tenv', lvl, body, break)
   
   | ArrayExp {typ; size; init; pos} ->
-    let {exp = _; ty = tysize} = trexp(size, break) in
+    let {exp = _; ty = tysize} = trexp(size) in
     if type_equal tysize INT then
-      let {exp = _; ty = tyinit} = trexp(init, break) in
+      let {exp = _; ty = tyinit} = trexp(init) in
       match S.look(tenv, typ) with
       | Some tyarray ->
         begin
@@ -284,7 +286,7 @@ and transDec (venv, tenv, lvl, dec, break) =
       )
       in
       
-      let {exp = _; ty = tybody} = transExp(venv'' , tenv, lvl', body, false) in
+      let {exp = _; ty = tybody} = transExp(venv'' , tenv, lvl', body, None) in
       match tyresopt with
       | Some tyresult ->
         if not (type_equal tybody tyresult) then
@@ -377,5 +379,5 @@ and transVar (venv, tenv, lvl, var, break) =
 
 let transProg e0 = 
   FindEscape.findEscape e0;
-  transExp (Env.base_venv, Env.base_tenv, T.outermost, e0, false)
+  transExp (Env.base_venv, Env.base_tenv, T.outermost, e0, None)
 end

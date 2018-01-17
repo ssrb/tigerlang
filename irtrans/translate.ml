@@ -22,7 +22,7 @@ val transCall: level * level * Temp.label * exp list * Types.ty -> exp
 val transRecord: exp option list -> exp
 val transAssign: exp * exp -> exp
 val transIf: exp * exp * exp option -> exp
-val transWhile: exp * exp -> exp
+val transWhile: exp * exp * Temp.label -> exp
 val transVar: access * level -> exp
 
 val toDo: unit -> exp
@@ -289,10 +289,19 @@ let transIf (test, then', else') =
                 T.LABEL j ])
     end
 
-
-let transWhile (test, body) =
+let transWhile (test, body, finish) =
     let module T = Tree in
-    Ex (T.CONST 0)
+    let r = Temp.newtemp () in
+    let start = Temp.newlabel () in
+    let work = Temp.newlabel () in
+    Ex (T.ESEQ (seq [
+        T.LABEL start;
+        (unCx test) (work, finish);
+        T.LABEL work;
+        T.MOVE ((T.TEMP r), (unEx body));
+        T.JUMP ((T.NAME start), [start]);
+        T.LABEL finish ],
+        T.TEMP r))
  
 let toDo () = Ex (Tree.CONST 0)
 
