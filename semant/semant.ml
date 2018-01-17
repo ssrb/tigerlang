@@ -145,13 +145,13 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     else
       raise (Semantic_error "If test must be of integer type")
 
-  | WhileExp {test; body; pos} ->
-    let {exp = _; ty = tytest} = trexp (test, break) in
-    let {exp = _; ty = tybody} = trexp (body, true) in
-    if type_equal tytest Types.INT then
-      {exp = T.toDo (); ty = tybody}
-    else
-      raise (Semantic_error "While test must be of integer type")
+  | WhileExp exp ->
+    let test = trexp (exp.test, break) in
+    let body = trexp (exp.body, true) in
+    if not (type_equal test.ty Types.INT) then
+      raise (Semantic_error "While test must be of integer type");
+    {exp = T.transWhile (test.exp, body.exp); ty = body.ty}
+      
 
   | ForExp {var; escape; lo; hi; body = body; pos} ->
     let (venv', tenv') = transDec (venv, tenv, lvl, VarDec {name =  var; escape; typ = None; init = lo; pos}, break) in
