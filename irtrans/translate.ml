@@ -308,7 +308,6 @@ let transWhile (test, body, finish) =
  
 let transFor (var, lo, hi, body, finish) =
     let module T = Tree in
-    let module T = Tree in
     let var = Frame.exp (snd var, (T.TEMP Frame.fp)) in
     let r = Temp.newtemp () in
     let work = Temp.newlabel () in
