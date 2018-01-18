@@ -26,6 +26,7 @@ val transWhile: exp * exp * Temp.label -> exp
 val transFor: access * exp * exp * exp * Temp.label -> exp
 val transBreak: Temp.label -> exp
 val transLet: exp list * exp -> exp
+val transArray: exp * exp -> exp
 val transVar: access * level -> exp
 
 val toDo: unit -> exp
@@ -330,6 +331,10 @@ let transBreak label =
 let transLet (inits, body) =
     let module T = Tree in
     Ex (T.ESEQ (inits |> List.map ~f:unNx |> seq, unEx body))
+
+let transArray (size, init) =
+    let module T = Tree in
+    Ex (T.CONST 0)
 
 let toDo () = Ex (Tree.CONST 0)
 

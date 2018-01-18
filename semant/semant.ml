@@ -126,25 +126,24 @@ let rec transExp (venv, tenv, lvl, exp, break) =
   | AssignExp a ->
     let var = transVar (venv, tenv, lvl, a.var, break) in
     let exp = trexp a.exp in
-    if type_equal var.ty exp.ty then 
-      {exp = T.transAssign (var.exp, exp.exp); ty = Types.UNIT}
-    else
-      raise (Semantic_error "Incompatible type in assignment")
-
+    if not (type_equal var.ty exp.ty) then 
+      raise (Semantic_error "Incompatible type in assignment");
+    {exp = T.transAssign (var.exp, exp.exp); ty = Types.UNIT}
+    
   | IfExp i ->
     let test = trexp i.test in
     let then' = trexp i.then' in
-    if type_equal test.ty Types.INT then
+    begin
+      if not (type_equal test.ty Types.INT) then
+        raise (Semantic_error "If test must be of integer type");
       match i.else' with
       | Some else' -> 
         let else' = trexp else' in
-        if type_equal then'.ty else'.ty then
-          {exp = T.transIf (test.exp, then'.exp, Some else'.exp); ty = then'.ty}
-        else
-          raise (Semantic_error "If-then-else type is inconsistent")
+        if not (type_equal then'.ty else'.ty) then
+          raise (Semantic_error "If-then-else type is inconsistent");
+        {exp = T.transIf (test.exp, then'.exp, Some else'.exp); ty = then'.ty}
       | None -> {exp = T.transIf (test.exp, then'.exp, None); ty = Types.UNIT}
-    else
-      raise (Semantic_error "If test must be of integer type")
+    end
 
   | WhileExp w ->
     let test = trexp w.test in
@@ -159,9 +158,11 @@ let rec transExp (venv, tenv, lvl, exp, break) =
       let (venv', tenv', inits) = transDec (venv, tenv, lvl, VarDec {name =  f.var; escape = f.escape; typ = None; init = f.lo; pos = f.pos}, break) in
       match S.look (venv, f.var) with
       | Some (Env.VarEntry var) -> 
-        if not (type_equal var.ty INT) then raise (Semantic_error "For loop lower bound must have int type");
+        if not (type_equal var.ty INT) then 
+          raise (Semantic_error "For loop lower bound must have int type");
         let hi = transExp (venv, tenv, lvl, f.hi, break) in
-        if not (type_equal hi.ty INT) then raise (Semantic_error "For loop upper bound must have int type");
+        if not (type_equal hi.ty INT) then 
+          raise (Semantic_error "For loop upper bound must have int type");
         let finish = Temp.newlabel() in
         let body = transExp (venv', tenv', lvl, f.body, Some finish) in
         {exp = T.transFor (var.access, List.hd_exn inits, hi.exp, body.exp, finish); ty = body.ty}
@@ -195,10 +196,9 @@ let rec transExp (venv, tenv, lvl, exp, break) =
       begin
         match ty with
         | ARRAY (ty, unique) -> 
-          if type_equal ty init.ty then
-            {exp = T.toDo (); ty}
-          else
-            raise (Semantic_error "Incompoatible initializer type")
+          if not (type_equal ty init.ty) then
+            raise (Semantic_error "Incompoatible initializer type");
+          {exp = T.transArray (size.exp, init.exp); ty}  
         | _ -> raise (Semantic_error "Not an array type")
       end
     | None -> raise (Semantic_error "Unknown array type")
