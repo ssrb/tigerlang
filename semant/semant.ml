@@ -328,7 +328,7 @@ and transDec (venv, tenv, lvl, dec, break) =
           raise (Semantic_error "A variable declaration initialized with nil must beconstrained to be a structure")
     end;
 
-    (S.enter (venv, name, VarEntry {access = T.allocLocal lvl true; ty = init.ty}), tenv, [ init.exp ])
+    (S.enter (venv, name, VarEntry {access = T.allocLocal lvl !escape; ty = init.ty}), tenv, [ init.exp ])
 
   | TypeDec l ->
     
