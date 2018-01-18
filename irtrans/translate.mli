@@ -24,7 +24,9 @@ val transRecord: exp option list -> exp
 val transAssign: exp * exp -> exp
 val transIf: exp * exp * exp option -> exp
 val transWhile: exp * exp * Temp.label -> exp
+val transFor: access * exp * exp * exp * Temp.label -> exp
 val transBreak: Temp.label -> exp
+val transLet: exp list * exp -> exp
 val transVar: access * level -> exp
 
 val toDo: unit -> exp

@@ -154,13 +154,19 @@ let rec transExp (venv, tenv, lvl, exp, break) =
       raise (Semantic_error "While test must be of integer type");
     {exp = T.transWhile (test.exp, body.exp, finish); ty = body.ty}
       
-  | ForExp {var; escape; lo; hi; body = body; pos} ->
-    let (venv', tenv') = transDec (venv, tenv, lvl, VarDec {name =  var; escape; typ = None; init = lo; pos}, break) in
-    (* TODO: assert INT*)
-    let {exp; ty = tyhi} = transExp (venv, tenv, lvl, hi, break) in
-    if not (type_equal tyhi INT) then raise (Semantic_error "For loop upper bound must have int type");
-    let {exp; ty = tybody} = transExp (venv', tenv', lvl, body, break) in
-    {exp = T.toDo (); ty = tybody}
+  | ForExp exp ->
+    begin
+      let (venv', tenv', inits) = transDec (venv, tenv, lvl, VarDec {name =  exp.var; escape = exp.escape; typ = None; init = exp.lo; pos = exp.pos}, break) in
+      match S.look (venv, exp.var) with
+      | Some (Env.VarEntry var) -> 
+        if not (type_equal var.ty INT) then raise (Semantic_error "For loop lower bound must have int type");
+        let hi = transExp (venv, tenv, lvl, exp.hi, break) in
+        if not (type_equal hi.ty INT) then raise (Semantic_error "For loop upper bound must have int type");
+        let finish = Temp.newlabel() in
+        let body = transExp (venv', tenv', lvl, exp.body, Some finish) in
+        {exp = T.transFor (var.access, List.hd_exn inits, hi.exp, body.exp, finish); ty = body.ty}
+      | _ -> assert(false)
+    end
 
   | BreakExp p ->
     begin
@@ -170,8 +176,14 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     end
 
   | LetExp {decs; body; pos} ->
-  	let (venv', tenv') = List.fold decs ~init:(venv, tenv) ~f:(fun (v, t) d -> transDec (v, t, lvl, d, break)) in
-  	transExp (venv', tenv', lvl, body, break)
+    let f (v, t, is) d = 
+      let (v, t, i) = transDec (v, t, lvl, d, break) in
+      (v, t, i::is)
+    in
+  	let (venv', tenv', inits) = List.fold decs ~init:(venv, tenv, []) ~f:f in
+    let inits = inits |> List.rev |> List.concat  in
+  	let body = transExp (venv', tenv', lvl, body, break) in
+    {exp = T.transLet (inits, body.exp); ty = body.ty}
   
   | ArrayExp {typ; size; init; pos} ->
     let {exp = _; ty = tysize} = trexp(size) in
@@ -295,28 +307,28 @@ and transDec (venv, tenv, lvl, dec, break) =
     in
     begin
       fdecs |> List.rev |> List.iter ~f:trans_body;
-      (venv', tenv)
+      (venv', tenv, [])
     end
   
   | VarDec {name; escape; typ; init; pos} -> 
     
-    let {exp = _; ty = tyinit} = transExp (venv, tenv, lvl, init, break) in
+    let init = transExp (venv, tenv, lvl, init, break) in
     begin
       match typ with
       | Some (symbol, pos) ->
         begin
           match Symbol.look (tenv, symbol) with
           | Some ty ->
-            if not (type_equal ty tyinit) then
+            if not (type_equal ty init.ty) then
               raise (Semantic_error "Type of initiialyzer does not match type annotation")
           | None -> raise (Semantic_error "unknown type name")
         end
       | None -> 
-        if tyinit = NIL then
+        if init.ty = NIL then
           raise (Semantic_error "A variable declaration initialized with nil must beconstrained to be a structure")
     end;
 
-    (S.enter (venv, name, VarEntry {access = T.allocLocal lvl true; ty = tyinit}), tenv)
+    (S.enter (venv, name, VarEntry {access = T.allocLocal lvl true; ty = init.ty}), tenv, [ init.exp ])
 
   | TypeDec l ->
     
@@ -335,7 +347,7 @@ and transDec (venv, tenv, lvl, dec, break) =
 
     List.iter l ~f:(fun {name; ty; pos} -> checkForCyclicType(tenv', name));
 
-    (venv, tenv')
+    (venv, tenv', [])
 
 and transVar (venv, tenv, lvl, var, break) =
 

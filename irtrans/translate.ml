@@ -23,7 +23,9 @@ val transRecord: exp option list -> exp
 val transAssign: exp * exp -> exp
 val transIf: exp * exp * exp option -> exp
 val transWhile: exp * exp * Temp.label -> exp
+val transFor: access * exp * exp * exp * Temp.label -> exp
 val transBreak: Temp.label -> exp
+val transLet: exp list * exp -> exp
 val transVar: access * level -> exp
 
 val toDo: unit -> exp
@@ -304,8 +306,31 @@ let transWhile (test, body, finish) =
         T.LABEL finish ],
         T.TEMP r))
  
+let transFor (var, lo, hi, body, finish) =
+    let module T = Tree in
+    let module T = Tree in
+    let var = Frame.exp (snd var, (T.TEMP Frame.fp)) in
+    let r = Temp.newtemp () in
+    let work = Temp.newlabel () in
+    let increment = Temp.newlabel () in
+    Ex (T.ESEQ (seq [
+        unNx lo;
+        T.CJUMP (T.GT, var, (unEx hi), finish, work);
+        T.LABEL work;
+        T.MOVE ((T.TEMP r), (unEx body));
+        T.CJUMP (T.LE, var, (unEx hi), increment, finish);
+        T.LABEL increment;
+        T.MOVE (var, (T.BINOP (T.PLUS, (T.TEMP r), (T.CONST 1))));
+        T.JUMP ((T.NAME work), [work]);
+        T.LABEL finish ],
+        T.TEMP r))
+
 let transBreak label =
     Nx (Tree.JUMP (Tree.NAME label, [label]))
+
+let transLet (inits, body) =
+    let module T = Tree in
+    Ex (T.ESEQ (inits |> List.map ~f:unNx |> seq, unEx body))
 
 let toDo () = Ex (Tree.CONST 0)
 
