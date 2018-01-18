@@ -47,9 +47,9 @@ let rec transExp (venv, tenv, lvl, exp, break) =
 
   | StringExp (s, p) ->  {exp = T.transString s; ty = Types.STRING}
   
-  | CallExp call ->
+  | CallExp c ->
     begin
-      match Symbol.look (venv, call.func) with
+      match Symbol.look (venv, c.func) with
       | Some(entry) ->
         begin
           match entry with
@@ -57,10 +57,10 @@ let rec transExp (venv, tenv, lvl, exp, break) =
           | FunEntry fentry ->
             begin
 
-              if (List.length call.args) <> (List.length fentry.formals) then 
+              if (List.length c.args) <> (List.length fentry.formals) then 
                 raise (Semantic_error "missing argument in function call");
 
-              let args = List.map call.args ~f:(fun a -> trexp (a)) in
+              let args = List.map c.args ~f:trexp in
               let rty = actual_ty fentry.result in
 
               args |>  List.zip_exn fentry.formals |> List.iter ~f:(fun(f, a) ->
@@ -75,36 +75,36 @@ let rec transExp (venv, tenv, lvl, exp, break) =
       | None -> raise (Semantic_error "unknown function name")
     end
   
-  | OpExp exp ->
-    let left = trexp (exp.left) in
-    let right = trexp (exp.right) in
+  | OpExp o ->
+    let left = trexp (o.left) in
+    let right = trexp (o.right) in
     
     if not (type_equal left.ty Types.INT) || not (type_equal right.ty Types.INT) then
       raise (Semantic_error "integer expected");
-    {exp = T.transOp (exp.oper, left.exp, right.exp); ty = Types.INT}
+    {exp = T.transOp (o.oper, left.exp, right.exp); ty = Types.INT}
   
-  | RecordExp exp ->
+  | RecordExp r ->
     begin
-      match List.find_a_dup exp.fields ~compare:(fun (left, _, _) (right,_, _) -> compare left right) with
+      match List.find_a_dup r.fields ~compare:(fun (left, _, _) (right,_, _) -> compare left right) with
       | Some dup -> raise (Semantic_error "duplicate record field iniitialization")
       | None -> ();
 
-      match Symbol.look (tenv, exp.typ) with
+      match Symbol.look (tenv, r.typ) with
       | Some rty -> 
         begin
           match rty with
           | Types.RECORD (ftypes, _) ->
           begin
 
-            List.iter exp.fields ~f:(fun (sym, _, _) ->
+            List.iter r.fields ~f:(fun (sym, _, _) ->
             if not (List.exists ftypes ~f:(fun (sym', _) -> sym = sym')) then
               raise (Semantic_error "unknown record field")
             );
 
             let f (sym, ty) =
-              match List.find exp.fields ~f:(fun (sym', _, _) -> sym = sym') with
+              match List.find r.fields ~f:(fun (sym', _, _) -> sym = sym') with
               | Some (_, field, _) ->
-                let expty = trexp (field) in
+                let expty = trexp field in
                 if not (type_equal ty expty.ty)  then
                   raise (Semantic_error "wrong type for record field");
                 Some expty.exp  
@@ -120,92 +120,89 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     end
 
   | SeqExp l ->
-    let ts = List.fold l ~init:[] ~f:(fun ts (t, _) -> (trexp (t))::ts) in
+    let ts = List.fold l ~init:[] ~f:(fun ts (t, _) -> (trexp t)::ts) in
     {exp = T.transSeq(ts |> List.rev_map ~f:(fun x -> x.exp)); ty = (ts |> List.hd_exn).ty} 
 
-  | AssignExp exp ->
-    let var = transVar (venv, tenv, lvl, exp.var, break) in
-    let exp = trexp (exp.exp) in
+  | AssignExp a ->
+    let var = transVar (venv, tenv, lvl, a.var, break) in
+    let exp = trexp a.exp in
     if type_equal var.ty exp.ty then 
       {exp = T.transAssign (var.exp, exp.exp); ty = Types.UNIT}
     else
       raise (Semantic_error "Incompatible type in assignment")
 
-  | IfExp exp ->
-    let test = trexp (exp.test) in
-    let then' = trexp (exp.then') in
+  | IfExp i ->
+    let test = trexp i.test in
+    let then' = trexp i.then' in
     if type_equal test.ty Types.INT then
-      match exp.else' with
-      | None -> {exp = T.transIf (test.exp, then'.exp, None); ty = Types.UNIT}
+      match i.else' with
       | Some else' -> 
-        let else' = trexp (else') in
+        let else' = trexp else' in
         if type_equal then'.ty else'.ty then
           {exp = T.transIf (test.exp, then'.exp, Some else'.exp); ty = then'.ty}
         else
           raise (Semantic_error "If-then-else type is inconsistent")
+      | None -> {exp = T.transIf (test.exp, then'.exp, None); ty = Types.UNIT}
     else
       raise (Semantic_error "If test must be of integer type")
 
-  | WhileExp exp ->
-    let test = trexp (exp.test) in
+  | WhileExp w ->
+    let test = trexp w.test in
     let finish = Temp.newlabel() in
-    let body = transExp (venv, tenv, lvl, exp.body, Some finish) in
+    let body = transExp (venv, tenv, lvl, w.body, Some finish) in
     if not (type_equal test.ty Types.INT) then
       raise (Semantic_error "While test must be of integer type");
     {exp = T.transWhile (test.exp, body.exp, finish); ty = body.ty}
       
-  | ForExp exp ->
+  | ForExp f ->
     begin
-      let (venv', tenv', inits) = transDec (venv, tenv, lvl, VarDec {name =  exp.var; escape = exp.escape; typ = None; init = exp.lo; pos = exp.pos}, break) in
-      match S.look (venv, exp.var) with
+      let (venv', tenv', inits) = transDec (venv, tenv, lvl, VarDec {name =  f.var; escape = f.escape; typ = None; init = f.lo; pos = f.pos}, break) in
+      match S.look (venv, f.var) with
       | Some (Env.VarEntry var) -> 
         if not (type_equal var.ty INT) then raise (Semantic_error "For loop lower bound must have int type");
-        let hi = transExp (venv, tenv, lvl, exp.hi, break) in
+        let hi = transExp (venv, tenv, lvl, f.hi, break) in
         if not (type_equal hi.ty INT) then raise (Semantic_error "For loop upper bound must have int type");
         let finish = Temp.newlabel() in
-        let body = transExp (venv', tenv', lvl, exp.body, Some finish) in
+        let body = transExp (venv', tenv', lvl, f.body, Some finish) in
         {exp = T.transFor (var.access, List.hd_exn inits, hi.exp, body.exp, finish); ty = body.ty}
       | _ -> assert(false)
     end
 
-  | BreakExp p ->
+  | BreakExp b ->
     begin
       match break with
       | Some label -> {exp = T.transBreak label; ty = Types.UNIT}
       | None -> raise (Semantic_error "No loop to break from")
     end
 
-  | LetExp {decs; body; pos} ->
+  | LetExp l ->
     let f (v, t, is) d = 
       let (v, t, i) = transDec (v, t, lvl, d, break) in
       (v, t, i::is)
     in
-  	let (venv', tenv', inits) = List.fold decs ~init:(venv, tenv, []) ~f:f in
+  	let (venv', tenv', inits) = List.fold l.decs ~init:(venv, tenv, []) ~f:f in
     let inits = inits |> List.rev |> List.concat  in
-  	let body = transExp (venv', tenv', lvl, body, break) in
+  	let body = transExp (venv', tenv', lvl, l.body, break) in
     {exp = T.transLet (inits, body.exp); ty = body.ty}
   
-  | ArrayExp {typ; size; init; pos} ->
-    let {exp = _; ty = tysize} = trexp(size) in
-    if type_equal tysize INT then
-      let {exp = _; ty = tyinit} = trexp(init) in
-      match S.look(tenv, typ) with
-      | Some tyarray ->
-        begin
-          match tyarray with
-          | ARRAY (tyelem, unique) -> 
-            if type_equal tyelem tyinit then
-              {exp = T.toDo (); ty = tyarray}
-            else
-              raise (Semantic_error "Incompoatible initializer type")
-          | _ ->
-            raise (Semantic_error "Not an array type")
-        end
-      | None ->
-        raise (Semantic_error "Unknown array type")
-    else
-      raise (Semantic_error "Array size expression must have type int")
-
+  | ArrayExp a ->
+    let size = trexp a.size in
+    if not (type_equal size.ty Types.INT) then
+       raise (Semantic_error "Array size expression must have type int");
+    let init = trexp a.init in
+    match S.look(tenv, a.typ) with
+    | Some ty ->
+      begin
+        match ty with
+        | ARRAY (ty, unique) -> 
+          if type_equal ty init.ty then
+            {exp = T.toDo (); ty}
+          else
+            raise (Semantic_error "Incompoatible initializer type")
+        | _ -> raise (Semantic_error "Not an array type")
+      end
+    | None -> raise (Semantic_error "Unknown array type")
+     
 and transTy (tenv, ty) = 
   match ty with 
   | NameTy (symbol, pos) -> 
