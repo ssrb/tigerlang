@@ -68,14 +68,12 @@ let getResult () = !fragments
 
 let seq stms =
     let module T = Tree in
-    
     let rec aux stms res =
         match stms with
         | [] -> assert(false)
         | [ stm ] -> T.SEQ (res, stm)
         | stm::stms' -> aux stms' (T.SEQ (res, stm))
     in
-
     match stms with
     | [] -> assert(false)
     | [ stm ] -> stm
@@ -122,6 +120,7 @@ let unCx exp =
     | Cx cx -> cx
 
 let transNil i = Ex (Tree.CONST 0)
+
 let transInt i = Ex (Tree.CONST i)
 
 let transOp (op, left, right) =
@@ -169,7 +168,6 @@ let level_equal left right =
     | (Level (_, left), Level (_, right)) -> left = right
 
 let follow_static_link declvl uselvl =
-    
     let module T = Tree in
     let rec aux lvl fp =
         if level_equal declvl lvl then
@@ -183,7 +181,6 @@ let follow_static_link declvl uselvl =
                 aux parent.level (Frame.exp (sl, fp))
             end
     in
-
     aux uselvl (T.TEMP Frame.fp)
 
 let transCall (declvl, uselvl, lbl, args, rtype) = 
@@ -196,17 +193,13 @@ let transCall (declvl, uselvl, lbl, args, rtype) =
 
 let transRecord fldxp =
     let module T = Tree in
-
     let r = Temp.newtemp () in
-
     let init woffset xp =
         let xp = match xp with Some xp -> unEx xp | None -> T.CONST 0 in
         T.MOVE (T.MEM (T.BINOP (T.PLUS, (T.TEMP r), (T.CONST (woffset * Frame.wordSize)))), xp)
     in
-
     let alloc = T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "malloc")), [ T.CONST ((List.length fldxp) * Frame.wordSize) ]))) in        
-    let inits = List.mapi fldxp ~f:init in
-    
+    let inits = List.mapi fldxp ~f:init in    
     Ex (T.ESEQ (seq (alloc::inits), T.TEMP r))
 
 let transAssign (left, right) =
@@ -334,7 +327,10 @@ let transLet (inits, body) =
 
 let transArray (size, init) =
     let module T = Tree in
-    Ex (T.CONST 0)
+    let r = Temp.newtemp () in
+    let alloc = T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "malloc")), [ T.BINOP (T.MUL, (unEx size), (T.CONST Frame.wordSize)) ]))) in
+    let init = T.EXP (T.CALL ((T.NAME (Temp.namedlabel "initArray")), [ (T.TEMP r); (unEx init) ])) in
+    Ex (T.ESEQ (seq [alloc; init], T.TEMP r))
 
 let toDo () = Ex (Tree.CONST 0)
 
