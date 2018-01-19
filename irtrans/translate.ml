@@ -28,6 +28,7 @@ val transBreak: Temp.label -> exp
 val transLet: exp list * exp -> exp
 val transArray: exp * exp -> exp
 val transVar: access * level -> exp
+val transField: exp * int -> exp
 
 val toDo: unit -> exp
 
@@ -331,6 +332,10 @@ let transArray (size, init) =
     let alloc = T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "malloc")), [ T.BINOP (T.MUL, (unEx size), (T.CONST Frame.wordSize)) ]))) in
     let init = T.EXP (T.CALL ((T.NAME (Temp.namedlabel "initArray")), [ (T.TEMP r); (unEx init) ])) in
     Ex (T.ESEQ (seq [alloc; init], T.TEMP r))
+
+let transField (var, fidx) =
+    let module T = Tree in
+    Ex (T.MEM (T.BINOP (T.PLUS, (unEx var), (T.BINOP (T.MUL, (T.CONST fidx), (T.CONST Frame.wordSize))))))
 
 let toDo () = Ex (Tree.CONST 0)
 

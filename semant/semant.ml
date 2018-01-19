@@ -363,13 +363,13 @@ and transVar (venv, tenv, lvl, var, break) =
     end
 
   | FieldVar (var, sym, pos) ->
-    let {exp; ty} = transVar (venv, tenv, lvl, var, break) in
+    let var = transVar (venv, tenv, lvl, var, break) in
     begin
-      match ty with
+      match var.ty with
       | RECORD (fields, _) ->
         begin
-          match List.find fields (fun (sym', _) -> sym = sym')  with
-          | Some (_, ty) -> { exp = T.toDo (); ty = actual_ty ty }
+          match List.findi fields (fun _ (sym', _) -> sym = sym')  with
+          | Some (i, (_, ty)) -> { exp = T.transField (var.exp, i); ty = actual_ty ty }
           | None -> raise (Semantic_error "unknown field for record")
         end
       | _ -> raise (Semantic_error "var isn't a record")
