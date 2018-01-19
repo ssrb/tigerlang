@@ -304,7 +304,7 @@ and transDec (venv, tenv, lvl, dec, break) =
           raise (Semantic_error "Wrong return type")
       | None -> ();
 
-      T.transFunction (lvl', body.exp, tyresopt)
+      T.procEntryExit ~level:lvl' ~body:body.exp
 
     in
     begin

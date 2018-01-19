@@ -31,7 +31,7 @@ val transArray: exp * exp -> exp
 val transVar: access * level -> exp
 val transField: exp * int -> exp
 val transSubscript: exp * exp -> exp
-val transFunction: level * exp * Types.ty option -> unit
+val procEntryExit: level:level -> body:exp -> unit
 
 end
 

@@ -29,3 +29,5 @@ let exp (access, exp) =
     match access with
     | InFrame off -> T.MEM (T.BINOP (T.PLUS, exp, (T.CONST off)))
     | InReg temp -> T.TEMP temp
+
+let procEntryExit1 (frame, body) = body
