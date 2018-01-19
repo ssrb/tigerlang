@@ -254,11 +254,11 @@ and checkForCyclicType (tenv, symbol) =
 and transDec (venv, tenv, lvl, dec, break) = 
   match dec with
 
-  | FunctionDec l ->
+  | FunctionDec fs ->
 
-    let forward_declare (fdecs, v) {name; params; result; body} =
+    let forward_declare (fdecs, v) f =
       
-      let typarams = List.map params ~f:(fun p ->
+      let typarams = List.map f.params ~f:(fun p ->
         match S.look (tenv, p.typ) with
         | Some ty -> (p.typ, ty)
         | None -> raise (Semantic_error "Unknown type")
@@ -266,10 +266,10 @@ and transDec (venv, tenv, lvl, dec, break) =
       in
       
       let lab = Temp.newlabel () in
-      let lvl' = T.newLevel ~parent:lvl ~name:lab ~formals:(List.map params ~f:(fun t -> true)) in
+      let lvl' = T.newLevel ~parent:lvl ~name:lab ~formals:(List.map f.params ~f:(fun p -> !(p.escape))) in
 
       let tyresopt =
-        match result with
+        match f.result with
         | Some (res, pos) ->
         begin
           match S.look (tenv, res) with
@@ -279,7 +279,7 @@ and transDec (venv, tenv, lvl, dec, break) =
         | None -> None
       in
 
-      let v' = S.enter (v, name, FunEntry {
+      let v' = S.enter (v, f.name, FunEntry {
         level = lvl';
         label = lab;
         formals = typarams |> List.map ~f:(fun (n,t) -> t); 
@@ -287,9 +287,9 @@ and transDec (venv, tenv, lvl, dec, break) =
       })
       in
 
-      ((name, lvl', typarams, tyresopt, body)::fdecs, v') 
+      ((name, lvl', typarams, tyresopt, f.body)::fdecs, v') 
     in
-    let (fdecs, venv') = List.fold l ~init:([], venv) ~f:forward_declare in
+    let (fdecs, venv') = List.fold fs ~init:([], venv) ~f:forward_declare in
     let trans_body (name, lvl', typarams, tyresopt, body) =
 
       let venv'' = List.fold typarams ~init:venv' ~f:(fun v (n, t) ->
@@ -297,10 +297,10 @@ and transDec (venv, tenv, lvl, dec, break) =
       )
       in
       
-      let {exp = _; ty = tybody} = transExp(venv'' , tenv, lvl', body, None) in
+      let body = transExp(venv'' , tenv, lvl', body, None) in
       match tyresopt with
-      | Some tyresult ->
-        if not (type_equal tybody tyresult) then
+      | Some ty ->
+        if not (type_equal body.ty ty) then
           raise (Semantic_error "Wrong return type")
       | None -> ()
     in
