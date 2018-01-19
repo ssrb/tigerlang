@@ -29,8 +29,7 @@ val transLet: exp list * exp -> exp
 val transArray: exp * exp -> exp
 val transVar: access * level -> exp
 val transField: exp * int -> exp
-
-val toDo: unit -> exp
+val transSubscript: exp * exp -> exp
 
 end
 
@@ -337,6 +336,8 @@ let transField (var, fidx) =
     let module T = Tree in
     Ex (T.MEM (T.BINOP (T.PLUS, (unEx var), (T.BINOP (T.MUL, (T.CONST fidx), (T.CONST Frame.wordSize))))))
 
-let toDo () = Ex (Tree.CONST 0)
+let transSubscript (var, sub) = 
+    let module T = Tree in
+    Ex (T.MEM (T.BINOP (T.PLUS, (unEx var), (T.BINOP (T.MUL, (unEx sub), (T.CONST Frame.wordSize))))))
 
 end

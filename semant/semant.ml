@@ -376,13 +376,14 @@ and transVar (venv, tenv, lvl, var, break) =
     end
 
   | SubscriptVar (var, sub, pos) -> 
-    let {exp; ty} = transVar (venv, tenv, lvl, var, break) in
+    let var = transVar (venv, tenv, lvl, var, break) in
     begin
-      match ty with
+      match var.ty with
       | ARRAY (ty, _) -> 
-      let {exp; ty} = transExp (venv, tenv, lvl, sub, break) in
-      if not (type_equal ty INT) then raise (Semantic_error "subscript must have int type");
-      { exp = T.toDo (); ty = actual_ty ty }
+        let sub = transExp (venv, tenv, lvl, sub, break) in
+        if not (type_equal ty INT) then 
+          raise (Semantic_error "subscript must have int type");
+        { exp = T.transSubscript (var.exp, sub.exp); ty = actual_ty ty }
       | _ -> raise (Semantic_error "subscripted is not an array")
     end
 

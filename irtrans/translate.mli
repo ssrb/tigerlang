@@ -30,8 +30,7 @@ val transLet: exp list * exp -> exp
 val transArray: exp * exp -> exp
 val transVar: access * level -> exp
 val transField: exp * int -> exp
-
-val toDo: unit -> exp
+val transSubscript: exp * exp -> exp
 
 end
 
