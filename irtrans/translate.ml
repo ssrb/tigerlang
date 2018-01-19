@@ -66,8 +66,9 @@ let allocLocal lvl escape =
 
 let getResult () = !fragments
 
+module T = Tree
+
 let seq stms =
-    let module T = Tree in
     let rec aux stms res =
         match stms with
         | [] -> assert(false)
@@ -81,7 +82,6 @@ let seq stms =
 
 
 let unEx exp = 
-    let module T = Tree in
     match exp with 
     | Ex ex -> ex
     | Nx nx -> T.ESEQ(nx, T.CONST 0)
@@ -98,7 +98,6 @@ let unEx exp =
             T.TEMP r)
 
 let unNx exp =
-    let module T = Tree in
     match exp with 
     | Ex ex -> T.EXP ex
     | Nx nx -> nx
@@ -107,7 +106,6 @@ let unNx exp =
         seq [cx(l, l); T.LABEL l]
 
 let unCx exp = 
-    let module T = Tree in
     match exp with 
     | Ex ex ->
     begin
@@ -125,7 +123,6 @@ let transInt i = Ex (Tree.CONST i)
 
 let transOp (op, left, right) =
     let module A = Absyn in
-    let module T = Tree in
     let leftEx = unEx left in
     let rightEx = unEx left in
     match op with 
@@ -141,22 +138,18 @@ let transOp (op, left, right) =
     | A.GeOp -> Cx (fun (t, f) -> (T.CJUMP (T.LT, rightEx, leftEx, t, f)))
 
 let transSeq exps =
-    let module T = Tree in
-    
     let rec aux exps res =
         match exps with
         | [] -> assert(false)
         | [ exp ] -> T.ESEQ (res, unEx exp)
         | exp::exps' -> aux exps' (T.SEQ (res,unNx exp))
     in
-
     match exps with 
     | [] -> assert(false)
     | [ exp ] -> exp
     | exp::exps' -> Ex (aux exps' (unNx exp))
 
 let transString lit =
-    let module T = Tree in
     let lab = Temp.newlabel () in
     fragments := (Frame.STRING (lab, lit))::!fragments;
     Ex (T.NAME (lab))
@@ -168,7 +161,6 @@ let level_equal left right =
     | (Level (_, left), Level (_, right)) -> left = right
 
 let follow_static_link declvl uselvl =
-    let module T = Tree in
     let rec aux lvl fp =
         if level_equal declvl lvl then
             fp
@@ -184,7 +176,6 @@ let follow_static_link declvl uselvl =
     aux uselvl (T.TEMP Frame.fp)
 
 let transCall (declvl, uselvl, lbl, args, rtype) = 
-    let module T = Tree in
     let sl = follow_static_link declvl uselvl in
     let call = T.CALL ((T.NAME lbl), sl::(List.map args ~f:unEx)) in
     match rtype with
@@ -192,7 +183,6 @@ let transCall (declvl, uselvl, lbl, args, rtype) =
     | _ -> Ex call
 
 let transRecord fldxp =
-    let module T = Tree in
     let r = Temp.newtemp () in
     let init woffset xp =
         let xp = match xp with Some xp -> unEx xp | None -> T.CONST 0 in
@@ -203,19 +193,14 @@ let transRecord fldxp =
     Ex (T.ESEQ (seq (alloc::inits), T.TEMP r))
 
 let transAssign (left, right) =
-    let module T = Tree in
     Nx (T.MOVE ((unEx left), (unEx right)))
 
-let transVar ((declvl ,  access), uselvl) = 
-    let module T = Tree in 
-    let sl = follow_static_link declvl uselvl in
-    Ex (Frame.exp (access, sl))
+let transVar ((declvl ,  access), uselvl) =
+    Ex (Frame.exp (access, (follow_static_link declvl uselvl)))
 
 let transIf (test, then', else') =
-    let module T = Tree in
     let t = Temp.newlabel () in
     let j = Temp.newlabel () in
-    
     match else' with 
     | Some else' ->
     begin
@@ -287,7 +272,6 @@ let transIf (test, then', else') =
     end
 
 let transWhile (test, body, finish) =
-    let module T = Tree in
     let r = Temp.newtemp () in
     let start = Temp.newlabel () in
     let work = Temp.newlabel () in
@@ -301,7 +285,6 @@ let transWhile (test, body, finish) =
         T.TEMP r))
  
 let transFor (var, lo, hi, body, finish) =
-    let module T = Tree in
     let var = Frame.exp (snd var, (T.TEMP Frame.fp)) in
     let r = Temp.newtemp () in
     let work = Temp.newlabel () in
@@ -322,22 +305,18 @@ let transBreak label =
     Nx (Tree.JUMP (Tree.NAME label, [label]))
 
 let transLet (inits, body) =
-    let module T = Tree in
     Ex (T.ESEQ (inits |> List.map ~f:unNx |> seq, unEx body))
 
 let transArray (size, init) =
-    let module T = Tree in
     let r = Temp.newtemp () in
     let alloc = T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "malloc")), [ T.BINOP (T.MUL, (unEx size), (T.CONST Frame.wordSize)) ]))) in
     let init = T.EXP (T.CALL ((T.NAME (Temp.namedlabel "initArray")), [ (T.TEMP r); (unEx init) ])) in
     Ex (T.ESEQ (seq [alloc; init], T.TEMP r))
 
 let transField (var, fidx) =
-    let module T = Tree in
     Ex (T.MEM (T.BINOP (T.PLUS, (unEx var), (T.BINOP (T.MUL, (T.CONST fidx), (T.CONST Frame.wordSize))))))
 
 let transSubscript (var, sub) = 
-    let module T = Tree in
     Ex (T.MEM (T.BINOP (T.PLUS, (unEx var), (T.BINOP (T.MUL, (unEx sub), (T.CONST Frame.wordSize))))))
 
 end
