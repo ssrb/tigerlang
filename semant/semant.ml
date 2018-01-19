@@ -17,11 +17,13 @@ type expty = {exp: Translate.exp; ty: Types.ty}
 
 exception Semantic_error of string
 
-let type_equal tyleft tyright =
-  match (tyleft, tyright) with
+let type_equal left right =
+  match (left, right) with
   | (NIL, RECORD _) | (RECORD _, NIL) -> true
   | (NIL, _) | (_, NIL)-> false
-  | _ -> tyleft = tyright
+  | (RECORD (_, left), RECORD (_, right))
+  | (ARRAY (_, left), ARRAY (_, right))-> left = right
+  | _ -> left = right
 
 let rec actual_ty ty =
   match ty with
@@ -195,7 +197,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     | Some ty ->
       begin
         match ty with
-        | ARRAY (ty, unique) -> 
+        | ARRAY (ty, _) -> 
           if not (type_equal ty init.ty) then
             raise (Semantic_error "Incompoatible initializer type");
           {exp = T.transArray (size.exp, init.exp); ty}  
