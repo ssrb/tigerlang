@@ -4,6 +4,7 @@ module Tree = Tree.F(M68kTemp)
 module Temp = Tree.Temp
 
 let fp = Temp.newtemp ()
+let rv = Temp.newtemp ()
 let wordSize = 4
 
 type access = InFrame of int | InReg of Temp.temp

@@ -8,6 +8,7 @@ type access
 type frag = PROC of {body: Tree.stm; frame: frame} | STRING of Temp.label * string
 
 val fp: Temp.temp
+val rv: Temp.temp
 val wordSize: int
 
 val newFrame: name:Temp.label -> formals:bool list -> frame

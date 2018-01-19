@@ -320,6 +320,15 @@ let transField (var, fidx) =
 let transSubscript (var, sub) = 
     Ex (T.MEM (T.BINOP (T.PLUS, (unEx var), (T.BINOP (T.MUL, (unEx sub), (T.CONST Frame.wordSize))))))
 
-let transFunction  (level, body, ret) = ()
+let transFunction (level, body, ret) =
+    match level with
+    | Level (level, _) -> 
+    begin
+        match ret with 
+        | Some _ -> fragments := (Frame.PROC {body = (unNx body); frame = level.frame})::!fragments
+        | None -> fragments := (Frame.PROC {body = (unNx body); frame = level.frame})::!fragments
+    end
+    | Outermost -> assert(false)
+    
 
 end
