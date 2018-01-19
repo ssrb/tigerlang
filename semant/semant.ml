@@ -302,13 +302,16 @@ and transDec (venv, tenv, lvl, dec, break) =
       | Some ty ->
         if not (type_equal body.ty ty) then
           raise (Semantic_error "Wrong return type")
-      | None -> ()
+      | None -> ();
+
+      T.transFunction (lvl', body.exp, tyresopt)
+
     in
     begin
       fdecs |> List.rev |> List.iter ~f:trans_body;
       (venv', tenv, [])
     end
-  
+
   | VarDec v -> 
     
     let init = transExp (venv, tenv, lvl, v.init, break) in

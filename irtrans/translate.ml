@@ -30,6 +30,7 @@ val transArray: exp * exp -> exp
 val transVar: access * level -> exp
 val transField: exp * int -> exp
 val transSubscript: exp * exp -> exp
+val transFunction: level * exp * Types.ty option -> unit
 
 end
 
@@ -318,5 +319,7 @@ let transField (var, fidx) =
 
 let transSubscript (var, sub) = 
     Ex (T.MEM (T.BINOP (T.PLUS, (unEx var), (T.BINOP (T.MUL, (unEx sub), (T.CONST Frame.wordSize))))))
+
+let transFunction  (level, body, ret) = ()
 
 end
