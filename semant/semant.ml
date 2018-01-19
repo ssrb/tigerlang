@@ -258,9 +258,9 @@ and transDec (venv, tenv, lvl, dec, break) =
 
     let forward_declare (fdecs, v) {name; params; result; body} =
       
-      let typarams = List.map params ~f:(fun {typ = pname; _} ->
-        match S.look (tenv, pname) with
-        | Some ty -> (pname, ty)
+      let typarams = List.map params ~f:(fun p ->
+        match S.look (tenv, p.typ) with
+        | Some ty -> (p.typ, ty)
         | None -> raise (Semantic_error "Unknown type")
       )
       in
@@ -309,11 +309,11 @@ and transDec (venv, tenv, lvl, dec, break) =
       (venv', tenv, [])
     end
   
-  | VarDec {name; escape; typ; init; pos} -> 
+  | VarDec v -> 
     
-    let init = transExp (venv, tenv, lvl, init, break) in
+    let init = transExp (venv, tenv, lvl, v.init, break) in
     begin
-      match typ with
+      match v.typ with
       | Some (symbol, pos) ->
         begin
           match Symbol.look (tenv, symbol) with
@@ -327,13 +327,13 @@ and transDec (venv, tenv, lvl, dec, break) =
           raise (Semantic_error "A variable declaration initialized with nil must beconstrained to be a structure")
     end;
 
-    (S.enter (venv, name, VarEntry {access = T.allocLocal lvl !escape; ty = init.ty}), tenv, [ init.exp ])
+    (S.enter (venv, v.name, VarEntry {access = T.allocLocal lvl !(v.escape); ty = init.ty}), tenv, [ init.exp ])
 
-  | TypeDec l ->
+  | TypeDec ts ->
     
-    let (fdecs, tenv') = List.fold l ~init:([], tenv) ~f:(fun (fdecs, te) {name; ty} ->
-      let fdec = NAME(name, ref None) in
-      ((fdec, ty)::fdecs, S.enter (te, name, fdec))
+    let (fdecs, tenv') = List.fold ts ~init:([], tenv) ~f:(fun (fdecs, te) t ->
+      let fdec = NAME(t.name, ref None) in
+      ((fdec, t.ty)::fdecs, S.enter (te, t.name, fdec))
     ) 
     in
 
@@ -344,7 +344,7 @@ and transDec (venv, tenv, lvl, dec, break) =
       | _ -> assert(false)
     );
 
-    List.iter l ~f:(fun {name; ty; pos} -> checkForCyclicType(tenv', name));
+    List.iter ts ~f:(fun t -> checkForCyclicType(tenv', t.name));
 
     (venv, tenv', [])
 
