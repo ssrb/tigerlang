@@ -78,13 +78,26 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     end
   
   | OpExp o ->
+  begin
     let left = trexp (o.left) in
     let right = trexp (o.right) in
     
-    if not (type_equal left.ty Types.INT) || not (type_equal right.ty Types.INT) then
-      raise (Semantic_error "integer expected");
+    (match o.oper with
+    | PlusOp | MinusOp | MulOp | DivOp ->
+      if not (type_equal left.ty Types.INT) || not (type_equal right.ty Types.INT) then
+        raise (Semantic_error "integer expected");
+    | EqOp | NeqOp ->
+      if not (type_equal left.ty right.ty) then
+        raise (Semantic_error "different types in equality test");
+    | LtOp | LeOp | GtOp | GeOp ->
+     if not (((type_equal left.ty Types.INT) && (type_equal right.ty Types.INT))
+     || ((type_equal left.ty Types.STRING) && (type_equal right.ty Types.STRING))) then
+        raise (Semantic_error "integer or string expected"));
+
     {exp = T.transOp (o.oper, left.exp, right.exp); ty = Types.INT}
-  
+
+  end
+
   | RecordExp r ->
     begin
       match List.find_a_dup r.fields ~compare:(fun (left, _, _) (right,_, _) -> compare left right) with
