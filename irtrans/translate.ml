@@ -127,26 +127,19 @@ let transOp (op, left, right, ty) =
     let left = unEx left in
     let right = unEx right in
     if ty = Types.STRING then
-        let r = Temp.newtemp () in
         match op with
-        | A.EqOp -> Cx (fun (t, f) ->  seq [
-            T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [left; right]))));
-            T.CJUMP (T.EQ, (T.TEMP r), (T.CONST 0), t, f) ])
-        | A.NeqOp -> Cx (fun (t, f) ->  seq [
-            T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [left; right]))));
-            T.CJUMP (T.NE, (T.TEMP r), (T.CONST 0), t, f) ])
-        | A.LtOp -> Cx (fun (t, f) ->  seq [
-            T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [left; right]))));
-            T.CJUMP (T.LT, (T.TEMP r), (T.CONST 0), t, f) ])
-        | A.LeOp -> Cx (fun (t, f) ->  seq [
-            T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [left; right]))));
-            T.CJUMP (T.LE, (T.TEMP r), (T.CONST 0), t, f) ])
-        | A.GtOp -> Cx (fun (t, f) ->  seq [
-            T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [right; left]))));
-            T.CJUMP (T.LT, (T.TEMP r), (T.CONST 0), t, f) ])
-        | A.GeOp -> Cx (fun (t, f) ->  seq [
-            T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [right; left]))));
-            T.CJUMP (T.LE, (T.TEMP r), (T.CONST 0), t, f) ])
+        | A.EqOp -> Cx (fun (t, f) ->
+            T.CJUMP (T.EQ, (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [left; right]))), (T.CONST 0), t, f))
+        | A.NeqOp -> Cx (fun (t, f) ->
+            T.CJUMP (T.NE, (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [left; right]))), (T.CONST 0), t, f))
+        | A.LtOp -> Cx (fun (t, f) ->
+            T.CJUMP (T.LT, (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [left; right]))), (T.CONST 0), t, f))
+        | A.LeOp -> Cx (fun (t, f) ->
+            T.CJUMP (T.LE, (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [left; right]))), (T.CONST 0), t, f))
+        | A.GtOp -> Cx (fun (t, f) ->
+            T.CJUMP (T.LT, (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [right; left]))), (T.CONST 0), t, f))
+        | A.GeOp -> Cx (fun (t, f) ->
+            T.CJUMP (T.LE, (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [right; left]))), (T.CONST 0), t, f))
         | _ -> assert(false)
     else
         match op with 
