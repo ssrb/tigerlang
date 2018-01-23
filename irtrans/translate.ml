@@ -15,7 +15,7 @@ val getResult: unit -> Frame.frag list
 
 val transNil: unit -> exp
 val transInt: int -> exp
-val transOp: Absyn.oper * exp * exp -> exp
+val transOp: Absyn.oper * exp * exp * Types.ty -> exp
 val transSeq: exp list -> exp
 val transString: string -> exp
 val transCall: level * level * Temp.label * exp list * Types.ty -> exp
@@ -122,21 +122,44 @@ let transNil i = Ex (Tree.CONST 0)
 
 let transInt i = Ex (Tree.CONST i)
 
-let transOp (op, left, right) =
+let transOp (op, left, right, ty) =
     let module A = Absyn in
-    let leftEx = unEx left in
-    let rightEx = unEx left in
-    match op with 
-    | A.PlusOp -> Ex (T.BINOP (T.PLUS, leftEx, rightEx))
-    | A.MinusOp -> Ex (T.BINOP (T.MINUS, leftEx, rightEx))
-    | A.MulOp -> Ex (T.BINOP (T.MUL, leftEx, rightEx))
-    | A.DivOp -> Ex (T.BINOP (T.DIV, leftEx, rightEx))
-    | A.EqOp -> Cx (fun (t, f) -> (T.CJUMP (T.EQ, leftEx, rightEx, t, f)))
-    | A.NeqOp -> Cx (fun (t, f) -> (T.CJUMP (T.NE, leftEx, rightEx, t, f)))
-    | A.LtOp -> Cx (fun (t, f) -> (T.CJUMP (T.LT, leftEx, rightEx, t, f)))
-    | A.LeOp -> Cx (fun (t, f) -> (T.CJUMP (T.LE, leftEx, rightEx, t, f)))
-    | A.GtOp -> Cx (fun (t, f) -> (T.CJUMP (T.LE, rightEx, leftEx, t, f)))
-    | A.GeOp -> Cx (fun (t, f) -> (T.CJUMP (T.LT, rightEx, leftEx, t, f)))
+    let left = unEx left in
+    let right = unEx right in
+    if ty = Types.STRING then
+        let r = Temp.newtemp () in
+        match op with
+        | A.EqOp -> Cx (fun (t, f) ->  seq [
+            T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [left; right]))));
+            T.CJUMP (T.EQ, (T.TEMP r), (T.CONST 0), t, f) ])
+        | A.NeqOp -> Cx (fun (t, f) ->  seq [
+            T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [left; right]))));
+            T.CJUMP (T.NE, (T.TEMP r), (T.CONST 0), t, f) ])
+        | A.LtOp -> Cx (fun (t, f) ->  seq [
+            T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [left; right]))));
+            T.CJUMP (T.LT, (T.TEMP r), (T.CONST 0), t, f) ])
+        | A.LeOp -> Cx (fun (t, f) ->  seq [
+            T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [left; right]))));
+            T.CJUMP (T.LE, (T.TEMP r), (T.CONST 0), t, f) ])
+        | A.GtOp -> Cx (fun (t, f) ->  seq [
+            T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [right; left]))));
+            T.CJUMP (T.LT, (T.CONST 0), (T.TEMP r), t, f) ])
+        | A.GeOp -> Cx (fun (t, f) ->  seq [
+            T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [right; left]))));
+            T.CJUMP (T.LE, (T.CONST 0), (T.TEMP r), t, f) ])
+        | _ -> assert(false)
+    else
+        match op with 
+        | A.PlusOp -> Ex (T.BINOP (T.PLUS, left, right))
+        | A.MinusOp -> Ex (T.BINOP (T.MINUS, left, right))
+        | A.MulOp -> Ex (T.BINOP (T.MUL, left, right))
+        | A.DivOp -> Ex (T.BINOP (T.DIV, left, right))
+        | A.EqOp -> Cx (fun (t, f) -> (T.CJUMP (T.EQ, left, right, t, f)))
+        | A.NeqOp -> Cx (fun (t, f) -> (T.CJUMP (T.NE, left, right, t, f)))
+        | A.LtOp -> Cx (fun (t, f) -> (T.CJUMP (T.LT, left, right, t, f)))
+        | A.LeOp -> Cx (fun (t, f) -> (T.CJUMP (T.LE, left, right, t, f)))
+        | A.GtOp -> Cx (fun (t, f) -> (T.CJUMP (T.LT, right, left, t, f)))
+        | A.GeOp -> Cx (fun (t, f) -> (T.CJUMP (T.LE, right, left, t, f)))
 
 let transSeq exps =
     let rec aux exps res =

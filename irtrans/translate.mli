@@ -16,7 +16,7 @@ val getResult: unit -> Frame.frag list
 
 val transNil: unit -> exp
 val transInt: int -> exp
-val transOp: Absyn.oper * exp * exp -> exp
+val transOp: Absyn.oper * exp * exp * Types.ty -> exp
 val transSeq: exp list -> exp
 val transString: string -> exp
 val transCall: level * level * Temp.label * exp list * Types.ty -> exp

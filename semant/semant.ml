@@ -94,7 +94,9 @@ let rec transExp (venv, tenv, lvl, exp, break) =
      || ((type_equal left.ty Types.STRING) && (type_equal right.ty Types.STRING))) then
         raise (Semantic_error "integer or string expected"));
 
-    {exp = T.transOp (o.oper, left.exp, right.exp); ty = (if type_equal left.ty Types.NIL then right.ty else left.ty)}
+    let ty = (if type_equal left.ty Types.NIL then right.ty else left.ty) in 
+
+    {exp = T.transOp (o.oper, left.exp, right.exp, ty); ty = ty}
 
   end
 
