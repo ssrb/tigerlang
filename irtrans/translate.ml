@@ -143,10 +143,10 @@ let transOp (op, left, right, ty) =
             T.CJUMP (T.LE, (T.TEMP r), (T.CONST 0), t, f) ])
         | A.GtOp -> Cx (fun (t, f) ->  seq [
             T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [right; left]))));
-            T.CJUMP (T.LT, (T.CONST 0), (T.TEMP r), t, f) ])
+            T.CJUMP (T.LT, (T.TEMP r), (T.CONST 0), t, f) ])
         | A.GeOp -> Cx (fun (t, f) ->  seq [
             T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [right; left]))));
-            T.CJUMP (T.LE, (T.CONST 0), (T.TEMP r), t, f) ])
+            T.CJUMP (T.LE, (T.TEMP r), (T.CONST 0), t, f) ])
         | _ -> assert(false)
     else
         match op with 
