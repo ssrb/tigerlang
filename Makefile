@@ -54,8 +54,34 @@ define PROJ_semant_tester
 endef
 export PROJ_semant_tester
 
+define PROJ_canon_tester
+	RESULT = canon/canon_tester
+	SOURCES = absyn/absyn.ml \
+	absyn/table.ml \
+	absyn/symbol.ml \
+	parser/tigerparse.mly \
+	lexer/tokenCBs.ml \
+	lexer/tigerlex.mll \
+	parser/parsertokens.ml \
+	semant/types.ml \
+	irtrans/temp.ml \
+	irtrans/tree.ml \
+	irtrans/frame.ml \
+	irtrans/translate.ml \
+	irtrans/findEscape.ml \
+	semant/env.ml \
+	semant/semant.ml \
+	semant/prtype.ml \
+	irtrans/m68kTemp.ml \
+	irtrans/m68kFrame.ml \
+	canon/canon.ml \
+	canon/canon_tester.ml
+	YFLAGS = --explain --trace --dump
+endef
+export PROJ_canon_tester
+
 ifndef SUBPROJS
-  export SUBPROJS = lexer_tester parser_tester absyn_tester semant_tester
+  export SUBPROJS = lexer_tester parser_tester absyn_tester semant_tester canon_tester
 endif
 
 all: debug-code native-code

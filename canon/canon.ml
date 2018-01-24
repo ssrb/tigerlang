@@ -1,8 +1,8 @@
-module T = Tree
+module F  = functor(Tree: Tree.T) -> struct
 
 let linearize s = []
 
-let basicBlocks l = ([], Tree.newlabel ())
+let basicBlocks l = ([], Tree.Temp.newlabel ())
 
 let traceSchedule x = []
 
@@ -149,3 +149,5 @@ let traceSchedule x = []
   fun traceSchedule(blocks,done) = 
        getnext(foldr enterblock Symbol.empty blocks, blocks)
          @ [T.LABEL done]*)
+
+end

@@ -1,3 +1,5 @@
+module F : functor(Tree: Tree.T) -> sig
+
 val linearize : Tree.stm -> Tree.stm list
         (* From an arbitrary Tree statement, produce a list of cleaned trees
 	   satisfying the following properties:
@@ -27,3 +29,4 @@ val traceSchedule : Tree.stm list list * Tree.label -> Tree.stm list
 	    in this reordering as many JUMP(T.NAME(lab)) statements
             as possible are eliminated by falling through into T.LABEL(lab).
          *)
+end

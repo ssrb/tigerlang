@@ -1,9 +1,11 @@
 module Lexer = Tigerlex.F(Parsertokens)
-module M68KSemant = Semant.F(Translate.F(M68kFrame))
+module Semant = Semant.F(Translate.F(M68kFrame))
 
-let {M68KSemant.exp = _; ty } =
+open Semant
+
+let expty =
 	let lexbuf = Lexing.from_channel stdin in
-	M68KSemant.transProg (Tigerparse.prog Lexer.read lexbuf);;
+	Semant.transProg (Tigerparse.prog Lexer.read lexbuf);;
 
-Prtype.print stdout ty
+Prtype.print stdout expty.ty
 
