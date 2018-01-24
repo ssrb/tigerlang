@@ -409,5 +409,16 @@ and transVar (venv, tenv, lvl, var, break) =
 
 let transProg e0 = 
   FindEscape.findEscape e0;
-  transExp (Env.base_venv, Env.base_tenv, T.outermost, e0, None)
+  let lab = Temp.newlabel () in
+  let level = T.newLevel ~parent:T.outermost ~name:lab ~formals:[] in
+  transExp (Env.base_venv, Env.base_tenv, level, e0, None)
+
+let transProg2 e0 =
+  FindEscape.findEscape e0;
+  let lab = Temp.newlabel () in
+  let level =  T.newLevel ~parent:T.outermost ~name:lab ~formals:[] in
+  let expty = transExp (Env.base_venv, Env.base_tenv, level, e0, None) in
+  T.procEntryExit ~body:expty.exp ~level;
+  T.getResult ()
+
 end
