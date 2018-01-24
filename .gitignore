@@ -2,6 +2,15 @@
 *.cmi
 *.cmo
 *.o
+*.byte
+*.automaton
 ._d
 ._bcdi
 ._ncdi
+lexer/tigerlex.ml
+lexer/lexer_tester
+parser/tigerparse.ml
+parser/tigerparse.mli
+parser/parser_tester
+semant/semant_tester
+canon/canon_tester
