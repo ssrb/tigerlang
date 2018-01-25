@@ -2,37 +2,43 @@ module F  = functor(Tree: Tree.T) -> struct
 
 let linearize s =
   let module T = Tree in
+  
   let (%) x y =
     match (x, y) with 
     | (T.EXP (T.CONST _), _) -> y
     | (_, T.EXP(T.CONST _)) -> x
     | _ -> T.SEQ(x,y)
   in
-  let commute x y = 
-    match (x, y) with
+  
+  let commute = function
     | (T.EXP(T.CONST _), _) -> true
     | (_, T.NAME _) -> true
     | (_, T.CONST _) -> true
     | _ -> false
   in
-  let nop = T.EXP(T.CONST 0) 
-  in []
-  (*let reorder ((e as T.CALL _ )::rest) =
-	let val t = Temp.newtemp()
-	 in reorder(T.ESEQ(T.MOVE(T.TEMP t, e), T.TEMP t) :: rest)
-	end
-    | reorder (a::rest) =
-	 let val (stms,e) = do_exp a
-	     val (stms',el) = reorder rest
-	  in if commute(stms',e)
-	     then (stms % stms',e::el)
-	     else let val t = Temp.newtemp()
-		   in (stms % T.MOVE(T.TEMP t, e) % stms', T.TEMP t :: el)
-		  end
-	 end
-    | reorder nil = (nop,nil)
+  
+  let nop = T.EXP (T.CONST 0) in 
+  
+  let rec reorder stmts =
+    match stmts with
+    | (T.CALL _ as e)::rest ->
+      let t = T.Temp.newtemp() in 
+      reorder (T.ESEQ(T.MOVE(T.TEMP t, e), T.TEMP t)::rest)
+    | a::rest ->
+      let (stms,e) = do_exp a in
+      let (stms',el) = reorder rest in
+      if commute(stms',e) then 
+        (stms % stms',e::el)
+      else 
+        let t = T.Temp.newtemp() in 
+        (stms % T.MOVE(T.TEMP t, e) % stms', T.TEMP t :: el)
+    | [] -> (nop, [])
 
-  and reorder_exp(el,build) = let val (stms,el') = reorder el
+  and do_exp x = (nop, (T.CONST 0))
+
+
+  in []
+  (*and reorder_exp(el,build) = let val (stms,el') = reorder el
                         in (stms, build el')
                        end
 
