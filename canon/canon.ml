@@ -1,26 +1,23 @@
 module F  = functor(Tree: Tree.T) -> struct
 
-let linearize s = []
-
-let basicBlocks l = ([], Tree.Temp.newlabel ())
-
-let traceSchedule x = []
-
- (*fun linearize(stm0: T.stm) : T.stm list =
- let
-  infix %
-  fun (T.EXP(T.CONST _)) % x = x
-    | x % (T.EXP(T.CONST _)) = x
-    | x % y = T.SEQ(x,y)
-
-  fun commute(T.EXP(T.CONST _), _) = true
-    | commute(_, T.NAME _) = true
-    | commute(_, T.CONST _) = true
-    | commute _ = false
-
-  val nop = T.EXP(T.CONST 0)
-
-  fun reorder ((e as T.CALL _ )::rest) =
+let linearize s =
+  let module T = Tree in
+  let (%) x y =
+    match (x, y) with 
+    | (T.EXP (T.CONST _), _) -> y
+    | (_, T.EXP(T.CONST _)) -> x
+    | _ -> T.SEQ(x,y)
+  in
+  let commute x y = 
+    match (x, y) with
+    | (T.EXP(T.CONST _), _) -> true
+    | (_, T.NAME _) -> true
+    | (_, T.CONST _) -> true
+    | _ -> false
+  in
+  let nop = T.EXP(T.CONST 0) 
+  in []
+  (*let reorder ((e as T.CALL _ )::rest) =
 	let val t = Temp.newtemp()
 	 in reorder(T.ESEQ(T.MOVE(T.TEMP t, e), T.TEMP t) :: rest)
 	end
@@ -82,9 +79,13 @@ let traceSchedule x = []
 
  in (* body of linearize *)
     linear(do_stm stm0, nil)
- end
+ end*)
 
-  type block = T.stm list
+let basicBlocks l = ([], Tree.Temp.newlabel ())
+
+let traceSchedule x = []
+
+  (*type block = T.stm list
 
   (* Take list of statements and make basic blocks satisfying conditions
        3 and 4 above, in addition to the extra condition that 
