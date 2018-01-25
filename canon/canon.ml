@@ -1,14 +1,17 @@
 module F  = functor(Tree: Tree.T) -> struct
 
+module T = Tree
+module Temp = T.Temp
+
+open Core
+
 let linearize stm0 =
 
-  let module T = Tree in
-  
   let (%) x y =
     match (x, y) with 
     | (T.EXP (T.CONST _), _) -> y
     | (_, T.EXP(T.CONST _)) -> x
-    | _ -> T.SEQ(x,y)
+    | _ -> T.SEQ(x, y)
   in
   
   let commute = function
@@ -20,20 +23,19 @@ let linearize stm0 =
   
   let nop = T.EXP (T.CONST 0) in 
   
-  let rec reorder stmts =
-    match stmts with
-    | (T.CALL _ as e)::rest ->
-      let t = T.Temp.newtemp() in 
-      reorder (T.ESEQ(T.MOVE(T.TEMP t, e), T.TEMP t)::rest)
-    | a::rest ->
-      let (stms,e) = do_exp a in
-      let (stms',el) = reorder rest in
-      if commute(stms',e) then 
-        (stms % stms',e::el)
-      else 
-        let t = T.Temp.newtemp() in 
-        (stms % T.MOVE(T.TEMP t, e) % stms', T.TEMP t :: el)
-    | [] -> (nop, [])
+  let rec reorder = function
+  | (T.CALL _ as e)::rest ->
+    let t = Temp.newtemp() in 
+    reorder (T.ESEQ(T.MOVE(T.TEMP t, e), T.TEMP t)::rest)
+  | a::rest ->
+    let (stms,e) = do_exp a in
+    let (stms',el) = reorder rest in
+    if commute(stms',e) then 
+      (stms % stms',e::el)
+    else 
+      let t = Temp.newtemp() in 
+      (stms % T.MOVE(T.TEMP t, e) % stms', T.TEMP t :: el)
+  | [] -> (nop, [])
 
   and reorder_exp (el, build) = 
     let (stms, el') = reorder el in 
@@ -73,75 +75,76 @@ let linearize stm0 =
   in (* body of linearize *)
   linear (do_stm stm0, [])
  
+type block = T.stm list
 
-let basicBlocks l = ([], Tree.Temp.newlabel ())
-
-let traceSchedule x = []
-
-  (*type block = T.stm list
-
+let basicBlocks stms =
   (* Take list of statements and make basic blocks satisfying conditions
        3 and 4 above, in addition to the extra condition that 
       every block ends with a JUMP or CJUMP *)
+  let done' = Temp.newlabel() in
+  let rec blocks = function
+  |((T.LABEL _ as head) :: tail, blist) ->
+  begin
+    let rec next = function 
+    | ((T.JUMP _ as s)::rest, thisblock) -> endblock (rest, s::thisblock)
+    | ((T.CJUMP _ as s)::rest, thisblock) -> endblock (rest, s::thisblock)
+    | (((T.LABEL lab)::_) as stms, thisblock) -> next (T.JUMP(T.NAME lab,[lab])::stms, thisblock)
+    | (s::rest, thisblock) -> next (rest, s::thisblock)
+    | ([], thisblock) -> next ([T.JUMP(T.NAME done', [done'])], thisblock)
+    and endblock (stms, thisblock) = blocks(stms, List.rev (thisblock::blist)) in 
+    next(tail, [head])
+  end
+  | ([], blist) -> List.rev blist
+  | (stms, blist) -> blocks ((T.LABEL(Temp.newlabel()))::stms, blist)
+  in (blocks(stms, []), done') 
 
-  fun basicBlocks stms = 
-     let val done = Temp.newlabel()
-         fun blocks((head as T.LABEL _) :: tail, blist) =
-	     let fun next((s as (T.JUMP _))::rest, thisblock) =
-		                endblock(rest, s::thisblock)
-		   | next((s as (T.CJUMP _))::rest, thisblock) =
-                                endblock(rest,s::thisblock)
-		   | next(stms as (T.LABEL lab :: _), thisblock) =
-                                next(T.JUMP(T.NAME lab,[lab]) :: stms, thisblock)
-		   | next(s::rest, thisblock) = next(rest, s::thisblock)
-		   | next(nil, thisblock) = 
-			     next([T.JUMP(T.NAME done, [done])], thisblock)
-		 
-		 and endblock(stms, thisblock) = 
-		            blocks(stms, rev thisblock :: blist)
-		     
-	     in next(tail, [head])
-	     end
-	   | blocks(nil, blist) = rev blist
-	   | blocks(stms, blist) = blocks(T.LABEL(Temp.newlabel())::stms, blist)
-      in (blocks(stms,nil), done)
-     end
+let traceSchedule (blocks, done') =
 
-  fun enterblock(b as (T.LABEL s :: _), table) = Symbol.enter(table,s,b)
-    | enterblock(_, table) = table
+  let enterblock table stms =
+  match (stms, table) with
+  | (((T.LABEL s)::_ as b), table) -> Symbol.enter(table, s, b)
+  | (_, table) -> table
+  in
 
-  fun splitlast([x]) = (nil,x)
-    | splitlast(h::t) = let val (t',last) = splitlast t in (h::t', last) end
+  let rec splitlast = function
+  | [x] -> ([], x)
+  | h::t-> let (t',last) = splitlast t in (h::t', last)
+  in
 
-  fun trace(table,b as (T.LABEL lab :: _),rest) = 
-   let val table = Symbol.enter(table, lab, nil)
-    in case splitlast b
-     of (most,T.JUMP(T.NAME lab, _)) =>
-	  (case Symbol.look(table, lab)
-            of SOME(b' as _::_) => most @ trace(table, b', rest)
-	     | _ => b @ getnext(table,rest))
-      | (most,T.CJUMP(opr,x,y,t,f)) =>
-          (case (Symbol.look(table,t), Symbol.look(table,f))
-            of (_, SOME(b' as _::_)) => b @ trace(table, b', rest)
-             | (SOME(b' as _::_), _) => 
-		           most @ [T.CJUMP(T.notRel opr,x,y,f,t)]
+  let rec trace (table, (((T.LABEL lab)::_) as b), rest) = 
+    
+    let table = Symbol.enter(table, lab, []) in 
+    match splitlast b with
+    | (most, T.JUMP(T.NAME lab, _)) ->
+    begin
+	    match Symbol.look(table, lab) with
+      | Some(_::_ as b') -> most @ trace(table, b', rest)
+	    | _ -> b @ getnext(table,rest)
+    end
+    | (most, T.CJUMP(opr, x, y, t, f)) ->
+    begin
+      match (Symbol.look(table, t), Symbol.look(table, f)) with
+      | (_, Some(_::_ as b')) -> b @ trace(table, b', rest)
+      | (Some(_::_ as b'),  _) -> 
+		           most @ [T.CJUMP(T.notRel opr, x, y, f, t)]
 		                @ trace(table, b', rest)
-             | _ => let val f' = Temp.newlabel()
-		     in most @ [T.CJUMP(opr,x,y,t,f'), 
-				T.LABEL f', T.JUMP(T.NAME f,[f])]
-			     @ getnext(table,rest)
-                        end)
-      | (most, T.JUMP _) => b @ getnext(table,rest)
-     end
+      | _ -> 
+        let f' = Temp.newlabel() in 
+        most @ [T.CJUMP(opr, x, y, t, f'); T.LABEL f'; T.JUMP(T.NAME f, [f])] 
+             @ getnext(table,rest)
+    end
+    | (most, T.JUMP _) -> b @ getnext(table,rest)
 
-  and getnext(table,(b as (T.LABEL lab::_))::rest) = 
-           (case Symbol.look(table, lab)
-             of SOME(_::_) => trace(table,b,rest)
-              | _ => getnext(table,rest))
-    | getnext(table,nil) = nil
+  and getnext = function
+  | (table, ((T.LABEL lab::_) as b)::rest) ->
+  begin
+    match Symbol.look(table, lab) with
+    | Some(_::_) -> trace(table, b, rest)
+    | _ -> getnext(table, rest)
+  end
+  | (table, []) -> []
 
-  fun traceSchedule(blocks,done) = 
-       getnext(foldr enterblock Symbol.empty blocks, blocks)
-         @ [T.LABEL done]*)
+  in
+  getnext(List.fold ~f:enterblock ~init:Symbol.empty blocks, blocks) @ [T.LABEL done']
 
 end
