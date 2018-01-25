@@ -1,6 +1,7 @@
 module F  = functor(Tree: Tree.T) -> struct
 
-let linearize s =
+let linearize stm0 =
+
   let module T = Tree in
   
   let (%) x y =
@@ -34,58 +35,44 @@ let linearize s =
         (stms % T.MOVE(T.TEMP t, e) % stms', T.TEMP t :: el)
     | [] -> (nop, [])
 
-  and do_exp x = (nop, (T.CONST 0))
+  and reorder_exp (el, build) = 
+    let (stms, el') = reorder el in 
+    (stms, build el')
 
+  and reorder_stm (el, build) = 
+    let (stms, el') = reorder el in 
+    stms % (build el')
 
-  in []
-  (*and reorder_exp(el,build) = let val (stms,el') = reorder el
-                        in (stms, build el')
-                       end
+  and do_stm = function
+  | T.SEQ (a, b) -> do_stm a % do_stm b
+  | T.JUMP(e, labs) -> reorder_stm ([e], (fun [e] -> T.JUMP(e, labs)))
+  | T.CJUMP (p, a, b, t, f) -> reorder_stm ([a;b], (fun [a; b] -> T.CJUMP(p, a, b, t, f)))
+  | T.MOVE(T.TEMP t, T.CALL(e, el)) -> reorder_stm (e::el, (fun (e::el) -> T.MOVE(T.TEMP t,T.CALL (e, el))))
+  | T.MOVE(T.TEMP t, b) -> reorder_stm ([b], (fun [b] -> T.MOVE(T.TEMP t,b)))
+  | T.MOVE(T.MEM e, b) -> reorder_stm([e; b], (fun [e; b] -> T.MOVE(T.MEM e,b)))
+  | T.MOVE(T.ESEQ(s, e), b) -> do_stm (T.SEQ(s, T.MOVE(e,b)))
+  | T.EXP(T.CALL(e, el)) -> reorder_stm (e::el, (fun (e::el) -> T.EXP(T.CALL(e, el))))
+  | T.EXP e -> reorder_stm ([e], (fun [e] -> T.EXP e))
+  | s -> reorder_stm([], (fun [] -> s))
 
-  and reorder_stm(el,build) = let val (stms,el') = reorder (el)
-		 	 in stms % build(el')
-			end
-
-  and do_stm(T.SEQ(a,b)) = 
-               do_stm a % do_stm b
-    | do_stm(T.JUMP(e,labs)) = 
-	       reorder_stm([e],fn [e] => T.JUMP(e,labs))
-    | do_stm(T.CJUMP(p,a,b,t,f)) = 
-               reorder_stm([a,b], fn[a,b]=> T.CJUMP(p,a,b,t,f))
-    | do_stm(T.MOVE(T.TEMP t,T.CALL(e,el))) = 
-               reorder_stm(e::el,fn e::el => T.MOVE(T.TEMP t,T.CALL(e,el)))
-    | do_stm(T.MOVE(T.TEMP t,b)) = 
-	       reorder_stm([b],fn[b]=>T.MOVE(T.TEMP t,b))
-    | do_stm(T.MOVE(T.MEM e,b)) = 
-	       reorder_stm([e,b],fn[e,b]=>T.MOVE(T.MEM e,b))
-    | do_stm(T.MOVE(T.ESEQ(s,e),b)) = 
-	       do_stm(T.SEQ(s,T.MOVE(e,b)))
-    | do_stm(T.EXP(T.CALL(e,el))) = 
-	       reorder_stm(e::el,fn e::el => T.EXP(T.CALL(e,el)))
-    | do_stm(T.EXP e) = 
-	       reorder_stm([e],fn[e]=>T.EXP e)
-    | do_stm s = reorder_stm([],fn[]=>s)
-
-  and do_exp(T.BINOP(p,a,b)) = 
-                 reorder_exp([a,b], fn[a,b]=>T.BINOP(p,a,b))
-    | do_exp(T.MEM(a)) = 
-		 reorder_exp([a], fn[a]=>T.MEM(a))
-    | do_exp(T.ESEQ(s,e)) = 
-		 let val stms = do_stm s
-		     val (stms',e) = do_exp e
-		  in (stms%stms',e)
-		 end
-    | do_exp(T.CALL(e,el)) = 
-		 reorder_exp(e::el, fn e::el => T.CALL(e,el))
-    | do_exp e = reorder_exp([],fn[]=>e)
+  and do_exp = function
+  | T.BINOP (p, a, b) -> reorder_exp ([a;b], (fun [a;b] -> T.BINOP(p, a, b)))
+  | T.MEM a -> reorder_exp([a], (fun [a] -> T.MEM(a)))
+  | T.ESEQ (s, e) ->
+		 let stms = do_stm s in
+		 let (stms', e) = do_exp e in 
+     (stms % stms', e)
+  | T.CALL(e,el) -> reorder_exp(e::el, fun (e::el) -> T.CALL(e, el))
+  | e -> reorder_exp([], (fun [] -> e))
 
   (* linear gets rid of the top-level SEQ's, producing a list *)
-  fun linear(T.SEQ(a,b),l) = linear(a,linear(b,l))
-    | linear(s,l) = s::l
+  and linear = function
+  | (T.SEQ (a,b), l) -> linear (a, linear (b,l))
+  | (s, l) -> s::l
 
- in (* body of linearize *)
-    linear(do_stm stm0, nil)
- end*)
+  in (* body of linearize *)
+  linear (do_stm stm0, [])
+ 
 
 let basicBlocks l = ([], Tree.Temp.newlabel ())
 
