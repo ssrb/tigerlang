@@ -60,7 +60,18 @@ and binop = PLUS | MINUS | MUL | DIV
 and relop = EQ | NE | LT | GT | LE | GE 
 | ULT | ULE | UGT | UGE
 
-let notRel relop = relop
+let notRel = function
+| EQ -> NE
+| NE -> EQ
+| LT -> GE
+| GT -> LE
+| LE -> GT
+| GE -> LT 
+| ULT -> UGE
+| ULE -> UGT
+| UGT -> ULE
+| UGE -> ULT
+
 let commute relop = relop
 
 end
