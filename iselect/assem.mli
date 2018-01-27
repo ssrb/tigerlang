@@ -17,4 +17,4 @@ val format : (temp -> string) -> instr -> string
 
 end
 
-module F : functor(Temp: Temp.T) -> T
+module F : functor(Temp: Temp.T) -> T with module Temp = Temp
