@@ -103,7 +103,8 @@ define PROJ_iselect_tester
 	canon/canon.ml \
 	iselect/assem.ml \
 	iselect/codegen.ml \
-	iselect/m68kCodegen.ml
+	iselect/m68kCodegen.ml \
+	iselect/iselect_tester.ml
 	YFLAGS = --explain --trace --dump
 endef
 export PROJ_iselect_tester
