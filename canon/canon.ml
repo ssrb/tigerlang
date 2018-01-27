@@ -84,14 +84,14 @@ let basicBlocks stms =
       every block ends with a JUMP or CJUMP *)
   let done' = Temp.newlabel() in
   let rec blocks = function
-    |((T.LABEL _ as head) :: tail, blist) ->
+    | ((T.LABEL _ as head)::tail, blist) ->
     begin
       let rec next = function 
-      | ((T.JUMP _ as s)::rest, thisblock) -> endblock (rest, s::thisblock)
-      | ((T.CJUMP _ as s)::rest, thisblock) -> endblock (rest, s::thisblock)
-      | (((T.LABEL lab)::_) as stms, thisblock) -> next (T.JUMP(T.NAME lab, [lab])::stms, thisblock)
-      | (s::rest, thisblock) -> next (rest, s::thisblock)
-      | ([], thisblock) -> next ([T.JUMP(T.NAME done', [done'])], thisblock)
+        | ((T.JUMP _ as s)::rest, thisblock) -> endblock (rest, s::thisblock)
+        | ((T.CJUMP _ as s)::rest, thisblock) -> endblock (rest, s::thisblock)
+        | (((T.LABEL lab)::_) as stms, thisblock) -> next (T.JUMP(T.NAME lab, [lab])::stms, thisblock)
+        | (s::rest, thisblock) -> next (rest, s::thisblock)
+        | ([], thisblock) -> next ([T.JUMP(T.NAME done', [done'])], thisblock)
       and endblock (stms, thisblock) = blocks(stms, (List.rev thisblock)::blist) in 
       next(tail, [head])
     end
