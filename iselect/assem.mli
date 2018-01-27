@@ -1,5 +1,4 @@
-
-module Temp : Temp.T
+module F : functor(Temp: Temp.T) -> sig
 
 type reg = string
 type temp = Temp.temp
@@ -11,3 +10,5 @@ type instr =
 	| MOVE of {assem: string; dst: temp; src: temp}
 
 val format : (temp -> string) -> instr -> string
+
+end

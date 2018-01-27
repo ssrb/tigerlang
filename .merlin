@@ -4,10 +4,12 @@ S absyn
 S semant
 S irtrans
 S canon
+S iselect
 B parser
 B lexer
 B absyn
 B semant
 B irtrans
 B canon
+B iselect
 PKG core
