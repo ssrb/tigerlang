@@ -101,7 +101,9 @@ define PROJ_iselect_tester
 	irtrans/m68kTemp.ml \
 	irtrans/m68kFrame.ml \
 	canon/canon.ml \
-	iselect/assem.ml
+	iselect/assem.ml \
+	iselect/codegen.ml \
+	iselect/m68kCodegen.ml
 	YFLAGS = --explain --trace --dump
 endef
 export PROJ_iselect_tester

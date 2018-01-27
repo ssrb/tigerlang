@@ -1,4 +1,6 @@
-module F : functor(Temp: Temp.T) -> sig
+module type T = sig
+
+module Temp : Temp.T
 
 exception Assem_error of string
 
@@ -14,3 +16,5 @@ type instr =
 val format : (temp -> string) -> instr -> string
 
 end
+
+module F : functor(Temp: Temp.T) -> T
