@@ -1,5 +1,7 @@
 module F : functor(Temp: Temp.T) -> sig
 
+exception Assem_error of string
+
 type reg = string
 type temp = Temp.temp
 type label = Temp.label

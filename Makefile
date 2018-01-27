@@ -80,8 +80,34 @@ define PROJ_canon_tester
 endef
 export PROJ_canon_tester
 
+define PROJ_iselect_tester
+	RESULT = canon/canon_tester
+	SOURCES = absyn/absyn.ml \
+	absyn/table.ml \
+	absyn/symbol.ml \
+	parser/tigerparse.mly \
+	lexer/tokenCBs.ml \
+	lexer/tigerlex.mll \
+	parser/parsertokens.ml \
+	semant/types.ml \
+	irtrans/temp.ml \
+	irtrans/tree.ml \
+	irtrans/frame.ml \
+	irtrans/translate.ml \
+	irtrans/findEscape.ml \
+	semant/env.ml \
+	semant/semant.ml \
+	semant/prtype.ml \
+	irtrans/m68kTemp.ml \
+	irtrans/m68kFrame.ml \
+	canon/canon.ml \
+	iselect/assem.ml
+	YFLAGS = --explain --trace --dump
+endef
+export PROJ_iselect_tester
+
 ifndef SUBPROJS
-  export SUBPROJS = lexer_tester parser_tester absyn_tester semant_tester canon_tester
+  export SUBPROJS = lexer_tester parser_tester absyn_tester semant_tester canon_tester iselect_tester
 endif
 
 all: debug-code native-code
