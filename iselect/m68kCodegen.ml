@@ -18,13 +18,19 @@ let codegen frame stm =
     let rec munchStm = function
     (* Data movememt *)
         
+        | T.MOVE (T.MEM (T.BINOP (T.PLUS, e0, (T.CONST i))), T.MEM (T.BINOP (T.PLUS, e1, (T.CONST j))))
+        | T.MOVE (T.MEM (T.BINOP (T.PLUS, (T.CONST i), e0)), T.MEM (T.BINOP (T.PLUS, e1, (T.CONST j))))
+        | T.MOVE (T.MEM (T.BINOP (T.PLUS, e0, (T.CONST i))), T.MEM (T.BINOP (T.PLUS, (T.CONST j), e1)))
+        | T.MOVE (T.MEM (T.BINOP (T.PLUS, (T.CONST i), e0)), T.MEM (T.BINOP (T.PLUS, (T.CONST j), e1)))
+         -> emit(A.OPER {assem = "move.l $" ^ Int.to_string (j / 4) ^ "(s1),$" ^ Int.to_string (i / 4) ^ "(s0)"; dst = []; src = [munchExp e0; munchExp e1]; jump = None})
+
         | T.MOVE (T.MEM (T.BINOP (T.PLUS, e0, (T.CONST i))), e1)
         | T.MOVE (T.MEM (T.BINOP (T.PLUS, (T.CONST i), e0)), e1)
-         -> emit(A.OPER {assem = "move.l s1, $" ^ Int.to_string (i / 4) ^ "(s0)"; dst = []; src = [munchExp e0; munchExp e1]; jump = None})
+         -> emit(A.OPER {assem = "move.l s1,$" ^ Int.to_string (i / 4) ^ "(s0)"; dst = []; src = [munchExp e0; munchExp e1]; jump = None})
         
         | T.MOVE (e0, T.MEM (T.BINOP (T.PLUS, e1, (T.CONST i))))
         | T.MOVE (e0, T.MEM (T.BINOP (T.PLUS, (T.CONST i), e1)))
-         -> emit(A.OPER {assem = "move.l $" ^ Int.to_string (i / 4) ^ "(s1), s0"; dst = []; src = [munchExp e0; munchExp e1]; jump = None})
+         -> emit(A.OPER {assem = "move.l $" ^ Int.to_string (i / 4) ^ "(s1),s0"; dst = []; src = [munchExp e0; munchExp e1]; jump = None})
 
         | T.MOVE(e1, e2) -> emit(A.OPER {assem = "move.l"; dst = [munchExp e1]; src = [munchExp e2]; jump = None})
         | _ -> assert(false)
