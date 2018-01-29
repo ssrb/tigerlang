@@ -99,14 +99,15 @@ let codegen frame stm =
                 emit(A.OPER {assem = "move.l s1,(s0)"; dst = []; src = [munchAddrExp e0; munchDataExp e1]; jump = None})
         end 
 
-        | T.MOVE(e0, e1) -> 
-            emit(A.MOVE {assem = "move.l s0,d0"; dst = munchDataExp e0; src = munchDataExp e1})
+        (*| T.MOVE(e0, e1) -> 
+            emit(A.MOVE {assem = "move.l s0,d0"; dst = munchDataExp e0; src = munchDataExp e1})*)
 
         | T.LABEL label -> 
             emit(A.LABEL {assem = (Symbol.name label) ^ ":"; lab = label})
         
-        | JUMP (e0, lbls) ->
-            emit(A.OPER {assem = ""; dst = []; src = []; jump = None})
+        | T.JUMP (T.NAME l, lbls) ->
+            emit(A.OPER {assem = "jmp " ^ (Symbol.name l); dst = []; src = []; jump = Some lbls})
+
         (*| CJUMP (relop, e0, e1, t, f*)
         (*| EXP of exp*)
 
