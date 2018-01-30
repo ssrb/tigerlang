@@ -25,25 +25,25 @@ let codegen frame stm =
             | T.MEM (T.BINOP (T.PLUS, e1, (T.CONST j)))
             | T.MEM (T.BINOP (T.PLUS, (T.CONST j), e1)) ->
                 if i = j then
-                    emit(A.MOVE {assem = "move.l " ^ Int.to_string (j / 4) ^ "(s0)," ^ Int.to_string (i / 4) ^ "(d0)"; dst = munchAddrExp e0; src = munchAddrExp e1})
+                    emit(A.MOVE {assem = "move.l " ^ (Int.to_string (j / 4)) ^ "(s0)," ^ (Int.to_string (i / 4)) ^ "(d0)"; dst = munchAddrExp e0; src = munchAddrExp e1})
                 else
-                    emit(A.OPER {assem = "move.l " ^ Int.to_string (j / 4) ^ "(s1)," ^ Int.to_string (i / 4) ^ "(s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
+                    emit(A.OPER {assem = "move.l " ^ (Int.to_string (j / 4)) ^ "(s1)," ^ (Int.to_string (i / 4)) ^ "(s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
   
             | T.MEM (T.BINOP (T.MINUS, e1, (T.CONST j)))
             | T.MEM (T.BINOP (T.MINUS, (T.CONST j), e1)) ->
-                emit(A.OPER {assem = "move.l " ^ Int.to_string (-j / 4) ^ "(s1)," ^ Int.to_string (i / 4) ^ "(s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
+                emit(A.OPER {assem = "move.l " ^ (Int.to_string (-j / 4)) ^ "(s1)," ^ (Int.to_string (i / 4)) ^ "(s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
 
             | T.MEM (T.CONST i) ->
-                emit(A.OPER {assem = "move.l $" ^ Int.to_string (i / 4) ^ ",(s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
+                emit(A.OPER {assem = "move.l $" ^ (Int.to_string (i / 4)) ^ ",(s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
 
             | T.MEM e1 ->
-                emit(A.OPER {assem = "move.l (s1)," ^ Int.to_string (i / 4) ^ "(s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
+                emit(A.OPER {assem = "move.l (s1)," ^ (Int.to_string (i / 4)) ^ "(s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
 
             | T.CONST i ->
-                emit(A.OPER {assem = "move.l #$" ^ Int.to_string (i / 4) ^ ",(s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
+                emit(A.OPER {assem = "move.l #$" ^ (Int.to_string (i / 4)) ^ ",(s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
 
             | e1 ->
-                emit(A.OPER {assem = "move.l s1," ^ Int.to_string (i / 4) ^ "(s0)"; dst = []; src = [munchAddrExp e0; munchDataExp e1]; jump = None})
+                emit(A.OPER {assem = "move.l s1," ^ (Int.to_string (i / 4)) ^ "(s0)"; dst = []; src = [munchAddrExp e0; munchDataExp e1]; jump = None})
         end 
 
         | T.MOVE (T.MEM (T.BINOP (T.MINUS, e0, (T.CONST i))), e1)
@@ -52,26 +52,26 @@ let codegen frame stm =
             match e1 with
             | T.MEM (T.BINOP (T.PLUS, e1, (T.CONST j)))
             | T.MEM (T.BINOP (T.PLUS, (T.CONST j), e1)) ->
-                emit(A.OPER {assem = "move.l " ^ Int.to_string (j / 4) ^ "(s1)," ^ Int.to_string (-i / 4) ^ "(s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
+                emit(A.OPER {assem = "move.l " ^ (Int.to_string (j / 4)) ^ "(s1)," ^ (Int.to_string (-i / 4)) ^ "(s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
   
             | T.MEM (T.BINOP (T.MINUS, e1, (T.CONST j)))
             | T.MEM (T.BINOP (T.MINUS, (T.CONST j), e1)) ->
                 if i = j then
-                    emit(A.MOVE {assem = "move.l " ^ Int.to_string (-j / 4) ^ "(s0)," ^ Int.to_string (-i / 4) ^ "(d0)"; dst = munchAddrExp e0; src = munchAddrExp e1})
+                    emit(A.MOVE {assem = "move.l " ^ (Int.to_string (-j / 4)) ^ "(s0)," ^ (Int.to_string (-i / 4)) ^ "(d0)"; dst = munchAddrExp e0; src = munchAddrExp e1})
                 else
-                    emit(A.OPER {assem = "move.l " ^ Int.to_string (-j / 4) ^ "(s1)," ^ Int.to_string (-i / 4) ^ "(s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
+                    emit(A.OPER {assem = "move.l " ^ (Int.to_string (-j / 4)) ^ "(s1)," ^ (Int.to_string (-i / 4)) ^ "(s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
 
             | T.MEM (T.CONST i) ->
-                emit(A.OPER {assem = "move.l $" ^ Int.to_string (i / 4) ^ ",(s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
+                emit(A.OPER {assem = "move.l $" ^ (Int.to_string (i / 4)) ^ ",(s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
 
             | T.MEM e1 ->
-                emit(A.OPER {assem = "move.l (s1)," ^ Int.to_string (-i / 4) ^ "(s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
+                emit(A.OPER {assem = "move.l (s1)," ^ (Int.to_string (-i / 4)) ^ "(s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
 
             | T.CONST i ->
-                emit(A.OPER {assem = "move.l #$" ^ Int.to_string (i / 4) ^ ",(s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
+                emit(A.OPER {assem = "move.l #$" ^ (Int.to_string (i / 4)) ^ ",(s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
 
             | e1 ->
-                emit(A.OPER {assem = "move.l s1," ^ Int.to_string (-i / 4) ^ "(s0)"; dst = []; src = [munchAddrExp e0; munchDataExp e1]; jump = None})
+                emit(A.OPER {assem = "move.l s1," ^ (Int.to_string (-i / 4)) ^ "(s0)"; dst = []; src = [munchAddrExp e0; munchDataExp e1]; jump = None})
         end
 
         | T.MOVE (T.MEM e0, e1) ->
@@ -79,21 +79,21 @@ let codegen frame stm =
             match e1 with
             | T.MEM (T.BINOP (T.PLUS, e1, (T.CONST j)))
             | T.MEM (T.BINOP (T.PLUS, (T.CONST j), e1)) ->
-                emit(A.OPER {assem = "move.l " ^ Int.to_string (j / 4) ^ "(s1),(s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
+                emit(A.OPER {assem = "move.l " ^ (Int.to_string (j / 4)) ^ "(s1),(s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
   
             | T.MEM (T.BINOP (T.MINUS, e1, (T.CONST j)))
             | T.MEM (T.BINOP (T.MINUS, (T.CONST j), e1)) ->
-                emit(A.OPER {assem = "move.l " ^ Int.to_string (-j / 4) ^ "(s1),(s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
+                emit(A.OPER {assem = "move.l " ^ (Int.to_string (-j / 4)) ^ "(s1),(s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
 
             | T.MEM (T.CONST i) ->
-                emit(A.OPER {assem = "move.l $" ^ Int.to_string (i / 4) ^ ",(s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
+                emit(A.OPER {assem = "move.l $" ^ (Int.to_string (i / 4)) ^ ",(s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
 
             | T.MEM e1 ->
                 if e0 <> e1 then
                     emit(A.OPER {assem = "move.l (s1),(s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None});
 
             | T.CONST i ->
-                emit(A.OPER {assem = "move.l #$" ^ Int.to_string (i / 4) ^ ",(s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
+                emit(A.OPER {assem = "move.l #$" ^ (Int.to_string (i / 4)) ^ ",(s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
 
             | e1 ->
                 emit(A.OPER {assem = "move.l s1,(s0)"; dst = []; src = [munchAddrExp e0; munchDataExp e1]; jump = None})
@@ -108,7 +108,27 @@ let codegen frame stm =
         | T.JUMP (T.NAME l, lbls) ->
             emit(A.OPER {assem = "jmp " ^ (Symbol.name l); dst = []; src = []; jump = Some lbls})
 
-        (*| CJUMP (relop, e0, e1, t, f*)
+        | T.CJUMP (relop, e0, e1, t, f) ->
+        begin
+            match (e0, e1) with
+            | (T.CONST i, e0) | (e0, T.CONST i) ->
+                emit(A.OPER {assem = "cmpi.l #$" ^ Int.to_string i ^ ",s0"; dst = []; src = [munchAddrExp e0]; jump = None});
+            | _ ->
+                emit(A.OPER {assem = "cmp.l s0,s1"; dst = []; src = [munchAddrExp e0; munchDataExp e1]; jump = None});
+            match relop with 
+            | T.EQ -> 
+                emit(A.OPER {assem = "beq " ^ (Symbol.name t); dst = []; src = []; jump = Some [t; f]})
+            | T.NE ->
+                emit(A.OPER {assem = "bne " ^ (Symbol.name t); dst = []; src = []; jump = Some [t; f]})
+            | T.LT | T.ULT ->
+                emit(A.OPER {assem = "blt " ^ (Symbol.name t); dst = []; src = []; jump = Some [t; f]})
+            | T.GT | T.UGT ->
+                emit(A.OPER {assem = "bgt " ^ (Symbol.name t); dst = []; src = []; jump = Some [t; f]})
+            | T.LE | T.ULE ->
+                emit(A.OPER {assem = "ble " ^ (Symbol.name t); dst = []; src = []; jump = Some [t; f]})
+            | T.GE | T.UGE ->
+                emit(A.OPER {assem = "bge " ^ (Symbol.name t); dst = []; src = []; jump = Some [t; f]})
+        end
         (*| EXP of exp*)
 
         | _ -> assert(false)
@@ -119,6 +139,7 @@ let codegen frame stm =
         | T.MEM(T.CONST i) -> result(fun r -> emit(A.OPER {assem = "move.l $"^ Int.to_string i ^ ",d0"; dst = [r]; src = []; jump = None}))
         | T.MEM(e0) -> result(fun r -> emit(A.OPER {assem = "move.l (s0),d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
         | T.CONST i -> result(fun r -> emit(A.OPER {assem = "move.l #$" ^ Int.to_string i ^ ",d0"; dst = [r]; src = []; jump = None}))        
+ 
         | _ -> assert(false)
     and munchAddrExp = function
         | _ -> assert(false)
