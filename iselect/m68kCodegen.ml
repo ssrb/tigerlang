@@ -11,7 +11,7 @@ let codegen frame stm =
     let ilist = ref [] in
     let emit x = ilist := x::!ilist in
     let result gen = 
-        let t = Temp.newtemp() in 
+        let t = T.Temp.newtemp() in 
         gen t; 
         t
     in
@@ -115,6 +115,9 @@ let codegen frame stm =
                 emit(A.OPER {assem = "cmpi.l #$" ^ Int.to_string i ^ ",s0"; dst = []; src = [munchAddrExp e0]; jump = None});
             | _ ->
                 emit(A.OPER {assem = "cmp.l s0,s1"; dst = []; src = [munchAddrExp e0; munchDataExp e1]; jump = None});
+
+            (* How about cmpa !*)
+
             match relop with 
             | T.EQ -> 
                 emit(A.OPER {assem = "beq " ^ (Symbol.name t); dst = []; src = []; jump = Some [t; f]})
@@ -134,10 +137,100 @@ let codegen frame stm =
         | _ -> assert(false)
 
     and munchDataExp = function
+
+        (*| BINOP of binop * exp * exp
+        | MEM of exp
+        | TEMP of Temp.temp
+        | ESEQ of stm * exp
+        | NAME of label
+        | CONST of int
+        | CALL of exp * exp list*)
+
+        | T.BINOP (op, e0, e1) -> 
+        begin
+            match op with 
+            | T.PLUS ->
+                begin
+                    match (e0, e1) with
+                    | (T.CONST i, e0) | (e0, T.CONST i) ->
+                        let e0 = munchDataExp e0 in
+                        result(fun r -> 
+                            emit(A.MOVE {assem = "move.l s0,d0"; dst = r; src = e0});
+                            emit(A.OPER {assem = "addi.l #$" ^ (Int.to_string i) ^ ",d0"; dst = [r]; src = [r]; jump = None}))
+                    | (T.MEM e0, e1) | (e1, T.MEM e0) ->
+                        let e0 = munchAddrExp e0 in
+                        let e1 = munchDataExp e1 in
+                        result(fun r -> 
+                            emit(A.MOVE {assem = "move.l s0,d0"; dst = r; src = e1});
+                            emit(A.OPER {assem = "add.l (s0),d0"; dst = [r]; src = [r; e0]; jump = None}))
+                    | _ ->
+                        let e0 = munchDataExp e0 in
+                        let e1 = munchDataExp e1 in
+                        result(fun r -> 
+                            emit(A.MOVE {assem = "move.l s0,d0"; dst = r; src = e0});
+                            emit(A.OPER {assem = "add.l s0,d0"; dst = [r]; src = [r; e1]; jump = None}))                
+                end
+            | T.MINUS ->
+                let e0 = munchDataExp e0 in
+                let e1 = munchDataExp e1 in
+                 result(fun r -> 
+                    emit(A.MOVE {assem = "move.l s0,d0"; dst = r; src = e0});
+                    emit(A.OPER {assem = "sub.l s0,d0"; dst = [r]; src = [r; e1]; jump = None})) 
+            | T.MUL ->
+                let e0 = munchDataExp e0 in
+                let e1 = munchDataExp e1 in
+                 result(fun r -> 
+                    emit(A.MOVE {assem = "move.l s0,d0"; dst = r; src = e0});
+                    emit(A.OPER {assem = "mul.l s0,d0"; dst = [r]; src = [r; e1]; jump = None})) 
+            | T.DIV ->
+                let e0 = munchDataExp e0 in
+                let e1 = munchDataExp e1 in
+                 result(fun r -> 
+                    emit(A.MOVE {assem = "move.l s0,d0"; dst = r; src = e0});
+                    emit(A.OPER {assem = "div.l s0,d0"; dst = [r]; src = [r; e1]; jump = None})) 
+            | T.AND ->
+                let e0 = munchDataExp e0 in
+                let e1 = munchDataExp e1 in
+                 result(fun r -> 
+                    emit(A.MOVE {assem = "move.l s0,d0"; dst = r; src = e0});
+                    emit(A.OPER {assem = "and.l s0,d0"; dst = [r]; src = [r; e1]; jump = None})) 
+            | T.OR ->
+                let e0 = munchDataExp e0 in
+                let e1 = munchDataExp e1 in
+                 result(fun r -> 
+                    emit(A.MOVE {assem = "move.l s0,d0"; dst = r; src = e0});
+                    emit(A.OPER {assem = "or.l s0,d0"; dst = [r]; src = [r; e1]; jump = None})) 
+            | T.LSHIFT ->
+                let e0 = munchDataExp e0 in
+                let e1 = munchDataExp e1 in
+                 result(fun r -> 
+                    emit(A.MOVE {assem = "move.l s0,d0"; dst = r; src = e0});
+                    emit(A.OPER {assem = "lsl.l s0,d0"; dst = [r]; src = [r; e1]; jump = None})) 
+            | T.RSHIFT ->
+                let e0 = munchDataExp e0 in
+                let e1 = munchDataExp e1 in
+                 result(fun r -> 
+                    emit(A.MOVE {assem = "move.l s0,d0"; dst = r; src = e0});
+                    emit(A.OPER {assem = "lsr.l s0,d0"; dst = [r]; src = [r; e1]; jump = None})) 
+            | T.ARSHIFT ->
+                let e0 = munchDataExp e0 in
+                let e1 = munchDataExp e1 in
+                 result(fun r -> 
+                    emit(A.MOVE {assem = "move.l s0,d0"; dst = r; src = e0});
+                    emit(A.OPER {assem = "asr.l s0,d0"; dst = [r]; src = [r; e1]; jump = None})) 
+            | T.XOR ->
+                let e0 = munchDataExp e0 in
+                let e1 = munchDataExp e1 in
+                 result(fun r -> 
+                    emit(A.MOVE {assem = "move.l s0,d0"; dst = r; src = e0});
+                    emit(A.OPER {assem = "eor.l s0,d0"; dst = [r]; src = [r; e1]; jump = None})) 
+        end
         | T.MEM(T.BINOP(T.PLUS, T.CONST i, e0)) -> result(fun r -> emit(A.OPER {assem = "move.l " ^ Int.to_string (i / 4) ^ "(s0),d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
         | T.MEM(T.BINOP(T.MINUS, T.CONST i, e0)) -> result(fun r -> emit(A.OPER {assem = "move.l " ^ Int.to_string (-i / 4) ^ "(s0),d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
         | T.MEM(T.CONST i) -> result(fun r -> emit(A.OPER {assem = "move.l $"^ Int.to_string i ^ ",d0"; dst = [r]; src = []; jump = None}))
         | T.MEM(e0) -> result(fun r -> emit(A.OPER {assem = "move.l (s0),d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
+        | T.TEMP t -> t
+        (*| NAME of label*)
         | T.CONST i -> result(fun r -> emit(A.OPER {assem = "move.l #$" ^ Int.to_string i ^ ",d0"; dst = [r]; src = []; jump = None}))        
  
         | _ -> assert(false)
