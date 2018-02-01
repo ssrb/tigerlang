@@ -278,6 +278,10 @@ and transDec (venv, tenv, lvl, dec, break) =
   match dec with
 
   | FunctionDec fs ->
+  begin
+     match List.find_a_dup fs ~compare:(fun (left : fundec) (right : fundec) -> compare left.name right.name) with
+    | Some dup -> raise (Semantic_error "duplicate function name within the same batch")
+    | None -> ();
 
     let forward_declare (fdecs, v) f =
       
@@ -326,14 +330,13 @@ and transDec (venv, tenv, lvl, dec, break) =
         if not (type_equal body.ty ty) then
           raise (Semantic_error "Wrong return type")
       | None -> ();
-
       T.procEntryExit ~level:lvl' ~body:body.exp
-
     in
-    begin
-      fdecs |> List.rev |> List.iter ~f:trans_body;
-      (venv', tenv, [])
-    end
+
+    fdecs |> List.rev |> List.iter ~f:trans_body;
+    (venv', tenv, [])
+
+  end
 
   | VarDec v -> 
     
@@ -356,7 +359,11 @@ and transDec (venv, tenv, lvl, dec, break) =
     (S.enter (venv, v.name, VarEntry {access = T.allocLocal lvl !(v.escape); ty = init.ty}), tenv, [ init.exp ])
 
   | TypeDec ts ->
-    
+  begin 
+    match List.find_a_dup ts ~compare:(fun (left : typedec) (right : typedec) -> compare left.name right.name) with
+    | Some dup -> raise (Semantic_error "duplicate type name within the same batch")
+    | None -> ();
+
     let (fdecs, tenv) = List.fold ts ~init:([], tenv) ~f:(fun (fdecs, te) t ->
       let fdec = NAME(t.name, ref None) in
       ((fdec, t)::fdecs, S.enter (te, t.name, fdec))
@@ -374,8 +381,8 @@ and transDec (venv, tenv, lvl, dec, break) =
     in
 
     List.iter ts ~f:(fun t -> checkForCyclicType(tenv, t.name));
-
     (venv, tenv, [])
+  end
 
 and transVar (venv, tenv, lvl, var, break) =
 
