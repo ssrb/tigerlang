@@ -50,7 +50,6 @@ define PROJ_semant_tester
 	irtrans/m68kTemp.ml \
 	irtrans/m68kFrame.ml \
 	semant/semant_tester.ml
-	YFLAGS = --explain --trace --dump
 endef
 export PROJ_semant_tester
 
@@ -77,7 +76,6 @@ define PROJ_canon_tester
 	irtrans/m68kFrame.ml \
 	canon/canon.ml \
 	canon/canon_tester.ml
-	YFLAGS = --explain --trace --dump
 endef
 export PROJ_canon_tester
 
@@ -106,7 +104,6 @@ define PROJ_iselect_tester
 	iselect/codegen.ml \
 	iselect/m68kCodegen.ml \
 	iselect/iselect_tester.ml
-	YFLAGS = --explain --trace --dump
 endef
 export PROJ_iselect_tester
 
