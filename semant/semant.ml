@@ -115,7 +115,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
 
             List.iter r.fields ~f:(fun (sym, _, _) ->
             if not (List.exists ftypes ~f:(fun (sym', _) -> sym = sym')) then
-              raise (Semantic_error "unknown record field")
+              raise (Semantic_error ("unknown record field " ^ Symbol.name sym))
             );
 
             let f (sym, ty) =
@@ -228,9 +228,9 @@ and transTy (tenv, ty) =
       | Some ty' -> ty'
       | None -> raise (Semantic_error "Unknown type")
     end
-  | RecordTy fields -> let ftypes =  List.map fields ~f:(fun {typ; _} -> 
-    match S.look (tenv, typ) with
-    | Some ty' -> (typ, ty')
+  | RecordTy fields -> let ftypes =  List.map fields ~f:(fun f -> 
+    match S.look (tenv, f.typ) with
+    | Some ty -> (f.name, ty)
     | None -> raise (Semantic_error "Unknown type")
   ) in RECORD (ftypes, ref ())
   | ArrayTy (symbol, pos) ->  
