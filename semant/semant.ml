@@ -176,7 +176,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
   | ForExp f ->
     begin
       let (venv', tenv', inits) = transDec (venv, tenv, lvl, VarDec {name =  f.var; escape = f.escape; typ = None; init = f.lo; pos = f.pos}, break) in
-      match S.look (venv, f.var) with
+      match S.look (venv', f.var) with
       | Some (Env.VarEntry var) -> 
         if not (type_equal var.ty INT) then 
           raise (Semantic_error "For loop lower bound must have int type");
