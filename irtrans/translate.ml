@@ -322,7 +322,9 @@ let transBreak label =
     Nx (Tree.JUMP (Tree.NAME label, [label]))
 
 let transLet (inits, body) =
-    Ex (T.ESEQ (inits |> List.map ~f:unNx |> seq, unEx body))
+    match inits with
+    | [] -> body
+    | _ -> Ex (T.ESEQ (inits |> List.map ~f:unNx |> seq, unEx body))
 
 let transArray (size, init) =
     let r = Temp.newtemp () in
