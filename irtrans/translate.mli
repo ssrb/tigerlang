@@ -14,6 +14,7 @@ val formals: level -> access list
 val allocLocal: level -> bool -> access
 val getResult: unit -> Frame.frag list
 
+val transNop: unit -> exp
 val transNil: unit -> exp
 val transInt: int -> exp
 val transOp: Absyn.oper * exp * exp * Types.ty -> exp

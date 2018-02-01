@@ -138,8 +138,12 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     end
 
   | SeqExp l ->
-    let ts = List.fold l ~init:[] ~f:(fun ts (t, _) -> (trexp t)::ts) in
+  begin
+    match l with
+    | [] -> {exp = T.transNop (); ty = Types.UNIT}
+    | _ -> let ts = List.fold l ~init:[] ~f:(fun ts (t, _) -> (trexp t)::ts) in
     {exp = T.transSeq(ts |> List.rev_map ~f:(fun x -> x.exp)); ty = (ts |> List.hd_exn).ty} 
+  end
 
   | AssignExp a ->
     let var = transVar (venv, tenv, lvl, a.var, break) in
@@ -340,12 +344,12 @@ and transDec (venv, tenv, lvl, dec, break) =
           match Symbol.look (tenv, symbol) with
           | Some ty ->
             if not (type_equal ty init.ty) then
-              raise (Semantic_error "Type of initiialyzer does not match type annotation")
+              raise (Semantic_error "Type of initialyzer does not match type annotation")
           | None -> raise (Semantic_error "unknown type name")
         end
       | None -> 
         if init.ty = NIL then
-          raise (Semantic_error "A variable declaration initialized with nil must beconstrained to be a structure")
+          raise (Semantic_error "A variable declaration initialized with nil must be constrained to be a structure")
     end;
 
     (S.enter (venv, v.name, VarEntry {access = T.allocLocal lvl !(v.escape); ty = init.ty}), tenv, [ init.exp ])

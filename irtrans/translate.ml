@@ -13,6 +13,7 @@ val formals: level -> access list
 val allocLocal: level -> bool -> access
 val getResult: unit -> Frame.frag list
 
+val transNop: unit -> exp
 val transNil: unit -> exp
 val transInt: int -> exp
 val transOp: Absyn.oper * exp * exp * Types.ty -> exp
@@ -118,7 +119,9 @@ let unCx exp =
     | Nx nx -> assert(false)
     | Cx cx -> cx
 
-let transNil i = Ex (Tree.CONST 0)
+let transNop () = Nx (Tree.EXP (Tree.CONST 0))
+
+let transNil () = Ex (Tree.CONST 0)
 
 let transInt i = Ex (Tree.CONST i)
 
