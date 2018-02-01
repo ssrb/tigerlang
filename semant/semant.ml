@@ -121,6 +121,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
             let f (sym, ty) =
               match List.find r.fields ~f:(fun (sym', _, _) -> sym = sym') with
               | Some (_, field, _) ->
+                let ty = actual_ty ty in
                 let expty = trexp field in
                 if not (type_equal ty expty.ty)  then
                   raise (Semantic_error "wrong type for record field");
