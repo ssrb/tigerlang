@@ -168,7 +168,9 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     let finish = Temp.newlabel() in
     let body = transExp (venv, tenv, lvl, w.body, Some finish) in
     if not (type_equal test.ty Types.INT) then
-      raise (Semantic_error "While test must be of integer type");
+      raise (Semantic_error "While test must have integer type");
+    if not (type_equal body.ty Types.UNIT) then
+      raise (Semantic_error "While body must have unit type");
     {exp = T.transWhile (test.exp, body.exp, finish); ty = body.ty}
       
   | ForExp f ->
