@@ -275,7 +275,7 @@ and transDec (venv, tenv, lvl, dec, break) =
       
       let typarams = List.map f.params ~f:(fun p ->
         match S.look (tenv, p.typ) with
-        | Some ty -> (p.typ, ty)
+        | Some ty -> (p.name, ty, !(p.escape))
         | None -> raise (Semantic_error "Unknown type")
       )
       in
@@ -297,7 +297,7 @@ and transDec (venv, tenv, lvl, dec, break) =
       let v' = S.enter (v, f.name, FunEntry {
         level = lvl';
         label = lab;
-        formals = typarams |> List.map ~f:(fun (n,t) -> t); 
+        formals = typarams |> List.map ~f:(fun (n, t, e) -> t); 
         result = match tyresopt with Some ty -> ty | None -> UNIT
       })
       in
@@ -307,8 +307,8 @@ and transDec (venv, tenv, lvl, dec, break) =
     let (fdecs, venv') = List.fold fs ~init:([], venv) ~f:forward_declare in
     let trans_body (name, lvl', typarams, tyresopt, body) =
 
-      let venv'' = List.fold typarams ~init:venv' ~f:(fun v (n, t) ->
-        S.enter (v, n, VarEntry {access = T.allocLocal lvl' true; ty = t})
+      let venv'' = typarams |> List.fold ~init:venv' ~f:(fun v (n, t, e) ->
+        S.enter (v, n, VarEntry {access = T.allocLocal lvl' e; ty = t})
       )
       in
       
