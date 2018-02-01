@@ -178,7 +178,7 @@ let level_equal left right =
     match (left, right) with 
     | (Outermost, Outermost) -> true
     | (Outermost, _) | (_, Outermost) -> false
-    | (Level (_, left), Level (_, right)) -> left = right
+    | (Level (_, left), Level (_, right)) -> phys_equal left right
 
 let follow_static_link declvl uselvl =
     let rec aux lvl fp =

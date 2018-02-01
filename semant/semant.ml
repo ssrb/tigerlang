@@ -22,7 +22,7 @@ let type_equal left right =
   | (NIL, RECORD _) | (RECORD _, NIL) -> true
   | (NIL, _) | (_, NIL)-> false
   | (RECORD (_, left), RECORD (_, right))
-  | (ARRAY (_, left), ARRAY (_, right))-> left = right
+  | (ARRAY (_, left), ARRAY (_, right))-> phys_equal left right
   | _ -> left = right
 
 let rec actual_ty ty =
@@ -141,8 +141,9 @@ let rec transExp (venv, tenv, lvl, exp, break) =
   begin
     match l with
     | [] -> {exp = T.transNop (); ty = Types.UNIT}
-    | _ -> let ts = List.fold l ~init:[] ~f:(fun ts (t, _) -> (trexp t)::ts) in
-    {exp = T.transSeq(ts |> List.rev_map ~f:(fun x -> x.exp)); ty = (ts |> List.hd_exn).ty} 
+    | _ -> 
+      let ts = List.fold l ~init:[] ~f:(fun ts (t, _) -> (trexp t)::ts) in
+      {exp = T.transSeq(ts |> List.rev_map ~f:(fun x -> x.exp)); ty = (ts |> List.hd_exn).ty} 
   end
 
   | AssignExp a ->
