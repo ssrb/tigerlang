@@ -212,10 +212,10 @@ let rec transExp (venv, tenv, lvl, exp, break) =
     | Some ty ->
       begin
         match ty with
-        | ARRAY (ty, _) -> 
-          if not (type_equal ty init.ty) then
-            raise (Semantic_error "Incompoatible initializer type");
-          {exp = T.transArray (size.exp, init.exp); ty}  
+        | ARRAY (ety, _) -> 
+          if not (type_equal ety init.ty) then
+            raise (Semantic_error "Incompatible initializer type");
+          {exp = T.transArray (size.exp, init.exp); ty}
         | _ -> raise (Semantic_error "Not an array type")
       end
     | None -> raise (Semantic_error "Unknown array type")
@@ -349,22 +349,25 @@ and transDec (venv, tenv, lvl, dec, break) =
 
   | TypeDec ts ->
     
-    let (fdecs, tenv') = List.fold ts ~init:([], tenv) ~f:(fun (fdecs, te) t ->
+    let (fdecs, tenv) = List.fold ts ~init:([], tenv) ~f:(fun (fdecs, te) t ->
       let fdec = NAME(t.name, ref None) in
-      ((fdec, t.ty)::fdecs, S.enter (te, t.name, fdec))
+      ((fdec, t)::fdecs, S.enter (te, t.name, fdec))
     ) 
     in
 
-    fdecs |> List.rev |> List.iter ~f:(fun (fdec, ty) -> 
+    let tenv = fdecs |> List.rev |> List.fold ~init:tenv ~f:(fun te (fdec, (t : typedec)) -> 
       match fdec with
       | NAME (name, tyref) -> 
-        tyref := Some (transTy(tenv', ty))
+        let ty = transTy(te, t.ty) in
+         tyref := Some ty;
+         S.enter (te, t.name, ty)
       | _ -> assert(false)
-    );
+    ) 
+    in
 
-    List.iter ts ~f:(fun t -> checkForCyclicType(tenv', t.name));
+    List.iter ts ~f:(fun t -> checkForCyclicType(tenv, t.name));
 
-    (venv, tenv', [])
+    (venv, tenv, [])
 
 and transVar (venv, tenv, lvl, var, break) =
 
