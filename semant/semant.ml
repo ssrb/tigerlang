@@ -422,7 +422,7 @@ and transVar (venv, tenv, lvl, var, break) =
       match var.ty with
       | ARRAY (ty, _) -> 
         let sub = transExp (venv, tenv, lvl, sub, break) in
-        if not (type_equal ty INT) then 
+        if not (type_equal sub.ty INT) then 
           raise (Semantic_error "subscript must have int type");
         { exp = T.transSubscript (var.exp, sub.exp); ty = actual_ty ty }
       | _ -> raise (Semantic_error "subscripted is not an array")
