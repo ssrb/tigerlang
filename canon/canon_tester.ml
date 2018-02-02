@@ -1,7 +1,9 @@
 module Lexer = Tigerlex.F(Parsertokens)
 module Translate = Translate.F(M68kFrame)
 module Semant = Semant.F(Translate)
-module Canon = Canon.F(Translate.Frame.Tree)
+module Tree = Translate.Frame.Tree
+module Canon = Canon.F(Tree)
+module PrintTree = Printtree.F(Tree)
 
 open Core
 
@@ -9,11 +11,11 @@ let fragments =
 	let lexbuf = Lexing.from_channel stdin in
 	Semant.transProg2 (Tigerparse.prog Lexer.read lexbuf);;
 
-let f acc frag =
+let f frag =
 	match frag with
 	| Translate.Frame.PROC proc -> 
-		let body = proc.body |> Canon.linearize |> Canon.basicBlocks |> Canon.traceSchedule in
-		(body, proc.frame)::acc
-	| Translate.Frame.STRING _ -> acc;;
+		let ts = proc.body |> Canon.linearize |> Canon.basicBlocks |> Canon.traceSchedule in
+		List.iter ts ~f:(fun t -> PrintTree.printtree Out_channel.stdout t; Out_channel.print_endline "#")
+	| Translate.Frame.STRING (lab, str) -> PrintTree.printtree Out_channel.stdout (Tree.LABEL lab); Out_channel.print_endline ("\"" ^ str ^ "\""); Out_channel.print_endline "#";;
 
-fragments |> List.fold ~init:[] ~f:f
+fragments |> List.iter ~f:f
