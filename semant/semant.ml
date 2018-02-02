@@ -344,22 +344,24 @@ and transDec (venv, tenv, lvl, dec, break) =
   | VarDec v -> 
     
     let init = transExp (venv, tenv, lvl, v.init, break) in
-    begin
+    let ty = 
       match v.typ with
       | Some (symbol, pos) ->
         begin
           match Symbol.look (tenv, symbol) with
           | Some ty ->
             if not (type_equal ty init.ty) then
-              raise (Semantic_error "Type of initialyzer does not match type annotation")
+              raise (Semantic_error "Type of initialyzer does not match type annotation");
+            ty
           | None -> raise (Semantic_error "unknown type name")
         end
       | None -> 
         if init.ty = NIL then
-          raise (Semantic_error "A variable declaration initialized with nil must be constrained to be a structure")
-    end;
+          raise (Semantic_error "A variable declaration initialized with nil must be constrained to be a structure");
+        init.ty
+    in
 
-    (S.enter (venv, v.name, VarEntry {access = T.allocLocal lvl !(v.escape); ty = init.ty}), tenv, [ init.exp ])
+    (S.enter (venv, v.name, VarEntry {access = T.allocLocal lvl !(v.escape); ty}), tenv, [ init.exp ])
 
   | TypeDec ts ->
   begin 
