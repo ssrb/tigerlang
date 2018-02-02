@@ -70,7 +70,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
                   raise (Semantic_error "wrong type in function call");
               );
 
-              {exp = T.transCall (lvl, fentry.level, fentry.label, (args |> List.map ~f:(fun a -> a.exp)), rty); ty = rty}
+              {exp = T.transCall (fentry.level, lvl, fentry.label, (args |> List.map ~f:(fun a -> a.exp)), rty); ty = rty}
               
             end
         end
@@ -296,31 +296,33 @@ and transDec (venv, tenv, lvl, dec, break) =
       in
       
       let lab = Temp.newlabel () in
-      let lvl' = T.newLevel ~parent:lvl ~name:lab ~formals:(List.map f.params ~f:(fun p -> !(p.escape))) in
-
-      let tyresopt =
+      
+      let tyres =
         match f.result with
         | Some (res, pos) ->
         begin
           match S.look (tenv, res) with
-          | Some _ as tyopt -> tyopt
+          | Some ty -> ty
           | None -> raise (Semantic_error "Unknown type")
         end
-        | None -> None
+        | None -> UNIT
       in
 
       let v' = S.enter (v, f.name, FunEntry {
-        level = lvl';
+        level = lvl;
         label = lab;
         formals = typarams |> List.map ~f:(fun (n, t, e) -> t); 
-        result = match tyresopt with Some ty -> ty | None -> UNIT
+        result = tyres
       })
       in
 
-      ((name, lvl', typarams, tyresopt, f.body)::fdecs, v') 
+      ((lab, typarams, tyres, f.body)::fdecs, v')
+
     in
     let (fdecs, venv') = List.fold fs ~init:([], venv) ~f:forward_declare in
-    let trans_body (name, lvl', typarams, tyresopt, body) =
+    let trans_body (lab, typarams, tyres, body) =
+
+      let lvl' = T.newLevel ~parent:lvl ~name:lab ~formals:(List.map typarams ~f:(fun (_, _, e) -> e)) in
 
       let venv'' = typarams |> List.fold ~init:venv' ~f:(fun v (n, t, e) ->
         S.enter (v, n, VarEntry {access = T.allocLocal lvl' e; ty = t})
@@ -328,11 +330,9 @@ and transDec (venv, tenv, lvl, dec, break) =
       in
       
       let body = transExp(venv'' , tenv, lvl', body, None) in
-      match tyresopt with
-      | Some ty ->
-        if not (type_equal body.ty ty) then
-          raise (Semantic_error "Wrong return type")
-      | None -> ();
+      if not (type_equal body.ty tyres) then
+          raise (Semantic_error "Wrong return type");
+      
       T.procEntryExit ~level:lvl' ~body:body.exp
     in
 
