@@ -1,5 +1,5 @@
 %{
-open Core.Std
+open Core
 module A = Absyn
 module S = Symbol
 
