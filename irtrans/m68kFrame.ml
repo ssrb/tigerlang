@@ -7,8 +7,8 @@ let fp = Temp.newtemp ()
 let rv = Temp.newtemp ()
 let wordSize = 4
 
-type access = InFrame of int | InReg of Temp.temp
-type frame = {name: Temp.label; formals: access list; offset: int ref}
+type access = InFrame of int | InReg of Temp.temp  [@@deriving sexp]
+type frame = {name: Temp.label; formals: access list; offset: int ref}  [@@deriving sexp]
 type frag = PROC of {body: Tree.stm; frame: frame} | STRING of Temp.label * string
 
 let (++) r inc = let x = !r in r := x + inc; x

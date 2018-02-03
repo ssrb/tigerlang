@@ -8,7 +8,7 @@ module PrintTree = Printtree.F(Tree)
 open Core
 
 let fragments = 
-	let lexbuf = Lexing.from_channel stdin in
+	let lexbuf = Lexing.from_channel In_channel.stdin in
 	Semant.transProg2 (Tigerparse.prog Lexer.read lexbuf);;
 
 let f frag =
@@ -18,4 +18,4 @@ let f frag =
 		List.iter ts ~f:(fun t -> PrintTree.printtree Out_channel.stdout t; Out_channel.print_endline "#")
 	| Translate.Frame.STRING (lab, str) -> PrintTree.printtree Out_channel.stdout (Tree.LABEL lab); Out_channel.print_endline ("\"" ^ str ^ "\""); Out_channel.print_endline "#";;
 
-fragments |> List.iter ~f:f
+let () = fragments |> List.iter ~f:f

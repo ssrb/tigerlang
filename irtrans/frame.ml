@@ -3,8 +3,8 @@ module type T = sig
 module Tree : Tree.T
 module Temp = Tree.Temp
 
-type frame
-type access
+type frame [@@deriving sexp]
+type access  [@@deriving sexp]
 type frag = PROC of {body: Tree.stm; frame: frame} | STRING of Temp.label * string
 
 val fp: Temp.temp

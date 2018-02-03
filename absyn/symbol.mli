@@ -1,4 +1,4 @@
-type symbol
+type symbol [@@deriving sexp]
 val symbol : string -> symbol
 val name : symbol -> string
 type 'a table

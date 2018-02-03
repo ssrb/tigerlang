@@ -7,7 +7,7 @@ module M68K = M68kCodegen
 open Core
 
 let fragments = 
-	let lexbuf = Lexing.from_channel stdin in
+	let lexbuf = Lexing.from_channel  In_channel.stdin in
 	Semant.transProg2 (Tigerparse.prog Lexer.read lexbuf);;
 
 let f acc frag =

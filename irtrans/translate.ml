@@ -46,7 +46,7 @@ open Core
 
 type exp = Ex of Tree.exp | Nx of Tree.stm | Cx of (Tree.label * Tree.label -> Tree.stm)
 type _level = {level: level; frame: Frame.frame}
-and level = Outermost | Level of _level * unit ref
+and level = Outermost | Level of _level * unit ref [@@deriving sexp]
 type access = level * Frame.access
 
 let outermost = Outermost
@@ -193,6 +193,7 @@ let follow_static_link declvl uselvl =
                 aux parent.level (Frame.exp (sl, fp))
             end
     in
+    sexp_of_level declvl |> Sexp.output_hum Out_channel.stdout;
     aux uselvl (T.TEMP Frame.fp)
 
 let transCall (declvl, uselvl, lbl, args, rtype) = 

@@ -1,7 +1,7 @@
 open Core
 
-type temp = int
-type label = Symbol.symbol
+type temp = int [@@deriving sexp]
+type label = Symbol.symbol [@@deriving sexp]
 
 let temps = ref 100
 let labs = ref 0

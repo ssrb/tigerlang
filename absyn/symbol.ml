@@ -1,6 +1,6 @@
 open Core.Std
 
-type symbol = string * int
+type symbol = string * int [@@deriving sexp]
 
 module H = Hashtbl
 
