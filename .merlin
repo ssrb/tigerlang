@@ -13,3 +13,5 @@ B irtrans
 B canon
 B iselect
 PKG core
+PKG ppx_sexp_conv
+
