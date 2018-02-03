@@ -13,12 +13,12 @@ let fragments =
 	Semant.transProg2 (Tigerparse.prog Lexer.read lexbuf)
 in
 
-let f _ frag =
+let f frag =
 	match frag with
 	| Translate.Frame.PROC proc -> 
 		let ts = proc.body |> Canon.linearize |> Canon.basicBlocks |> Canon.traceSchedule in
-		List.fold ~init:() ts ~f:(fun _ t -> Tree.sexp_of_stm t |> Sexp.output_hum Out_channel.stdout )
+		List.iter ts ~f:(fun t -> Tree.sexp_of_stm t |> Sexp.output_hum Out_channel.stdout )
 	| Translate.Frame.STRING (lab, str) -> (Tree.LABEL lab) |> Tree.sexp_of_stm |> Sexp.output_hum Out_channel.stdout
 in
 
-fragments |> List.fold ~init:() ~f:f
+fragments |> List.iter ~f:f

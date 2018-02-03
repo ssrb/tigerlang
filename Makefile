@@ -16,10 +16,9 @@ export PROJ_lexer_tester
 
 define PROJ_parser_tester
 	RESULT = parser/parser_tester
-	SOURCES = absyn/absyn.ml \
-	absyn/table.ml \
+	SOURCES = absyn/table.ml \
 	absyn/symbol.ml \
-	absyn/prabsyn.ml \
+	absyn/absyn.ml \
 	parser/tigerparse.mly \
 	lexer/tokenCBs.ml \
 	lexer/tigerlex.mll \
@@ -31,9 +30,9 @@ export PROJ_parser_tester
 
 define PROJ_semant_tester
 	RESULT = semant/semant_tester
-	SOURCES = absyn/absyn.ml \
-	absyn/table.ml \
+	SOURCES = absyn/table.ml \
 	absyn/symbol.ml \
+	absyn/absyn.ml \
 	parser/tigerparse.mly \
 	lexer/tokenCBs.ml \
 	lexer/tigerlex.mll \
@@ -55,9 +54,9 @@ export PROJ_semant_tester
 
 define PROJ_canon_tester
 	RESULT = canon/canon_tester
-	SOURCES = absyn/absyn.ml \
-	absyn/table.ml \
+	SOURCES = absyn/table.ml \
 	absyn/symbol.ml \
+	absyn/absyn.ml \
 	parser/tigerparse.mly \
 	lexer/tokenCBs.ml \
 	lexer/tigerlex.mll \
@@ -80,9 +79,9 @@ export PROJ_canon_tester
 
 define PROJ_iselect_tester
 	RESULT = canon/canon_tester
-	SOURCES = absyn/absyn.ml \
-	absyn/table.ml \
+	SOURCES = absyn/table.ml \
 	absyn/symbol.ml \
+	absyn/absyn.ml \
 	parser/tigerparse.mly \
 	lexer/tokenCBs.ml \
 	lexer/tigerlex.mll \
