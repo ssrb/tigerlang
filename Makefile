@@ -68,7 +68,6 @@ define PROJ_canon_tester
 	irtrans/frame.ml \
 	irtrans/translate.ml \
 	irtrans/findEscape.ml \
-	irtrans/printtree.ml \
 	semant/env.ml \
 	semant/semant.ml \
 	semant/prtype.ml \

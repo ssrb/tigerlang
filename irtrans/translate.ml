@@ -193,7 +193,6 @@ let follow_static_link declvl uselvl =
                 aux parent.level (Frame.exp (sl, fp))
             end
     in
-    sexp_of_level declvl |> Sexp.output_hum Out_channel.stdout;
     aux uselvl (T.TEMP Frame.fp)
 
 let transCall (declvl, uselvl, lbl, args, rtype) = 

@@ -2,7 +2,7 @@ module type T = sig
 
 module Temp: Temp.T
 
-type label = Temp.label
+type label = Temp.label [@@deriving sexp]
 
 type stm = 
 | SEQ of stm * stm
@@ -10,7 +10,7 @@ type stm =
 | JUMP of exp * label list
 | CJUMP of relop * exp * exp * label * label
 | MOVE of exp * exp
-| EXP of exp
+| EXP of exp [@@deriving sexp]
 
 and exp = 
 | BINOP of binop * exp * exp
@@ -19,13 +19,13 @@ and exp =
 | ESEQ of stm * exp
 | NAME of label
 | CONST of int
-| CALL of exp * exp list
+| CALL of exp * exp list [@@deriving sexp]
 
 and binop = PLUS | MINUS | MUL | DIV 
-| AND | OR | LSHIFT | RSHIFT | ARSHIFT | XOR
+| AND | OR | LSHIFT | RSHIFT | ARSHIFT | XOR [@@deriving sexp]
 
 and relop = EQ | NE | LT | GT | LE | GE 
-| ULT | ULE | UGT | UGE
+| ULT | ULE | UGT | UGE [@@deriving sexp]
 
 val notRel : relop -> relop
 val commute: relop -> relop
@@ -33,9 +33,11 @@ end
 
 module F  = functor(Temp: Temp.T) -> struct
 
+open Core
+
 module Temp  = Temp
 
-type label = Temp.label
+type label = Temp.label [@@deriving sexp]
 
 type stm = 
 | SEQ of stm * stm
@@ -43,7 +45,7 @@ type stm =
 | JUMP of exp * label list
 | CJUMP of relop * exp * exp * label * label
 | MOVE of exp * exp
-| EXP of exp
+| EXP of exp [@@deriving sexp]
 
 and exp = 
 | BINOP of binop * exp * exp
@@ -52,13 +54,13 @@ and exp =
 | ESEQ of stm * exp
 | NAME of label
 | CONST of int
-| CALL of exp * exp list
+| CALL of exp * exp list [@@deriving sexp]
 
 and binop = PLUS | MINUS | MUL | DIV 
-| AND | OR | LSHIFT | RSHIFT | ARSHIFT | XOR
+| AND | OR | LSHIFT | RSHIFT | ARSHIFT | XOR [@@deriving sexp]
 
 and relop = EQ | NE | LT | GT | LE | GE 
-| ULT | ULE | UGT | UGE
+| ULT | ULE | UGT | UGE [@@deriving sexp]
 
 let notRel = function
 | EQ -> NE
