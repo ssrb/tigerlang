@@ -1,1 +1,1 @@
-include Codegen.T
+include Codegen.T with module Frame = M68kFrame

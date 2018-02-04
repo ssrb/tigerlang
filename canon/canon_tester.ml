@@ -1,7 +1,7 @@
 module Lexer = Tigerlex.F(Parsertokens)
 module Translate = Translate.F(M68kFrame)
 module Semant = Semant.F(Translate)
-module Tree = Translate.Frame.Tree
+module Tree = M68kFrame.Tree
 module Canon = Canon.F(Tree)
 
 open Core

@@ -5,7 +5,7 @@ module Tree : Tree.T with module Temp = Temp
 
 type frame [@@deriving sexp]
 type access  [@@deriving sexp]
-type frag = PROC of {body: Tree.stm; frame: frame} | STRING of Temp.label * string
+type frag = PROC of {body: Tree.stm; frame: frame} | STRING of Temp.label * string [@@deriving sexp]
 
 val fp: Temp.temp
 val rv: Temp.temp

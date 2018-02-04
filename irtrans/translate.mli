@@ -36,4 +36,4 @@ val procEntryExit: level:level -> body:exp -> unit
 
 end
 
-module F : functor(Frame: Frame.T) -> T
+module F : functor(Frame: Frame.T) -> T with module Frame = Frame

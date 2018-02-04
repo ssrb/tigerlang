@@ -1,7 +1,7 @@
 module Lexer = Tigerlex.F(Parsertokens)
 module Translate = Translate.F(M68kFrame)
 module Semant = Semant.F(Translate)
-module Canon = Canon.F(Translate.Frame.Tree)
+module Canon = Canon.F(M68kFrame.Tree)
 module M68K = M68kCodegen
 
 open Core
@@ -17,8 +17,7 @@ in
 let f frag =
 	match frag with
 	| Translate.Frame.PROC proc -> 
-		()
-		(*proc.body 
+		proc.body 
 		|> Canon.linearize 
 		|> Canon.basicBlocks 
 		|> Canon.traceSchedule 
@@ -27,8 +26,8 @@ let f frag =
 			|> M68K.codegen proc.frame
 			|> List.iter ~f:(fun asm -> 
 				asm
-				|> sexp_of_instr
-				|> Sexp.output_hum Out_channel.stdout))*)
+				|> M68K.Assem.sexp_of_instr
+				|> Sexp.output_hum Out_channel.stdout))
 	| Translate.Frame.STRING _ -> ()
 in
 
