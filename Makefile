@@ -40,6 +40,7 @@ define PROJ_semant_tester
 	semant/types.ml \
 	irtrans/temp.ml \
 	irtrans/tree.ml \
+	iselect/assem.ml \
 	irtrans/frame.ml \
 	irtrans/translate.ml \
 	irtrans/findEscape.ml \
@@ -64,6 +65,7 @@ define PROJ_canon_tester
 	semant/types.ml \
 	irtrans/temp.ml \
 	irtrans/tree.ml \
+	iselect/assem.ml \
 	irtrans/frame.ml \
 	irtrans/translate.ml \
 	irtrans/findEscape.ml \
@@ -89,6 +91,7 @@ define PROJ_iselect_tester
 	semant/types.ml \
 	irtrans/temp.ml \
 	irtrans/tree.ml \
+	iselect/assem.ml \
 	irtrans/frame.ml \
 	irtrans/translate.ml \
 	irtrans/findEscape.ml \
@@ -98,7 +101,6 @@ define PROJ_iselect_tester
 	irtrans/m68kTemp.ml \
 	irtrans/m68kFrame.ml \
 	canon/canon.ml \
-	iselect/assem.ml \
 	iselect/codegen.ml \
 	iselect/m68kCodegen.ml \
 	iselect/iselect_tester.ml
