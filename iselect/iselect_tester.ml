@@ -8,6 +8,8 @@ open Core
 
 let _ = 
 
+let open Out_channel in
+
 let fragments = 
 	let lexbuf = Lexing.from_channel  In_channel.stdin in
 	Tigerparse.prog Lexer.read lexbuf
@@ -27,9 +29,10 @@ let f frag =
 			|> List.iter ~f:(fun asm -> 
 				asm
 				|> M68K.Assem.sexp_of_instr
-				|> Sexp.output_hum Out_channel.stdout))
+				|> Sexp.output_hum stdout;
+				newline stdout))
 	| Translate.Frame.STRING _ -> ()
 in
 
 let _ = fragments |> List.iter ~f:f in
-Out_channel.flush Out_channel.stdout
+flush stdout

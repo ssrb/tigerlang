@@ -99,8 +99,8 @@ let codegen frame stm =
                 emit(A.OPER {assem = "move.l s1,(s0)"; dst = []; src = [munchAddrExp e0; munchDataExp e1]; jump = None})
         end 
 
-        (*| T.MOVE(e0, e1) -> 
-            emit(A.MOVE {assem = "move.l s0,d0"; dst = munchDataExp e0; src = munchDataExp e1})*)
+        | T.MOVE(e0, e1) ->
+            emit(A.MOVE {assem = "move.l s0,d0"; dst = munchDataExp e0; src = munchDataExp e1})
 
         | T.LABEL label -> 
             emit(A.LABEL {assem = (Symbol.name label) ^ ":"; lab = label})
@@ -134,7 +134,11 @@ let codegen frame stm =
         end
         (*| EXP of exp*)
 
-        | _ -> assert(false)
+        | stm -> 
+            stm
+            |> Tree.sexp_of_stm
+            |> Sexp.output_hum Out_channel.stdout;
+            assert(false)
 
     and munchDataExp = function
 
@@ -233,9 +237,17 @@ let codegen frame stm =
         (*| NAME of label*)
         | T.CONST i -> result(fun r -> emit(A.OPER {assem = "move.l #$" ^ Int.to_string i ^ ",d0"; dst = [r]; src = []; jump = None}))        
  
-        | _ -> assert(false)
+        | exp -> 
+            exp
+            |> Tree.sexp_of_exp
+            |> Sexp.output_hum Out_channel.stdout;
+            assert(false)
     and munchAddrExp = function
-        | _ -> assert(false)
+        | exp -> 
+            exp
+            |> Tree.sexp_of_exp
+            |> Sexp.output_hum Out_channel.stdout;
+            assert(false)
     in 
     munchStm stm;
     List.rev(!ilist)
