@@ -233,10 +233,7 @@ let codegen frame stm =
         | T.CONST i -> result(fun r -> emit(A.OPER {assem = "move.l #$" ^ (Int.to_string i) ^ ",d0"; dst = [r]; src = []; jump = None}))
  
         | T.CALL (l, args) -> 
-            
-            ignore(munchAddrExp l);
-            List.iter ~f:(fun a -> ignore(munchDataExp a)) args;
-            result(fun r -> emit(A.OPER {assem = "TODO: call"; dst = []; src = []; jump = None}))
+            result(fun r -> emit(A.OPER {assem = "CALL s0"; dst = []; src = (munchAddrExp l)::(munchArgs (0, args)); jump = None}))
 
         | exp -> 
             exp
@@ -246,6 +243,9 @@ let codegen frame stm =
 
     and munchAddrExp = function
         | exp -> munchDataExp exp
+
+    and munchArgs (i, args) = 
+        List.map ~f:munchDataExp args
     in 
     munchStm stm;
     List.rev(!ilist)
