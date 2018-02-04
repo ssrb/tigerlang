@@ -1,7 +1,7 @@
 module type T = sig
 
-module Tree : Tree.T
-module Temp = Tree.Temp
+module Temp : Temp.T
+module Tree : Tree.T with module Temp = Temp
 
 type frame [@@deriving sexp]
 type access  [@@deriving sexp]

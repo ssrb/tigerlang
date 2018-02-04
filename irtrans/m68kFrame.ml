@@ -1,7 +1,7 @@
 open Core
 
-module Tree = Tree.F(M68kTemp)
-module Temp = Tree.Temp
+module Temp = M68kTemp
+module Tree = Tree.F(Temp)
 
 let fp = Temp.newtemp ()
 let rv = Temp.newtemp ()

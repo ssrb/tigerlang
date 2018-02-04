@@ -30,4 +30,4 @@ val notRel : relop -> relop
 val commute: relop -> relop
 end
 
-module F : functor(Temp: Temp.T) -> T
+module F : functor(Temp: Temp.T) -> T with module Temp = Temp

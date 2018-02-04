@@ -1,7 +1,7 @@
 module type T = sig
 
 module Frame: Frame.T
-module Temp : Temp.T
+module Temp = Frame.Temp
 
 type exp
 type level

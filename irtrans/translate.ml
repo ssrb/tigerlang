@@ -1,7 +1,7 @@
 module type T = sig
 
 module Frame: Frame.T
-module Temp : Temp.T
+module Temp = Frame.Temp
 
 type exp
 type level
@@ -39,8 +39,8 @@ module F = functor(Frame : Frame.T) ->
 struct
 
 module Frame = Frame
+module Temp = Frame.Temp
 module Tree = Frame.Tree
-module Temp = Tree.Temp
 
 open Core
 

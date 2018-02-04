@@ -1,1 +1,1 @@
-include Frame.T
+include Frame.T with module Temp = M68kTemp
