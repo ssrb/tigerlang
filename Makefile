@@ -78,7 +78,7 @@ endef
 export PROJ_canon_tester
 
 define PROJ_iselect_tester
-	RESULT = canon/canon_tester
+	RESULT = iselect/iselect_tester
 	SOURCES = absyn/table.ml \
 	absyn/symbol.ml \
 	absyn/absyn.ml \
