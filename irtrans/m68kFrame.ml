@@ -42,7 +42,7 @@ let procEntryExit1 (frame, body) = body
 
 let procEntryExit2 (frame, body) = 
     body @ 
-    [ Assem.OPER {assem = ""; src = [] @ calleesaves; dst = []; jump = None} ]
+    [ Assem.OPER {assem = ""; src = [fp; rv] @ calleesaves; dst = []; jump = None} ]
 
 type procEntryExit3 = {prolog: string; body: Assem.instr list; epilog: string} [@@deriving sexp]
 let procEntryExit3 (frame, body) = {prolog = ""; body; epilog = ""}
