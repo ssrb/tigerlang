@@ -12,8 +12,8 @@ type access = InFrame of int | InReg of Temp.temp  [@@deriving sexp]
 type frame = {name: Temp.label; formals: access list; offset: int ref}  [@@deriving sexp]
 type frag = PROC of {body: Tree.stm; frame: frame} | STRING of Temp.label * string [@@deriving sexp]
 type register = string [@@deriving sexp]
-type proc_entry_exit = {prolog: string; body: Assem.instr list; epilog: string} [@@deriving sexp]
 
+let registers = []
 let specialregs = []
 let argregs = []
 let calleesaves = []
@@ -44,6 +44,7 @@ let procEntryExit2 (frame, body) =
     body @ 
     [ Assem.OPER {assem = ""; src = [] @ calleesaves; dst = []; jump = None} ]
 
+type procEntryExit3 = {prolog: string; body: Assem.instr list; epilog: string} [@@deriving sexp]
 let procEntryExit3 (frame, body) = {prolog = ""; body; epilog = ""}
 
 let tempMap = Temp.Table.empty
