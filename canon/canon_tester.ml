@@ -23,7 +23,7 @@ let f frag =
 	| Translate.Frame.STRING (lab, str) -> 
 		(Tree.LABEL lab) |> Tree.sexp_of_stm |> Sexp.output_hum Out_channel.stdout;
 		Out_channel.newline Out_channel.stdout;
-		Out_channel.print_endline str
+		Out_channel.print_endline ("\"" ^ str ^ "\"")
 in
 
 let _ = fragments |> List.iter ~f:f
