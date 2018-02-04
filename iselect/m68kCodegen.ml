@@ -143,10 +143,6 @@ let codegen frame stm =
 
     and munchDataExp = function
 
-        (*| BINOP of binop * exp * exp
-        | MEM of exp
-        | ESEQ of stm * exp*)
-
         | T.BINOP (op, e0, e1) -> 
         begin
             match op with 
@@ -236,7 +232,11 @@ let codegen frame stm =
         
         | T.CONST i -> result(fun r -> emit(A.OPER {assem = "move.l #$" ^ (Int.to_string i) ^ ",d0"; dst = [r]; src = []; jump = None}))
  
-        | T.CALL _ -> result(fun r -> emit(A.OPER {assem = "call TODO"; dst = []; src = []; jump = None}))
+        | T.CALL (l, args) -> 
+            
+            ignore(munchAddrExp l);
+            List.iter ~f:(fun a -> ignore(munchDataExp a)) args;
+            result(fun r -> emit(A.OPER {assem = "TODO: call"; dst = []; src = []; jump = None}))
 
         | exp -> 
             exp
