@@ -132,7 +132,8 @@ let codegen frame stm =
             | T.GE | T.UGE ->
                 emit(A.OPER {assem = "bge " ^ (Symbol.name t); dst = []; src = []; jump = Some [t; f]})
         end
-        (*| EXP of exp*)
+
+        | T.EXP e -> ignore(munchDataExp e)
 
         | stm -> 
             stm
@@ -144,11 +145,7 @@ let codegen frame stm =
 
         (*| BINOP of binop * exp * exp
         | MEM of exp
-        | TEMP of Temp.temp
-        | ESEQ of stm * exp
-        | NAME of label
-        | CONST of int
-        | CALL of exp * exp list*)
+        | ESEQ of stm * exp*)
 
         | T.BINOP (op, e0, e1) -> 
         begin
@@ -234,20 +231,21 @@ let codegen frame stm =
         | T.MEM(T.CONST i) -> result(fun r -> emit(A.OPER {assem = "move.l $"^ Int.to_string i ^ ",d0"; dst = [r]; src = []; jump = None}))
         | T.MEM(e0) -> result(fun r -> emit(A.OPER {assem = "move.l (s0),d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
         | T.TEMP t -> t
-        (*| NAME of label*)
-        | T.CONST i -> result(fun r -> emit(A.OPER {assem = "move.l #$" ^ Int.to_string i ^ ",d0"; dst = [r]; src = []; jump = None}))        
+        
+        | T.NAME l -> result(fun r -> emit(A.OPER {assem = "movea.l #" ^ (Symbol.name l) ^ ",d0" ; dst = [r]; src = []; jump = None}))
+        
+        | T.CONST i -> result(fun r -> emit(A.OPER {assem = "move.l #$" ^ (Int.to_string i) ^ ",d0"; dst = [r]; src = []; jump = None}))
  
+        | T.CALL _ -> result(fun r -> emit(A.OPER {assem = "call TODO"; dst = []; src = []; jump = None}))
+
         | exp -> 
             exp
             |> Tree.sexp_of_exp
             |> Sexp.output_hum Out_channel.stdout;
             assert(false)
+
     and munchAddrExp = function
-        | exp -> 
-            exp
-            |> Tree.sexp_of_exp
-            |> Sexp.output_hum Out_channel.stdout;
-            assert(false)
+        | exp -> munchDataExp exp
     in 
     munchStm stm;
     List.rev(!ilist)
