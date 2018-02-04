@@ -4,14 +4,14 @@ module Temp : Temp.T
 
 exception Assem_error of string
 
-type reg = string
-type temp = Temp.temp
-type label = Temp.label
+type reg = string [@@deriving sexp]
+type temp = Temp.temp [@@deriving sexp]
+type label = Temp.label [@@deriving sexp]
 
 type instr = 
 	| OPER of {assem: string; dst: temp list; src: temp list; jump: label list option}
 	| LABEL of {assem: string; lab: Temp.label}
-	| MOVE of {assem: string; dst: temp; src: temp}
+	| MOVE of {assem: string; dst: temp; src: temp} [@@deriving sexp]
 
 val format : (temp -> string) -> instr -> string
 

@@ -10,7 +10,8 @@ let _ =
 
 let fragments = 
 	let lexbuf = Lexing.from_channel In_channel.stdin in
-	Semant.transProg2 (Tigerparse.prog Lexer.read lexbuf)
+	Tigerparse.prog Lexer.read lexbuf
+	|> Semant.transProg2 
 in
 
 let f frag =
@@ -26,5 +27,6 @@ let f frag =
 		Out_channel.print_endline ("\"" ^ str ^ "\"")
 in
 
-let _ = fragments |> List.iter ~f:f
-in Out_channel.flush Out_channel.stdout
+let _ = fragments |> List.iter ~f:f in 
+
+Out_channel.flush Out_channel.stdout
