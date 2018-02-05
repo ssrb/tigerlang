@@ -13,16 +13,20 @@ let base_tenv =
     tenv
 
 let base_venv = 
-    let venv = Symbol.enter (Symbol.empty, Symbol.symbol "print", FunEntry {level = Translate.outermost; label = Temp.newlabel(); formals = [ Types.STRING ]; result = Types.UNIT}) in
-    let venv = Symbol.enter (venv, Symbol.symbol "flush", FunEntry {level = Translate.outermost; label = Temp.newlabel(); formals = []; result = Types.UNIT}) in
-    let venv = Symbol.enter (venv, Symbol.symbol "getchar", FunEntry {level = Translate.outermost; label = Temp.newlabel(); formals = []; result = Types.STRING}) in
-    let venv = Symbol.enter (venv, Symbol.symbol "ord", FunEntry {level = Translate.outermost; label = Temp.newlabel(); formals = [ Types.STRING ]; result = Types.INT}) in
-    let venv = Symbol.enter (venv, Symbol.symbol "chr", FunEntry {level = Translate.outermost; label = Temp.newlabel(); formals = [ Types.INT ]; result = Types.STRING}) in
-    let venv = Symbol.enter (venv, Symbol.symbol "size", FunEntry {level = Translate.outermost; label = Temp.newlabel(); formals = [ Types.STRING ]; result = Types.INT}) in
-    let venv = Symbol.enter (venv, Symbol.symbol "substring", FunEntry {level = Translate.outermost; label = Temp.newlabel(); formals = [ Types.STRING; Types.INT; Types.INT ]; result = Types.STRING}) in
-    let venv = Symbol.enter (venv, Symbol.symbol "concat", FunEntry {level = Translate.outermost; label = Temp.newlabel(); formals = [ Types.STRING; Types.STRING ]; result = Types.STRING}) in
-    let venv = Symbol.enter (venv, Symbol.symbol "not", FunEntry {level = Translate.outermost; label = Temp.newlabel(); formals = [ Types.INT ]; result = Types.INT}) in
-    let venv = Symbol.enter (venv, Symbol.symbol "exit", FunEntry {level = Translate.outermost; label = Temp.newlabel(); formals = [ Types.INT ]; result = Types.UNIT}) in
-    venv
+
+    let declareBuiltin ~name ~formals ~result venv = 
+        Symbol.enter (venv, Symbol.symbol name, FunEntry {level = Translate.outermost; label = Temp.namedlabel name; formals; result})
+    in
+    Symbol.empty
+    |> declareBuiltin ~name:"print" ~formals:[ Types.STRING ] ~result:Types.UNIT
+    |> declareBuiltin ~name:"flush" ~formals:[] ~result:Types.UNIT
+    |> declareBuiltin ~name:"getchar" ~formals:[] ~result:Types.STRING
+    |> declareBuiltin ~name:"ord" ~formals:[ Types.STRING] ~result:Types.INT
+    |> declareBuiltin ~name:"chr" ~formals:[ Types.INT ] ~result:Types.STRING
+    |> declareBuiltin ~name:"size" ~formals:[ Types.STRING ] ~result:Types.INT
+    |> declareBuiltin ~name:"substring" ~formals:[ Types.STRING; Types.INT; Types.INT ] ~result:Types.STRING
+    |> declareBuiltin ~name:"concat" ~formals:[ Types.STRING; Types.STRING ] ~result:Types.STRING
+    |> declareBuiltin ~name:"not" ~formals:[ Types.INT ] ~result:Types.INT
+    |> declareBuiltin ~name:"exit" ~formals:[ Types.INT ] ~result:Types.UNIT
 
 end

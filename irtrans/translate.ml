@@ -196,11 +196,18 @@ let follow_static_link declvl uselvl =
     aux uselvl (T.TEMP Frame.fp)
 
 let transCall (declvl, uselvl, lbl, args, rtype) = 
-    let sl = follow_static_link declvl uselvl in
-    let call = T.CALL ((T.NAME lbl), sl::(List.map args ~f:unEx)) in
-    match rtype with
-    | Types.UNIT -> Nx (T.EXP call)
-    | _ -> Ex call
+    let args = List.map args ~f:unEx in
+    match declvl with
+    | Outermost ->
+        Ex (Frame.externalCall (Symbol.name lbl, args))
+    | _ ->
+    begin
+        let sl = follow_static_link declvl uselvl in
+        let call = T.CALL ((T.NAME lbl), sl::args) in
+        match rtype with
+        | Types.UNIT -> Nx (T.EXP call)
+        | _ -> Ex call
+    end
 
 let transRecord fldxp =
     let r = Temp.newtemp () in
