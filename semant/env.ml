@@ -13,7 +13,6 @@ let base_tenv =
     tenv
 
 let base_venv = 
-
     let declareBuiltin ~name ~formals ~result venv = 
         Symbol.enter (venv, Symbol.symbol name, FunEntry {level = Translate.outermost; label = Temp.namedlabel name; formals; result})
     in
