@@ -19,6 +19,9 @@ let argregs = []
 let calleesaves = []
 let callersaves = []
 
+let externalCall (name, exps) = 
+    Tree.CALL (Tree.NAME (Temp.namedlabel ("__" ^ name)), exps)
+
 let (++) r inc = let x = !r in r := x + inc; x
 
 let newFrame ~name ~formals = 

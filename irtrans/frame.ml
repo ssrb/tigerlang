@@ -12,7 +12,9 @@ type register = string [@@deriving sexp]
 val fp: Temp.temp
 val rv: Temp.temp
 val wordSize: int
-val registers: register list 
+val registers: register list
+
+val externalCall: string * Tree.exp list -> Tree.exp
 
 val newFrame: name:Temp.label -> formals:bool list -> frame
 val name: frame -> Temp.label

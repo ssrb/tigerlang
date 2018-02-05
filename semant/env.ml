@@ -12,5 +12,17 @@ let base_tenv =
     let tenv = Symbol.enter (tenv, Symbol.symbol "unit", Types.UNIT) in
     tenv
 
-let base_venv = Symbol.empty
+let base_venv = 
+    let venv = Symbol.enter (Symbol.empty, Symbol.symbol "print", FunEntry {level = Translate.outermost; label = Temp.newlabel(); formals = [ Types.STRING ]; result = Types.UNIT}) in
+    let venv = Symbol.enter (venv, Symbol.symbol "flush", FunEntry {level = Translate.outermost; label = Temp.newlabel(); formals = []; result = Types.UNIT}) in
+    let venv = Symbol.enter (venv, Symbol.symbol "getchar", FunEntry {level = Translate.outermost; label = Temp.newlabel(); formals = []; result = Types.STRING}) in
+    let venv = Symbol.enter (venv, Symbol.symbol "ord", FunEntry {level = Translate.outermost; label = Temp.newlabel(); formals = [ Types.STRING ]; result = Types.INT}) in
+    let venv = Symbol.enter (venv, Symbol.symbol "chr", FunEntry {level = Translate.outermost; label = Temp.newlabel(); formals = [ Types.INT ]; result = Types.STRING}) in
+    let venv = Symbol.enter (venv, Symbol.symbol "size", FunEntry {level = Translate.outermost; label = Temp.newlabel(); formals = [ Types.STRING ]; result = Types.INT}) in
+    let venv = Symbol.enter (venv, Symbol.symbol "substring", FunEntry {level = Translate.outermost; label = Temp.newlabel(); formals = [ Types.STRING; Types.INT; Types.INT ]; result = Types.STRING}) in
+    let venv = Symbol.enter (venv, Symbol.symbol "concat", FunEntry {level = Translate.outermost; label = Temp.newlabel(); formals = [ Types.STRING; Types.STRING ]; result = Types.STRING}) in
+    let venv = Symbol.enter (venv, Symbol.symbol "not", FunEntry {level = Translate.outermost; label = Temp.newlabel(); formals = [ Types.INT ]; result = Types.INT}) in
+    let venv = Symbol.enter (venv, Symbol.symbol "exit", FunEntry {level = Translate.outermost; label = Temp.newlabel(); formals = [ Types.INT ]; result = Types.UNIT}) in
+    venv
+
 end

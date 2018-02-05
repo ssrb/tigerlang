@@ -132,17 +132,17 @@ let transOp (op, left, right, ty) =
     if ty = Types.STRING then
         match op with
         | A.EqOp -> Cx (fun (t, f) ->
-            T.CJUMP (T.EQ, (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [left; right]))), (T.CONST 0), t, f))
+            T.CJUMP (T.EQ, Frame.externalCall ("stringCompare", [left; right]), (T.CONST 0), t, f))
         | A.NeqOp -> Cx (fun (t, f) ->
-            T.CJUMP (T.NE, (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [left; right]))), (T.CONST 0), t, f))
+            T.CJUMP (T.NE, Frame.externalCall ("stringCompare", [left; right]), (T.CONST 0), t, f))
         | A.LtOp -> Cx (fun (t, f) ->
-            T.CJUMP (T.LT, (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [left; right]))), (T.CONST 0), t, f))
+            T.CJUMP (T.LT, Frame.externalCall ("stringCompare", [left; right]), (T.CONST 0), t, f))
         | A.LeOp -> Cx (fun (t, f) ->
-            T.CJUMP (T.LE, (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [left; right]))), (T.CONST 0), t, f))
+            T.CJUMP (T.LE, Frame.externalCall ("stringCompare", [left; right]), (T.CONST 0), t, f))
         | A.GtOp -> Cx (fun (t, f) ->
-            T.CJUMP (T.LT, (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [right; left]))), (T.CONST 0), t, f))
+            T.CJUMP (T.LT, Frame.externalCall ("stringCompare", [right; left]), (T.CONST 0), t, f))
         | A.GeOp -> Cx (fun (t, f) ->
-            T.CJUMP (T.LE, (T.CALL ((T.NAME (Temp.namedlabel "stringCompare"), [right; left]))), (T.CONST 0), t, f))
+            T.CJUMP (T.LE, Frame.externalCall ("stringCompare", [right; left]), (T.CONST 0), t, f))
         | _ -> assert(false)
     else
         match op with 
@@ -208,7 +208,7 @@ let transRecord fldxp =
         let xp = match xp with Some xp -> unEx xp | None -> T.CONST 0 in
         T.MOVE (T.MEM (T.BINOP (T.PLUS, (T.TEMP r), (T.CONST (woffset * Frame.wordSize)))), xp)
     in
-    let alloc = T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "malloc")), [ T.CONST ((List.length fldxp) * Frame.wordSize) ]))) in        
+    let alloc = T.MOVE ((T.TEMP r), Frame.externalCall ("malloc", [ T.CONST ((List.length fldxp) * Frame.wordSize) ])) in        
     let inits = List.mapi fldxp ~f:init in    
     Ex (T.ESEQ (seq (alloc::inits), T.TEMP r))
 
@@ -331,8 +331,9 @@ let transLet (inits, body) =
 
 let transArray (size, init) =
     let r = Temp.newtemp () in
-    let alloc = T.MOVE ((T.TEMP r), (T.CALL ((T.NAME (Temp.namedlabel "malloc")), [ T.BINOP (T.MUL, (unEx size), (T.CONST Frame.wordSize)) ]))) in
-    let init = T.EXP (T.CALL ((T.NAME (Temp.namedlabel "initArray")), [ (T.TEMP r); (unEx init) ])) in
+    let size = (unEx size) in
+    let alloc = T.MOVE ((T.TEMP r), Frame.externalCall ("malloc", [ T.BINOP (T.MUL, size, (T.CONST Frame.wordSize)) ])) in
+    let init = T.EXP (Frame.externalCall ("initArray", [ (T.TEMP r); size; (unEx init) ])) in
     Ex (T.ESEQ (seq [alloc; init], T.TEMP r))
 
 let transField (var, fidx) =

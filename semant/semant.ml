@@ -96,7 +96,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
 
     let ty = (if type_equal left.ty Types.NIL then right.ty else left.ty) in 
 
-    {exp = T.transOp (o.oper, left.exp, right.exp, ty); ty = ty}
+    {exp = T.transOp (o.oper, left.exp, right.exp, ty); ty = Types.INT}
 
   end
 
