@@ -5,6 +5,24 @@ module Assem = Assem.F(Frame.Temp)
 
 open Core
 
+type stm = 
+| SEQ of stm * stm
+| LABEL of Tree.label
+| JUMP of adexp * Tree.label list
+| CJUMP of Tree.relop * adexp * adexp * Tree.label * Tree.label
+| MOVE of adexp * adexp
+| EXP of adexp [@@deriving sexp]
+
+and adexp = Addr of exp | Data of exp
+and exp = 
+| BINOP of Tree.binop * adexp * adexp
+| MEM of adexp
+| TEMP of Temp.temp
+| ESEQ of stm * adexp
+| NAME of Tree.label
+| CONST of int
+| CALL of adexp * adexp list [@@deriving sexp]
+
 let codegen frame stm =
     let module T = Tree in
     let module A = Assem in
