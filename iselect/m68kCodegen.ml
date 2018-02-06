@@ -5,25 +5,54 @@ module Assem = Assem.F(Frame.Temp)
 
 open Core
 
+module T = Tree
+
 type stm = 
 | LABEL of Tree.label
-| JUMP of adexp * Tree.label list
-| CJUMP of Tree.relop * adexp * adexp * Tree.label * Tree.label
-| MOVE of adexp * adexp
-| EXP of adexp [@@deriving sexp]
+| JUMP of schizoexp * Tree.label list
+| CJUMP of Tree.relop * schizoexp * schizoexp * Tree.label * Tree.label
+| MOVE of schizoexp * schizoexp
+| EXP of schizoexp [@@deriving sexp]
 
-and adexp = Addr of exp | Data of exp [@@deriving sexp]
+and schizoexp = Addr of exp | Data of exp [@@deriving sexp]
 
 and exp = 
-| BINOP of Tree.binop * adexp * adexp
-| MEM of adexp
+| BINOP of Tree.binop * schizoexp * schizoexp
+| MEM of schizoexp
 | TEMP of Temp.temp
 | NAME of Tree.label
 | CONST of int
-| CALL of adexp * adexp list [@@deriving sexp]
+| CALL of schizoexp * schizoexp list [@@deriving sexp]
+
+let rec schizoStm = function
+| T.LABEL l -> LABEL l
+| T.JUMP (e, ls) -> JUMP ((schizoExp e), ls)
+| T.CJUMP (relop, left, right, t, f) -> CJUMP (relop, (schizoExp left), (schizoExp right), t, f)
+| T.MOVE (dst, src) -> MOVE ((schizoExp dst), (schizoExp src))
+| T.EXP e -> EXP (schizoExp e)
+| _ -> assert(false)
+
+and schizoExp e =
+match e with
+| T.BINOP (binop, left, right) ->
+begin
+    let left = schizoExp left in
+    let right = schizoExp right in
+    match (left, right) with
+    | (Data _, Data _) -> Data (BINOP (binop, left, right))
+    | (Addr _, Addr _) -> Data (BINOP (binop, left, right))
+    | _ -> Addr (BINOP (binop, left, right))
+end
+| T.MEM e ->
+    let e = schizoExp e in
+    Data (MEM e)
+| T.TEMP t -> Data (TEMP t)
+| T.NAME l -> Data (NAME l)
+| T.CONST c -> Data (CONST c)
+| T.CALL (name, args) -> Data (CALL ((schizoExp name), List.map ~f:schizoExp args))
+| _ -> assert(false)
 
 let codegen frame stm =
-    let module T = Tree in
     let module A = Assem in
     let ilist = ref [] in
     let emit x = ilist := x::!ilist in
