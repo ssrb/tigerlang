@@ -14,6 +14,7 @@ type stm =
 | EXP of adexp [@@deriving sexp]
 
 and adexp = Addr of exp | Data of exp
+
 and exp = 
 | BINOP of Tree.binop * adexp * adexp
 | MEM of adexp
