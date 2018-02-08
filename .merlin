@@ -5,6 +5,7 @@ S semant
 S irtrans
 S canon
 S iselect
+S regalloc
 B parser
 B lexer
 B absyn
@@ -12,6 +13,7 @@ B semant
 B irtrans
 B canon
 B iselect
+B regalloc
 PKG core
 PKG ppx_sexp_conv
 
