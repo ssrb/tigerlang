@@ -107,8 +107,36 @@ define PROJ_iselect_tester
 endef
 export PROJ_iselect_tester
 
+define PROJ_regalloc_tester
+	RESULT = regalloc/regalloc_tester
+	SOURCES = absyn/table.ml \
+	absyn/symbol.ml \
+	absyn/absyn.ml \
+	parser/tigerparse.mly \
+	lexer/tokenCBs.ml \
+	lexer/tigerlex.mll \
+	parser/parsertokens.ml \
+	semant/types.ml \
+	irtrans/temp.ml \
+	irtrans/tree.ml \
+	iselect/assem.ml \
+	irtrans/frame.ml \
+	irtrans/translate.ml \
+	irtrans/findEscape.ml \
+	semant/env.ml \
+	semant/semant.ml \
+	semant/prtype.ml \
+	irtrans/m68kTemp.ml \
+	irtrans/m68kFrame.ml \
+	canon/canon.ml \
+	iselect/codegen.ml \
+	iselect/m68kCodegen.ml \
+	regalloc/regalloc_tester.ml
+endef
+export PROJ_regalloc_tester
+
 ifndef SUBPROJS
-  export SUBPROJS = lexer_tester parser_tester absyn_tester semant_tester canon_tester iselect_tester
+  export SUBPROJS = lexer_tester parser_tester absyn_tester semant_tester canon_tester iselect_tester regalloc_tester
 endif
 
 all: debug-code native-code

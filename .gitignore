@@ -15,3 +15,4 @@ parser/parser_tester
 semant/semant_tester
 canon/canon_tester
 iselect/iselect_tester
+regalloc/regalloc_tester
