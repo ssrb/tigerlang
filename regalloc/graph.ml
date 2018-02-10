@@ -1,76 +1,97 @@
+open Core
+
 type node' = int
 type temp = Temp.temp
 
-datatype noderep = NODE of {succ: node' list, pred: node' list}
+type noderep = {succ: node' list; pred: node' list}
 
-val emptyNode = NODE{succ=[],pred=[]}
+let emptyNode = {succ=[] ;pred=[]}
 
-val bogusNode = NODE{succ=[~1],pred=[]}
+let bogusNode = {succ=[ lnot 1 ]; pred=[]}
 
-fun isBogus(NODE{succ= ~1::_,...}) = true
-  | isBogus _ = false
+let isBogus = function
+| {succ = (n::_); _} when n = lnot 1 -> True
+| _ -> False
 
-structure A = DynamicArrayFn(struct open Array
+(*struct open Array
           type elem = noderep
           type vector = noderep vector
           type array = noderep array
-                            end)
+                            end*)
 
-type graph = A.array
+(*DynamicArrayFn()*)
+
+module A = struct
+
+  type array
+  let array (i, elem) = ()
+
+end
+
+type graph = noderep list
 
 type node = graph * node'
-fun eq((_,a),(_,b)) = a=b
 
-fun augment (g: graph) (n: node') : node = (g,n)
+let eq((_, a),(_, b)) = a = b
 
-fun newGraph() = A.array(0,bogusNode)
+let augment (g: graph) (n: node') : node = (g, n)
 
-fun nodes g = let val b = A.bound g
-                  fun f i = if isBogus( A.sub(g,i)) then nil
-                else (g,i)::f(i+1)
-    in f 0			     
-              end
+let newGraph () = A.array(0, bogusNode)
 
-fun succ(g,i) = let val NODE{succ=s,...} = A.sub(g,i) 
-      in map (augment g) s 
-    end
-fun pred(g,i) = let val NODE{pred=p,...} = A.sub(g,i)
-                    in map (augment g) p 
-    end
-fun adj gi = pred gi @ succ gi
+let nodes g = 
+  (*let b = A.bound g in*)
+  let f i = if isBogus(A.sub (g, i)) then [] else (g, i)::(f (i + 1)) in 
+  f 0			     
 
-fun newNode g = (* binary search for unused node *)
-  let fun look(lo,hi) =
-              (* i < lo indicates i in use
-                i >= hi indicates i not in use *)
-          if lo=hi then (A.update(g,lo,emptyNode); (g,lo))
-          else let val m = (lo+hi) div 2
-                in if isBogus(A.sub(g,m)) then look(lo,m) else look(m+1,hi)
-                end
-    in look(0, 1 + A.bound g)
-  end
+let succ(g, i) = 
+  let {succ; _} = A.sub(g, i) in
+  List.map ~f:(augment g) succ
+
+let pred(g, i) = 
+  let {pred; _} = A.sub(g,i) in 
+  List.map (augment g) pred 
+
+let adj gi = (pred gi) @ (succ gi)
+
+let newNode g = (* binary search for unused node *)
+  let rec look(lo,hi) =
+    (* i < lo indicates i in use
+    i >= hi indicates i not in use *)
+    if lo = hi then 
+      (A.update(g,lo,emptyNode); (g,lo))
+    else 
+      let m = (lo + hi) / 2 in 
+      if isBogus(A.sub(g,m)) then 
+        look(lo,m) 
+      else 
+        look(m+1,hi)
+  in
+  look(0, 1 + A.bound g)
 
 exception GraphEdge
-fun check(g,g') = (* if g=g' then () else raise GraphEdge *) ()
 
-fun delete(i,j::rest) = if i=j then rest else j::delete(i,rest)
-  | delete(_,nil) = raise GraphEdge
+let check(g, g') = (* if g=g' then () else raise GraphEdge *) ()
 
-fun diddle_edge change {from=(g:graph, i),to=(g':graph, j)} = 
-    let val _ = check(g,g')
-        val NODE{succ=si,pred=pi} = A.sub(g,i)
-        val _ = A.update(g,i,NODE{succ=change(j,si),pred=pi})
-        val NODE{succ=sj,pred=pj} = A.sub(g,j)
-        val _ = A.update(g,j,NODE{succ=sj,pred=change(i,pj)})
-      in ()
-    end
+let rec delete = function 
+  | (i, j::rest) -> if i = j then rest else j::delete(i,rest)
+  | (_, []) -> raise GraphEdge
 
-val mk_edge = diddle_edge (op ::)
-val rm_edge = diddle_edge delete
+let diddle_edge change {f = ((g : graph), i); t =((g': graph), j)} = 
+  check(g, g');
+  let {succ = si; pred = pi} = A.sub(g, i) in
+  A.update(g, i, {succ = change(j,si); pred = pi});
+  let {succ = sj; pred = pj} = A.sub(g, j);
+  A.update(g, j, {succ = sj; pred = change(i, pj)});
+  ()
 
-structure Table = IntMapTable(type key = node
-      fun getInt(g,n) = n)
+let mk_edge = diddle_edge (fun (a,b) -> a::b)
+let rm_edge = diddle_edge delete
 
+module NodeKey = struct
+      type t = node
+      let getInt (g,n) = n
+end
 
-fun nodename(g,i:int) = "n" ^ Int.toString(i)
+type Table = IntMapTable(NodeKey)
 
+let nodename(g, i) = "n" ^ Int.toString(i)

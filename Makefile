@@ -131,12 +131,13 @@ define PROJ_regalloc_tester
 	canon/canon.ml \
 	iselect/codegen.ml \
 	iselect/m68kCodegen.ml \
+	regalloc/graph.ml \
 	regalloc/regalloc_tester.ml
 endef
 export PROJ_regalloc_tester
 
 ifndef SUBPROJS
-  export SUBPROJS = lexer_tester parser_tester absyn_tester semant_tester canon_tester iselect_tester regalloc_tester
+  export SUBPROJS = lexer_tester parser_tester absyn_tester semant_tester canon_tester iselect_tester
 endif
 
 all: debug-code native-code
