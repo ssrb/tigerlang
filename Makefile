@@ -137,7 +137,7 @@ endef
 export PROJ_regalloc_tester
 
 ifndef SUBPROJS
-  export SUBPROJS = lexer_tester parser_tester absyn_tester semant_tester canon_tester iselect_tester
+  export SUBPROJS = lexer_tester parser_tester absyn_tester semant_tester canon_tester iselect_tester regalloc_tester
 endif
 
 all: debug-code native-code
