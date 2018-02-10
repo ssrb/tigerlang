@@ -81,7 +81,7 @@ let newNode g = (* binary search for unused node *)
 exception GraphEdge
 type edge = {f : node; t : node}
 
-let check(g, g') = (* if g=g' then () else raise GraphEdge *) ()
+let check(g, g') = if g = g' then () else raise GraphEdge
 
 let rec delete = function 
   | (i, j::rest) -> if i = j then rest else j::delete(i, rest)
