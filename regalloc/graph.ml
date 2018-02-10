@@ -12,21 +12,33 @@ let isBogus = function
 | {succ = (n::_); _} when n = lnot 1 -> true
 | _ -> false
 
-module A : sig 
-  type 'a array
-  val array : int * 'a -> 'a array
-  val sub : 'a array * int -> 'a
-  val update : 'a array * int * 'a -> unit
-  val bound : 'a array -> int
+module DynArray : sig 
+  type 'a t
+  exception Subscript
+  val create : int * 'a -> 'a t
+  val get : 'a t * int -> 'a
+  val set : 'a t * int * 'a -> unit
+  val bound : 'a t -> int
 end = struct
-  type 'a array = 'a Array.t ref * 'a * int ref
-  let array (size, dflt) = (ref (Array.create size dflt), dflt, ref (-1))
-  let sub ((a, _, _), idx) = !a.(idx)
-  let update ((a, _, _), idx, v) = !a.(idx) <- v
+  type 'a t = 'a Array.t ref * 'a * int ref
+  exception Subscript
+  let create (sz, dflt) = (ref (Array.create sz dflt), dflt, ref (lnot 1))
+  let get ((a,  dflt,  _), idx) = 
+    try !a.(idx) with Invalid_argument _ -> if idx < 0 then raise Subscript else dflt
+  let expand (a, oldlen, newlen, dflt) = 
+    Array.init newlen ~f:(fun i -> if i < oldlen then a.(i) else dflt)
+  let set ((a, dflt, bnd), idx, v) =
+    let len = Array.length !a in
+    if idx >= len then 
+      a := expand(!a, len, Int.max (len + len) (idx + 1), dflt);
+    !a.(idx) <- v;
+    if idx > !bnd then bnd := idx
   let bound (_, _, b) = !b
 end
 
-type graph = noderep A.array
+module A = DynArray
+
+type graph = noderep A.t
 
 type node = graph * node'
 
@@ -34,19 +46,19 @@ let eq((_, a),(_, b)) = a = b
 
 let augment (g: graph) (n: node') : node = (g, n)
 
-let newGraph () = A.array(0, bogusNode)
+let newGraph () = A.create(0, bogusNode)
 
 let nodes g = 
   (*let b = A.bound g in*)
-  let rec f i = if isBogus(A.sub (g, i)) then [] else (g, i)::(f (i + 1)) in 
+  let rec f i = if isBogus(A.get(g, i)) then [] else (g, i)::(f (i + 1)) in 
   f 0			     
 
 let succ(g, i) = 
-  let {succ; _} = A.sub(g, i) in
+  let {succ; _} = A.get(g, i) in
   List.map ~f:(augment g) succ
 
 let pred(g, i) = 
-  let {pred; _} = A.sub(g, i) in 
+  let {pred; _} = A.get(g, i) in 
   List.map ~f:(augment g) pred 
 
 let adj gi = (pred gi) @ (succ gi)
@@ -56,10 +68,10 @@ let newNode g = (* binary search for unused node *)
     (* i < lo indicates i in use
     i >= hi indicates i not in use *)
     if lo = hi then 
-      (A.update(g, lo, emptyNode); (g, lo))
+      (A.set(g, lo, emptyNode); (g, lo))
     else 
       let m = (lo + hi) / 2 in 
-      if isBogus(A.sub(g, m)) then 
+      if isBogus(A.get(g, m)) then 
         look(lo, m)
       else 
         look(m + 1, hi)
@@ -77,10 +89,10 @@ let rec delete = function
 
 let diddle_edge change ({f = ((g : graph), i); t = ((g': graph), j)} : edge) = 
   check(g, g');
-  let {succ = si; pred = pi} = A.sub(g, i) in
-  A.update(g, i, {succ = change(j,si); pred = pi});
-  let {succ = sj; pred = pj} = A.sub(g, j) in
-  A.update(g, j, {succ = sj; pred = change(i, pj)});
+  let {succ = si; pred = pi} = A.get(g, i) in
+  A.set(g, i, {succ = change(j,si); pred = pi});
+  let {succ = sj; pred = pj} = A.get(g, j) in
+  A.set(g, j, {succ = sj; pred = change(i, pj)});
   ()
 
 let mk_edge = diddle_edge (fun (a, b) -> a::b)
