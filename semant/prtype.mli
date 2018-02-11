@@ -1,1 +1,1 @@
-val print : out_channel -> Types.ty -> unit
+val print : Core.Out_channel.t -> Types.ty -> unit

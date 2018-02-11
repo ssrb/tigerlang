@@ -1,5 +1,6 @@
+open Core
 let print outstream ty =
- let say s =  output_string outstream s in
+ let say s =  Out_channel.output_string outstream s in
 
  let sayln s = (say s; say "\n") in
 
@@ -14,7 +15,7 @@ let print outstream ty =
   match ty with 
   | RECORD (tys, unique) -> 
   	indent d; sayln "{";
-	  List.iter (fun (sym, ty') -> print'(ty', d+1)) tys;
+	  List.iter ~f:(fun (sym, ty') -> print'(ty', d+1)) tys;
 	  indent d; sayln "}"
   | NIL -> indent d; sayln "nil"
   | INT -> indent d; say "int"
