@@ -14,6 +14,13 @@ type edge = {f: node; t: node}
 val mk_edge: edge -> unit
 val rm_edge: edge -> unit
 
+module Table : sig
+    type 'a table
+    val empty : 'a table
+    val look  : 'a table * node -> 'a option
+    val enter : 'a table * node * 'a -> 'a table
+end
+
 (*sharing type Table.key = node*)
 
 val nodename: node -> string  (* for debugging only *)

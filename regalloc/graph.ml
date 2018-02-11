@@ -98,11 +98,19 @@ let diddle_edge change ({f = ((g : graph), i); t = ((g': graph), j)} : edge) =
 let mk_edge = diddle_edge (fun (a, b) -> a::b)
 let rm_edge = diddle_edge delete
 
-module NodeKey = struct
-      type t = node
-      let getInt (g, n) = n
-end
+module Table = struct
 
-module Table = Table.IntMapTable(NodeKey)
+  module NodeKey = struct
+        type t = node
+        let getInt (g, n) = n
+  end
+
+  module Table = Table.IntMapTable(NodeKey)
+  type 'a table = 'a Table.table
+  let empty = Table.empty
+  let look  = Table.look 
+  let enter = Table.enter
+
+end
 
 let nodename (_, i) = "n" ^ Int.to_string(i)
