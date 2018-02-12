@@ -1,6 +1,5 @@
 module type T = sig
 module Temp : Temp.T
-module Graph = Graph
 type flowgraph = {
       control: Graph.graph; 
       def: Temp.temp list Graph.Table.table;
@@ -11,7 +10,6 @@ end
 
 module F = functor(Temp : Temp.T) -> struct
 module Temp = Temp
-module Graph = Graph
 type flowgraph = {
       control: Graph.graph; 
       def: Temp.temp list Graph.Table.table;
