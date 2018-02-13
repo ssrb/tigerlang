@@ -133,7 +133,7 @@ define PROJ_regalloc_tester
 	iselect/m68kCodegen.ml \
 	regalloc/graph.ml \
 	regalloc/flowgraph.ml \
-	regalloc/makegraph.mli \
+	regalloc/makegraph.ml \
 	regalloc/regalloc_tester.ml
 endef
 export PROJ_regalloc_tester
