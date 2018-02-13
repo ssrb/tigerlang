@@ -46,7 +46,6 @@ define PROJ_semant_tester
 	irtrans/findEscape.ml \
 	semant/env.ml \
 	semant/semant.ml \
-	semant/prtype.ml \
 	irtrans/m68kTemp.ml \
 	irtrans/m68kFrame.ml \
 	semant/semant_tester.ml
@@ -71,7 +70,6 @@ define PROJ_canon_tester
 	irtrans/findEscape.ml \
 	semant/env.ml \
 	semant/semant.ml \
-	semant/prtype.ml \
 	irtrans/m68kTemp.ml \
 	irtrans/m68kFrame.ml \
 	canon/canon.ml \
@@ -97,7 +95,6 @@ define PROJ_iselect_tester
 	irtrans/findEscape.ml \
 	semant/env.ml \
 	semant/semant.ml \
-	semant/prtype.ml \
 	irtrans/m68kTemp.ml \
 	irtrans/m68kFrame.ml \
 	canon/canon.ml \
@@ -125,7 +122,6 @@ define PROJ_regalloc_tester
 	irtrans/findEscape.ml \
 	semant/env.ml \
 	semant/semant.ml \
-	semant/prtype.ml \
 	irtrans/m68kTemp.ml \
 	irtrans/m68kFrame.ml \
 	canon/canon.ml \
