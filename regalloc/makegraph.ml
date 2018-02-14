@@ -81,7 +81,7 @@ let instrs2graph instrs =
             ) ls;
             create_edges labToNode lnodes
         
-        | (n, None)::((n', _)::_ as lnodes) -> 
+        | (n, None)::(((n', _)::_) as lnodes) -> 
             Graph.mk_edge {f = n; t = n'};
             create_edges labToNode lnodes
         
