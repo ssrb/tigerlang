@@ -1,4 +1,6 @@
-module F : functor(Flow : Flowgraph.T) -> sig 
+module type T = sig
+
+module Flow : Flowgraph.T
 module Temp : Temp.T
 
 type igraph = {
@@ -11,4 +13,6 @@ type igraph = {
 val interferenceGraph : Flow.flowgraph -> igraph * (Graph.node -> Temp.temp list)
 
 val show : Core.Out_channel.t * igraph -> unit
-end
+end 
+
+module F : functor(Flow : Flowgraph.T) -> T with module Temp = Flow.Temp 
