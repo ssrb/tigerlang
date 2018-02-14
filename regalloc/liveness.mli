@@ -1,14 +1,14 @@
 module F : functor(Flow : Flowgraph.T) -> sig 
-module Temp = Flow.Temp
-module IGraph = Graph
+module Temp : Temp.T
+
 type igraph = {
-    grap: IGraph.graph;
-    tnode: Temp.temp -> IGraph.node;
-    gtemp: IGraph.node -> Temp.temp;
-    moves: (IGraph.node * IGraph.node) list
+    graph: Graph.graph;
+    tnode: Temp.temp -> Graph.node;
+    gtemp: Graph.node -> Temp.temp;
+    moves: (Graph.node * Graph.node) list
 }
 
-val interferenceGraph : Flow.flowgraph -> igraph * (Flow.graph.node -> Temp.temp list)
+val interferenceGraph : Flow.flowgraph -> igraph * (Graph.node -> Temp.temp list)
 
 val show : Core.Out_channel.t * igraph -> unit
 end
