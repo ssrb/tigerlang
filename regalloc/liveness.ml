@@ -32,35 +32,59 @@ type igraph = {
 
 let interferenceGraph flowgraph = 
 
-    let module Comp = Comparator.Make(
-        struct
-            type t = Temp.temp [@@deriving sexp]
-            let compare = Temp.cmptemp
-        end
-    ) in
+    let liveness flowgraph =
 
-    let cmp = Comp.comparator in
+        let module Comp = Comparator.Make(
+            struct
+                type t = Temp.temp [@@deriving sexp]
+                let compare = Temp.cmptemp
+            end
+        ) 
+        in
 
-    let nodes = Graph.nodes flowgraph.control |> List.rev in
+        let cmp = Comp.comparator in
 
-    let emptyliveset = 
-        nodes
-        |> List.fold ~init:Graph.Table.empty ~f:(fun lin n ->
-            Graph.Table.enter (lin, n, Set.empty ~comparator:cmp) 
-        )
-    in
-
-    let lin = emptyliveset in
-
-    let lout = emptyliveset in
-    
-    let liveness nodes lin lout =
-        let aux (lin, lout) node =
+        let aux (lins, louts, converged) node =
             let use = Option.value_exn (Graph.Table.look (flowgraph.use, node)) |> Set.of_list ~comparator:cmp in
             let def = Option.value_exn (Graph.Table.look (flowgraph.def, node)) |> Set.of_list ~comparator:cmp in
-            (Set.union use (Set.diff lout def), Graph.succ node |> List.fold ~init:(Set.empty ~comparator:cmp) ~f:(fun out succ -> 
-                Set.union out (Option.value_exn (Graph.Table.look (lin, node)))))
-        in ()
+            let lin = Option.value_exn (Graph.Table.look (lins, node)) in
+            let lout = Option.value_exn (Graph.Table.look (louts, node)) in
+            let lin' = Set.union use (Set.diff lout def) in
+            let lout' = Graph.succ node |> List.fold ~init:(Set.empty ~comparator:cmp) ~f:(fun out succ -> 
+                Set.union out (Option.value_exn (Graph.Table.look (lins, succ)))) 
+            in
+            let converged = converged && Set.equal lin lin' && Set.equal lout lout' in
+            (Graph.Table.enter (lins, node, lin'), Graph.Table.enter (louts, node, lout'), converged)
+        in 
+
+        let rec iter nodes lins louts =
+            let (lins, louts, converged) = List.fold ~init:(lins, louts, true) ~f:aux nodes in
+            if converged then
+                (lins, louts)
+            else
+                iter nodes lins louts
+        in
+
+        let nodes = Graph.nodes flowgraph.control |> List.rev in
+
+        let emptylivesets = nodes
+            |> List.fold ~init:Graph.Table.empty ~f:(fun lin n ->
+                Graph.Table.enter (lin, n, Set.empty ~comparator:cmp) 
+            )
+        in
+
+        let (lins, louts) = iter nodes emptylivesets emptylivesets in
+
+        let lins = nodes |> List.fold ~init:Graph.Table.empty ~f:(fun lins' n ->
+                Graph.Table.enter (lins', n, Option.value_exn (Graph.Table.look (lins, n)) |> Set.to_list))
+        in
+
+        let louts = nodes |> List.fold ~init:Graph.Table.empty ~f:(fun louts' n ->
+                Graph.Table.enter (louts', n, Option.value_exn (Graph.Table.look (louts, n)) |> Set.to_list))
+        in
+
+        (lins, louts)
+
     in
 ({
     graph = Graph.newGraph ();
