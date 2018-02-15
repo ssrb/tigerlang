@@ -76,11 +76,11 @@ let interferenceGraph flowgraph =
         let (lins, louts) = iter nodes emptylivesets emptylivesets in
 
         let lins = nodes |> List.fold ~init:Graph.Table.empty ~f:(fun lins' n ->
-                Graph.Table.enter (lins', n, Option.value_exn (Graph.Table.look (lins, n)) |> Set.to_list))
+            Graph.Table.enter (lins', n, Option.value_exn (Graph.Table.look (lins, n)) |> Set.to_list))
         in
 
         let louts = nodes |> List.fold ~init:Graph.Table.empty ~f:(fun louts' n ->
-                Graph.Table.enter (louts', n, Option.value_exn (Graph.Table.look (louts, n)) |> Set.to_list))
+            Graph.Table.enter (louts', n, Option.value_exn (Graph.Table.look (louts, n)) |> Set.to_list))
         in
 
         (lins, louts)
