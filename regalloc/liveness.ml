@@ -58,7 +58,8 @@ let interferenceGraph flowgraph =
         let aux (lin, lout) node =
             let use = Option.value_exn (Graph.Table.look (flowgraph.use, node)) |> Set.of_list ~comparator:cmp in
             let def = Option.value_exn (Graph.Table.look (flowgraph.def, node)) |> Set.of_list ~comparator:cmp in
-            (lin, lout)
+            (Set.union use (Set.diff lout def), Graph.succ node |> List.fold ~init:(Set.empty ~comparator:cmp) ~f:(fun out succ -> 
+                Set.union out (Option.value_exn (Graph.Table.look (lin, node)))))
         in ()
     in
 ({
