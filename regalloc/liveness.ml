@@ -55,9 +55,8 @@ let interferenceGraph flowgraph =
     let lout = emptyliveset in
     
     let liveness nodes lin lout =
-        (* Optimize *)  
         let aux (lin, lout) node =
-            (*let use = Graph.Table.look (flowgraph.use, node) |>  Option.value_exn |> Set.of_list ~comparator:Graph.compare in*)
+            let use = Option.value_exn (Graph.Table.look (flowgraph.use, node)) |> Set.of_list ~comparator:cmp in
             let def = Option.value_exn (Graph.Table.look (flowgraph.def, node)) |> Set.of_list ~comparator:cmp in
             (lin, lout)
         in ()
