@@ -31,13 +31,37 @@ type igraph = {
 }
 
 let interferenceGraph flowgraph = 
-    let lin = 
-        Graph.nodes flowgraph.control
+
+    let module Comp = Comparator.Make(
+        struct
+            type t = Temp.temp [@@deriving sexp]
+            let compare = Temp.cmptemp
+        end
+    ) in
+
+    let cmp = Comp.comparator in
+
+    let nodes = Graph.nodes flowgraph.control |> List.rev in
+
+    let emptyliveset = 
+        nodes
         |> List.fold ~init:Graph.Table.empty ~f:(fun lin n ->
-            Graph.Table.enter (lin, n, []) 
+            Graph.Table.enter (lin, n, Set.empty ~comparator:cmp) 
         )
     in
-    let lout = lin in
+
+    let lin = emptyliveset in
+
+    let lout = emptyliveset in
+    
+    let liveness nodes lin lout =
+        (* Optimize *)  
+        let aux (lin, lout) node =
+            (*let use = Graph.Table.look (flowgraph.use, node) |>  Option.value_exn |> Set.of_list ~comparator:Graph.compare in*)
+            let def = Option.value_exn (Graph.Table.look (flowgraph.def, node)) |> Set.of_list ~comparator:cmp in
+            (lin, lout)
+        in ()
+    in
 ({
     graph = Graph.newGraph ();
     tnode = (fun _ -> Graph.newNode (Graph.newGraph ()));

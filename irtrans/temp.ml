@@ -11,4 +11,5 @@ val newtemp : unit -> temp
 val makestring: temp -> string
 val newlabel : unit -> label
 val namedlabel : string -> label
+val cmptemp : temp -> temp -> int
 end
