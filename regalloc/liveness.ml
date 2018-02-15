@@ -30,11 +30,14 @@ type igraph = {
     moves: (Graph.node * Graph.node) list
 }
 
+type liveSet = unit Temp.Table.table * Temp.temp list 
+type liveMap = liveSet Graph.Table.table
+
 let interferenceGraph flowgraph = 
 
     let liveness flowgraph =
 
-        let module Comp = Comparator.Make(
+        let module Comp = Comparator.Make (
             struct
                 type t = Temp.temp [@@deriving sexp]
                 let compare = Temp.cmptemp
