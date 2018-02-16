@@ -21,6 +21,7 @@ module Flow = Flow
 module Temp = Flow.Temp
 
 open Core
+open Graph
 open Flow
 
 type igraph = {
@@ -78,25 +79,42 @@ let liveness flowgraph : liveMap =
 
     nodes |> List.fold ~init:Graph.Table.empty ~f:(fun louts' n ->
         let l = Option.value_exn (Graph.Table.look (louts, n)) |> Set.to_list in
-        let s = List.fold ~init:Temp.Table.empty ~f:(fun s lo -> Temp.Table.enter (s, lo, ())) l in
+        let s = l |> List.fold ~init:Temp.Table.empty ~f:(fun s lo -> Temp.Table.enter (s, lo, ())) in
         Graph.Table.enter (louts', n, (s, l)))
 
 let interferenceGraph flowgraph = 
 
     let louts = liveness flowgraph in
 
-    let donode igraph n = 
+    let donode (igraph, tnode, gtemp) n = 
         let (s, l) = Option.value_exn (Graph.Table.look (louts, n)) in
         let def = Option.value_exn (Graph.Table.look (flowgraph.def, n)) in
         let ismove = Option.value_exn (Graph.Table.look (flowgraph.ismove, n)) in
-        ()
+        let (tnode, gtemp) = def |> List.fold ~init:(tnode, gtemp) ~f:(fun _ d ->
+            let node = Graph.newNode igraph in
+            let tnode = Temp.Table.enter (tnode, d, node) in
+            let gtemp = Graph.Table.enter (gtemp, node, d) in
+            l |> List.iter ~f:(fun out -> 
+                let node' = Option.value_exn (Temp.Table.look (tnode, out)) in
+                if not ismove || d <> out then 
+                    Graph.mk_edge {f = node; t= node'}
+            );
+            (tnode, gtemp)
+        )
+        in 
+        (igraph, tnode, gtemp)
     in
-({
-    graph = Graph.newGraph ();
-    tnode = (fun _ -> Graph.newNode (Graph.newGraph ()));
-    gtemp = (fun _ -> Temp.newtemp ());
-    moves = []
-}, (fun _ -> []))
+
+    let (graph, tnode, gtemp) = Graph.nodes flowgraph.control 
+        |> List.fold ~init:(Graph.newGraph (), Temp.Table.empty, Graph.Table.empty) ~f:donode
+    in
+    
+    ({
+        graph = graph;
+        tnode = (fun t -> Option.value_exn (Temp.Table.look (tnode, t)));
+        gtemp = (fun n -> Option.value_exn (Graph.Table.look (gtemp, n)));
+        moves = []
+    }, (fun _ -> []))
 
 let show (outstream, graph) = ()
 
