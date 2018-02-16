@@ -33,7 +33,7 @@ type igraph = {
 type liveSet = unit Temp.Table.table * Temp.temp list 
 type liveMap = liveSet Graph.Table.table
 
-let liveness flowgraph =
+let liveness flowgraph : liveMap =
 
     let module Comp = Comparator.Make (
         struct
@@ -74,23 +74,15 @@ let liveness flowgraph =
         )
     in
 
-    let (lins, louts) = iter nodes emptylivesets emptylivesets in
+    let (_, louts) = iter nodes emptylivesets emptylivesets in
 
-    let lins = nodes |> List.fold ~init:Graph.Table.empty ~f:(fun lins' n ->
-        let l = Option.value_exn (Graph.Table.look (lins, n)) |> Set.to_list in
-        let s = List.fold ~init:Temp.Table.empty ~f:(fun s li -> Temp.Table.enter (s, li, ())) l in
-        Graph.Table.enter (lins', n, (s, l)))
-    in
-
-    let louts = nodes |> List.fold ~init:Graph.Table.empty ~f:(fun louts' n ->
+    nodes |> List.fold ~init:Graph.Table.empty ~f:(fun louts' n ->
         let l = Option.value_exn (Graph.Table.look (louts, n)) |> Set.to_list in
         let s = List.fold ~init:Temp.Table.empty ~f:(fun s lo -> Temp.Table.enter (s, lo, ())) l in
         Graph.Table.enter (louts', n, (s, l)))
-    in
-
-    ((lins: liveMap), (louts: liveMap))
 
 let interferenceGraph flowgraph = 
+    let louts = liveness flowgraph in
 ({
     graph = Graph.newGraph ();
     tnode = (fun _ -> Graph.newNode (Graph.newGraph ()));
