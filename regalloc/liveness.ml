@@ -127,6 +127,15 @@ let interferenceGraph flowgraph =
         moves = moves
     }, (fun n -> snd (Option.value_exn (Graph.Table.look (louts, n)))))
 
-let show (outstream, graph) = ()
+let show (outstream, graph) =
+    Graph.nodes graph.graph |> List.iter ~f:(fun n ->
+        n |> Graph.nodename |> Out_channel.output_string outstream;
+        Out_channel.output_string outstream ":";
+        Graph.adj n |> List.iter ~f:(fun n ->
+            Out_channel.output_string outstream " ";
+            n |> Graph.nodename |> Out_channel.output_string outstream;
+        );
+        Out_channel.newline outstream
+    )
 
 end
