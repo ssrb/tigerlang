@@ -82,7 +82,15 @@ let liveness flowgraph : liveMap =
         Graph.Table.enter (louts', n, (s, l)))
 
 let interferenceGraph flowgraph = 
+
     let louts = liveness flowgraph in
+
+    let donode igraph n = 
+        let (s, l) = Option.value_exn (Graph.Table.look (louts, n)) in
+        let def = Option.value_exn (Graph.Table.look (flowgraph.def, n)) in
+        let ismove = Option.value_exn (Graph.Table.look (flowgraph.ismove, n)) in
+        ()
+    in
 ({
     graph = Graph.newGraph ();
     tnode = (fun _ -> Graph.newNode (Graph.newGraph ()));
