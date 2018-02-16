@@ -3,6 +3,8 @@ module Translate = Translate.F(M68kFrame)
 module Semant = Semant.F(Translate)
 module Canon = Canon.F(M68kFrame.Tree)
 module M68K = M68kCodegen
+module Flowgraph = Makegraph.F(M68kCodegen.Assem)
+module Liveness = Liveness.F(Flowgraph.Flow)
 
 open Core
 
@@ -16,23 +18,21 @@ let fragments =
 	|> Semant.transProg2
 in
 
-let f frag =
+let f acc frag =
 	match frag with
 	| Translate.Frame.PROC proc -> 
-		proc.body 
-		|> Canon.linearize 
-		|> Canon.basicBlocks 
-		|> Canon.traceSchedule 
-		|> List.iter ~f:(fun tree -> 
-			tree
-			|> M68K.codegen proc.frame
-			|> List.iter ~f:(fun asm -> 
-				asm
-				|> M68K.Assem.sexp_of_instr
-				|> Sexp.output_hum stdout;
-				newline stdout))
-	| Translate.Frame.STRING _ -> ()
+		let graph, _ = proc.body 
+			|> Canon.linearize 
+			|> Canon.basicBlocks 
+			|> Canon.traceSchedule 
+			|> List.fold 
+				~init:[] 
+				~f:(fun asm tree -> asm @ (M68K.codegen proc.frame tree))
+			|> Flowgraph.instrs2graph
+		in 
+		(Liveness.interferenceGraph graph)::acc
+	| Translate.Frame.STRING _ -> acc
 in
 
-let _ = fragments |> List.iter ~f:f in
+let _ = fragments |> List.fold ~init:[] ~f:f in
 flush stdout
