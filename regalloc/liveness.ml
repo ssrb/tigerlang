@@ -89,7 +89,9 @@ let interferenceGraph flowgraph =
     let donode (igraph, tnode, gtemp, moves) n = 
         let (s, l) = Option.value_exn (Graph.Table.look (louts, n)) in
         let def = Option.value_exn (Graph.Table.look (flowgraph.def, n)) in
+        let use = Option.value_exn (Graph.Table.look (flowgraph.use, n)) in
         let ismove = Option.value_exn (Graph.Table.look (flowgraph.ismove, n)) in
+        assert((not ismove) || (List.length def = 1 && List.length use = 1));
         let (tnode, gtemp, moves) = def |> List.fold ~init:(tnode, gtemp, moves) ~f:(fun _ d ->
             let node = Graph.newNode igraph in
             let tnode = Temp.Table.enter (tnode, d, node) in
@@ -100,7 +102,7 @@ let interferenceGraph flowgraph =
                     Graph.mk_edge {f = node; t= node'};
                     moves
                 end else begin
-                    if d <> out then
+                    if List.hd_exn use <> out then
                         Graph.mk_edge {f = node; t= node'};
                     (node, node')::moves
                 end
