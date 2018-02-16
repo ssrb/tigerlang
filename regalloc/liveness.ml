@@ -123,7 +123,7 @@ let interferenceGraph flowgraph =
         tnode = (fun t -> Option.value_exn (Temp.Table.look (tnode, t)));
         gtemp = (fun n -> Option.value_exn (Graph.Table.look (gtemp, n)));
         moves = moves
-    }, (fun _ -> []))
+    }, (fun n -> snd (Option.value_exn (Graph.Table.look (louts, n)))))
 
 let show (outstream, graph) = ()
 

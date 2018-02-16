@@ -91,6 +91,7 @@ let instrs2graph instrs =
     let (flowgraph, labToNode, lnodes) = create_nodes instrs in
 
     create_edges labToNode lnodes;
+    
     (flowgraph, List.map ~f:(fun (n, _) -> n) lnodes)
 
 end
