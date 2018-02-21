@@ -1,7 +1,7 @@
-signature REG_ALLOCA = 
-sig
-    structure Frame : Frame
-    type allocation = Frame.register Temp.table
-    val alloc : Assem.instr list 8 Frame.frame ->
-    Assem.instr list * allocation
+module F = functor(Frame : Frame.T) ->
+struct
+    module Temp = Frame.Temp
+    module Assem = Assem.F(Temp)
+    type allocation = Frame.register Temp.Table.table
+    let alloc _ = ([], Temp.Table.empty)
 end
