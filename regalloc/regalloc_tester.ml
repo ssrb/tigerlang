@@ -3,8 +3,9 @@ module Translate = Translate.F(M68kFrame)
 module Semant = Semant.F(Translate)
 module Canon = Canon.F(M68kFrame.Tree)
 module M68K = M68kCodegen
-module Flowgraph = Makegraph.F(M68kCodegen.Assem)
-module Liveness = Liveness.F(Flowgraph.Flow)
+module Makegraph = Makegraph.F(M68kCodegen.Assem)
+module Liveness = Liveness.F(Makegraph.Flow)
+module Color = Color.F (M68kFrame) (Liveness)
 
 open Core
 
@@ -28,9 +29,15 @@ let f acc frag =
 			|> List.fold 
 				~init:[] 
 				~f:(fun asm tree -> asm @ (M68K.codegen proc.frame tree))
-			|> Flowgraph.instrs2graph
+			|> Makegraph.instrs2graph
 		in 
-		(Liveness.interferenceGraph graph)::acc
+
+		let (igraph, _) = Liveness.interferenceGraph graph in
+
+		ignore(Color.color {interference = igraph; initial = M68kTemp.Table.empty; spillCost = (fun _ -> 0); registers = []});
+
+		igraph::acc
+
 	| Translate.Frame.STRING _ -> acc
 in
 
