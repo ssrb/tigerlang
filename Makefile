@@ -131,6 +131,7 @@ define PROJ_regalloc_tester
 	regalloc/flowgraph.ml \
 	regalloc/makegraph.ml \
 	regalloc/liveness.ml \
+	regalloc/color.ml \
 	regalloc/regalloc_tester.ml
 endef
 export PROJ_regalloc_tester
