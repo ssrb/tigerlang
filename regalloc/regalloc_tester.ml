@@ -3,9 +3,7 @@ module Translate = Translate.F(M68kFrame)
 module Semant = Semant.F(Translate)
 module Canon = Canon.F(M68kFrame.Tree)
 module M68K = M68kCodegen
-module Makegraph = Makegraph.F(M68kCodegen.Assem)
-module Liveness = Liveness.F(Makegraph.Flow)
-module Color = Color.F (M68kFrame) (Liveness)
+module Regalloc = Regalloc.F(M68kFrame)
 
 open Core
 
@@ -22,24 +20,19 @@ in
 let f acc frag =
 	match frag with
 	| Translate.Frame.PROC proc -> 
-		let graph, _ = proc.body 
+
+		let res = proc.body 
 			|> Canon.linearize 
 			|> Canon.basicBlocks 
 			|> Canon.traceSchedule 
-			|> List.fold 
-				~init:[] 
-				~f:(fun asm tree -> asm @ (M68K.codegen proc.frame tree))
-			|> Makegraph.instrs2graph
+			|> List.map ~f:(M68K.codegen proc.frame)
+			|> List.map ~f:(fun asm -> Regalloc.alloc (asm, proc.frame))
 		in 
 
-		let (igraph, _) = Liveness.interferenceGraph graph in
-
-		ignore(Color.color {interference = igraph; initial = M68kTemp.Table.empty; spillCost = (fun _ -> 0); registers = M68kFrame.registers});
-
-		igraph::acc
+		res::acc
 
 	| Translate.Frame.STRING _ -> acc
 in
 
 let _ = fragments |> List.fold ~init:[] ~f:f in
-flush stdout
+()
