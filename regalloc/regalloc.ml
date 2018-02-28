@@ -1,20 +1,18 @@
 module F = functor(Frame : Frame.T) ->
 struct
-
 module Temp = Frame.Temp
 module Assem = Frame.Assem
 
 module Makegraph = Makegraph.F(Assem)
 module Liveness = Liveness.F(Makegraph.Flow)
-module Color = Color.F (M68kFrame) (Liveness)
+module Color = Color.F (Frame) (Liveness)
 
-type allocation = Frame.register Temp.Table.table
-let alloc _ = ([], Temp.Table.empty)
+open Color
 
-(*
-let (igraph, _) = Liveness.interferenceGraph graph in
-
-		ignore(Color.color {interference = igraph; initial = M68kTemp.Table.empty; spillCost = (fun _ -> 0); registers = M68kFrame.registers});
-*)
+let alloc (asm, (frame : Frame.frame)) = 
+    let fgraph, fnodes =  Makegraph.instrs2graph asm in
+    let igraph, _ = Liveness.interferenceGraph fgraph in
+	let alloc, _ = Color.color {interference = igraph; initial = Temp.Table.empty; spillCost = (fun _ -> 0); registers = M68kFrame.registers} in
+    (asm, alloc)
 
 end

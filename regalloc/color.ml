@@ -1,5 +1,16 @@
+module type T = sig
+module Frame : Frame.T
+module Liveness : Liveness.T
+module Temp : Temp.T
+type allocation = Frame.register Temp.Table.table
+type color = {interference: Liveness.igraph; initial: allocation; spillCost: Graph.node -> int; registers: Frame.register list} 
+val color :  color -> allocation * Temp.temp list
+end
+
 module F (Frame: Frame.T) (Liveness: Liveness.T) =
 struct
+module Frame = Frame
+module Liveness = Liveness
 module Temp = Frame.Temp
 type allocation = Frame.register Temp.Table.table
 type color = {interference: Liveness.igraph; initial: allocation; spillCost: Graph.node -> int; registers: Frame.register list} 
