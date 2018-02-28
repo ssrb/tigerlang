@@ -11,8 +11,8 @@ open Color
 
 let alloc (asm, (frame : Frame.frame)) = 
     let fgraph, fnodes =  Makegraph.instrs2graph asm in
-    let igraph, _ = Liveness.interferenceGraph fgraph in
-	let alloc, _ = Color.color {interference = igraph; initial = Temp.Table.empty; spillCost = (fun _ -> 0); registers = M68kFrame.registers} in
+    let igraph, liveouts = Liveness.interferenceGraph fgraph in
+	let alloc, spills = Color.color {interference = igraph; initial = Temp.Table.empty; spillCost = (fun _ -> 0); registers = Frame.registers} in
     (asm, alloc)
 
 end
