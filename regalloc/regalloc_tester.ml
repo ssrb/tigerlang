@@ -34,7 +34,7 @@ let f acc frag =
 
 		let (igraph, _) = Liveness.interferenceGraph graph in
 
-		ignore(Color.color {interference = igraph; initial = M68kTemp.Table.empty; spillCost = (fun _ -> 0); registers = []});
+		ignore(Color.color {interference = igraph; initial = M68kTemp.Table.empty; spillCost = (fun _ -> 0); registers = M68kFrame.registers});
 
 		igraph::acc
 
