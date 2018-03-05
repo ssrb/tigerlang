@@ -1,13 +1,13 @@
 module type T = sig
+module Temp : Temp.T
 module Frame : Frame.T
 module Liveness : Liveness.T
-module Temp : Temp.T
 type allocation = Frame.register Temp.Table.table
 type color = {interference: Liveness.igraph; initial: allocation; spillCost: Graph.node -> int; registers: Frame.register list} 
 val color :  color -> allocation * Temp.temp list
 end
 
-module F (Frame: Frame.T) (Liveness: Liveness.T) = struct
+module F (Frame: Frame.T) (Liveness: Liveness.T with module Temp = Frame.Temp) = struct
 
 open Core
 open Liveness
@@ -29,7 +29,9 @@ let color color  =
 
     let _ = List.iter ~f:(fun n -> 
       let tmp = color.interference.gtemp n in
-      ()
+      match Temp.Table.look (color.initial, tmp) with
+      | Some _ -> ()
+      | None -> ()
     ) color.interference.graph in
 
     (* moves enabled for possible coalescing *)
