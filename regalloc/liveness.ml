@@ -4,7 +4,7 @@ module Flow : Flowgraph.T
 module Temp : Temp.T
 
 type igraph = {
-    graph: Graph.graph;
+    graph: Graph.node list;
     tnode: Temp.temp -> Graph.node;
     gtemp: Graph.node -> Temp.temp;
     moves: (Graph.node * Graph.node) list
@@ -25,7 +25,7 @@ open Graph
 open Flow
 
 type igraph = {
-    graph: Graph.graph;
+    graph: Graph.node list;
     tnode: Temp.temp -> Graph.node;
     gtemp: Graph.node -> Temp.temp;
     moves: (Graph.node * Graph.node) list
@@ -67,7 +67,7 @@ let liveness flowgraph : liveMap =
             iter nodes lins louts
     in
 
-    let nodes = Graph.nodes flowgraph.control |> List.rev in
+    let nodes = flowgraph.control |> List.rev in
 
     let emptylivesets = nodes
         |> List.fold ~init:Graph.Table.empty ~f:(fun lin n ->
@@ -116,19 +116,19 @@ let interferenceGraph flowgraph =
 
     let init = (Graph.newGraph (), Temp.Table.empty, Graph.Table.empty, []) in
 
-    let (graph, tnode, gtemp, moves) = Graph.nodes flowgraph.control
+    let (graph, tnode, gtemp, moves) = flowgraph.control
         |> List.fold ~init ~f:donode
     in
     
     ({
-        graph = graph;
+        graph = Graph.nodes graph;
         tnode = (fun t -> Option.value_exn (Temp.Table.look (tnode, t)));
         gtemp = (fun n -> Option.value_exn (Graph.Table.look (gtemp, n)));
         moves = moves
     }, (fun n -> snd (Option.value_exn (Graph.Table.look (louts, n)))))
 
 let show (outstream, graph) =
-    Graph.nodes graph.graph |> List.iter ~f:(fun n ->
+    graph.graph |> List.iter ~f:(fun n ->
         n |> Graph.nodename |> Out_channel.output_string outstream;
         Out_channel.output_string outstream ":";
         Graph.adj n |> List.iter ~f:(fun n ->

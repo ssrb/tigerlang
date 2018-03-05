@@ -4,7 +4,7 @@ module Flow : Flowgraph.T
 module Temp : Temp.T
 
 type igraph = {
-    graph: Graph.graph;
+    graph: Graph.node list;
     tnode: Temp.temp -> Graph.node;
     gtemp: Graph.node -> Temp.temp;
     moves: (Graph.node * Graph.node) list

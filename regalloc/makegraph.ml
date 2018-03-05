@@ -11,15 +11,17 @@ let instrs2graph instrs =
     
     let create_nodes instrs = 
 
+        let graph = Graph.newGraph () in
+
         let aux (fgraph, labToNode, lnodes, labels) instr = 
 
             match instr with
             | OPER op ->
                 
-                let node = Graph.newNode fgraph.control in
+                let node = Graph.newNode graph in
 
                 let fgraph = { 
-                    fgraph with
+                    control = [];
                     def = Graph.Table.enter (fgraph.def, node, op.dst);
                     use = Graph.Table.enter (fgraph.use, node, op.src);
                     ismove = Graph.Table.enter (fgraph.ismove, node, false)
@@ -32,10 +34,10 @@ let instrs2graph instrs =
 
             | MOVE mv ->
                 
-                let node = Graph.newNode fgraph.control in
+                let node = Graph.newNode graph in
 
                 let fgraph = { 
-                    fgraph with 
+                    control = [];
                     def = Graph.Table.enter (fgraph.def, node, [ mv.dst ]);
                     use = Graph.Table.enter (fgraph.use, node, [ mv.src ]);
                     ismove = Graph.Table.enter (fgraph.ismove, node, true)
@@ -50,7 +52,7 @@ let instrs2graph instrs =
         in
 
         let (fgraph, labToNode, lnodes, labels) = List.fold ~init:({ 
-            control = Graph.newGraph (); 
+            control = []; 
             def = Graph.Table.empty; 
             use = Graph.Table.empty;
             ismove = Graph.Table.empty
@@ -61,7 +63,7 @@ let instrs2graph instrs =
             match labels with
             | [] -> (labToNode, lnodes)
             | _ -> 
-                let node = Graph.newNode fgraph.control in
+                let node = Graph.newNode graph in
                 let labToNode = List.fold ~init:labToNode ~f:(fun t l -> Symbol.enter (t, l, node)) labels in
                 (labToNode, (node, None)::lnodes)
         in
@@ -92,6 +94,6 @@ let instrs2graph instrs =
 
     create_edges labToNode lnodes;
     
-    (flowgraph, List.map ~f:(fun (n, _) -> n) lnodes)
+    {flowgraph with control = List.map ~f:(fun (n, _) -> n) lnodes}
 
 end

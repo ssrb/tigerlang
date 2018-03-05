@@ -1,7 +1,7 @@
 module type T = sig
 module Temp : Temp.T
 type flowgraph = {
-      control: Graph.graph; 
+      control: Graph.node list; 
       def: Temp.temp list Graph.Table.table;
       use: Temp.temp list Graph.Table.table;
       ismove: bool Graph.Table.table

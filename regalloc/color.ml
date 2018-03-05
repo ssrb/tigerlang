@@ -24,20 +24,19 @@ let color color  =
 
     let adjList = Liveness.(color.interference.graph) in
 
-    let adjSet = Graph.nodes adjList
-        |> List.fold ~init:Graph.Table.empty ~f:(fun adjSet n -> 
+    let adjSet = adjList |> List.fold ~init:Graph.Table.empty ~f:(fun adjSet n -> 
             let succ = Graph.succ n |> List.fold ~init:Graph.Table.empty ~f:(fun succ n' -> Graph.Table.enter (succ, n' , ())) in
             Graph.Table.enter (adjSet, n , succ)
         ) in
     
-    let degree = Graph.nodes adjList
-        |> List.fold ~init:Graph.Table.empty ~f:(fun degree n -> Graph.Table.enter (degree, n , ref (List.length (Graph.succ n)))) in
+    let degree = adjList |> List.fold ~init:Graph.Table.empty ~f:(fun degree n -> Graph.Table.enter (degree, n , ref (List.length (Graph.succ n)))) in
 
+    let spillWorklist = [] in
+    let freezeWorklist = [] in
+    let simplifyWorklist = [] in
+    
     let precolored = [] in
     let initial = [] in
-    let simplifyWorklist = [] in
-    let freezeWorklist = []in
-    let spillWorklist = [] in
     let spilledNodes = [] in
     let coalescedNodes = [] in
     let coloredNodes = [] in
