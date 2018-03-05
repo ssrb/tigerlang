@@ -30,7 +30,9 @@ let color color  =
     let _ = List.iter ~f:(fun n -> 
       let tmp = color.interference.gtemp n in
       match Temp.Table.look (color.initial, tmp) with
-      | Some _ -> ()
+      | Some _ -> 
+        precolored := tmp :: !precolored;
+        coloredNodes := n :: !coloredNodes;
       | None -> ()
     ) color.interference.graph in
 
