@@ -10,7 +10,7 @@ type igraph = {
     moves: (Graph.node * Graph.node) list
 }
 
-val interferenceGraph : Flow.flowgraph -> igraph * (Graph.node -> Temp.temp list)
+val interferenceGraph : Flow.flowgraph -> igraph
 
 val show : Core.Out_channel.t * igraph -> unit
 end 
@@ -120,12 +120,12 @@ let interferenceGraph flowgraph =
         |> List.fold ~init ~f:donode
     in
     
-    ({
+    {
         graph = Graph.nodes graph;
         tnode = (fun t -> Option.value_exn (Temp.Table.look (tnode, t)));
         gtemp = (fun n -> Option.value_exn (Graph.Table.look (gtemp, n)));
         moves = moves
-    }, (fun n -> snd (Option.value_exn (Graph.Table.look (louts, n)))))
+    }
 
 let show (outstream, graph) =
     graph.graph |> List.iter ~f:(fun n ->

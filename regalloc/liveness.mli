@@ -10,7 +10,7 @@ type igraph = {
     moves: (Graph.node * Graph.node) list
 }
 
-val interferenceGraph : Flow.flowgraph -> igraph * (Graph.node -> Temp.temp list)
+val interferenceGraph : Flow.flowgraph -> igraph
 
 val show : Core.Out_channel.t * igraph -> unit
 end 
