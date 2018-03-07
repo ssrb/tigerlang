@@ -2,7 +2,7 @@ OCAMLMAKEFILE = OCamlMakefile
 
 export BCSUFFIX = ".byte"
 export OCAMLYACC = menhir
-export PACKS = core ppx_sexp_conv
+export PACKS = core core_kernel ppx_sexp_conv
 export THREADS = yes
 
 define PROJ_lexer_tester
