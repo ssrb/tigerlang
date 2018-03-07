@@ -20,7 +20,20 @@ module TT = Temp.Table
 type allocation = Frame.register Temp.Table.table
 type color = {interference: Liveness.igraph; initial: allocation; spillCost: Graph.node -> int; registers: Frame.register list} 
 
+module MVComp = Comparator.Make(
+    struct
+        type t = Graph.node * Graph.node [@@deriving sexp]
+        let compare (l1, l2) (r1, r2) = 
+            let open Graph.Comp in
+            let c = comparator.compare l1 r1 in
+            if c <> 0 then c else comparator.compare l2 r2
+    end
+)
+
+
 let color color  = 
+
+    let gtemp = color.interference.gtemp in
 
     (* machine registers, pre-assigned a color *)
     let precolored = ref TT.empty in
@@ -30,7 +43,7 @@ let color color  =
     let initial = ref [] in
 
     List.iter ~f:(fun n -> 
-      let tmp = color.interference.gtemp n in
+      let tmp = gtemp n in
       match Temp.Table.look (color.initial, tmp) with
       | Some r -> 
         (* precolored is a copy/subset of color.initial *)
@@ -43,10 +56,12 @@ let color color  =
     (* moves enabled for possible coalescing *)
     let worklistMoves = color.interference.moves in
     (* a mapping from a node to a list moves it is associated with *)
-    let moveList = () in
+    let moveList = ref TT.empty in
+    List.iter color.interference.graph ~f:(fun n -> moveList := TT.enter (!moveList, gtemp n, Set.empty ~comparator:MVComp.comparator));
+
+
 
     let adjList = color.interference.graph in
-
     let adjSet = adjList |> List.fold ~init:Graph.Table.empty ~f:(fun adjSet n -> 
             let succ = Graph.succ n |> List.fold ~init:Graph.Table.empty ~f:(fun succ n' -> Graph.Table.enter (succ, n' , ())) in
             Graph.Table.enter (adjSet, n , succ)
@@ -56,7 +71,6 @@ let color color  =
 
     
 
-  
     let spillWorklist = [] in
     let freezeWorklist = [] in
     let simplifyWorklist = [] in

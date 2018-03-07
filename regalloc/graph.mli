@@ -1,5 +1,5 @@
 type graph
-type node
+type node [@@deriving sexp]
 
 val nodes: graph -> node list
 val succ: node -> node list
