@@ -6,8 +6,7 @@ compiler:
 before_install:
 - sudo wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sh -s /usr/local/bin
 - export OPAMYES=1
-- opam switch 4.03.0
-- opam install ocamlfind core core_kernel ctypes ctypes-foreign menhir ppx_deriving
+- opam install ocamlfind core ctypes ctypes-foreign menhir ppx_deriving
 script:
 - eval $(opam config env)
 - make
