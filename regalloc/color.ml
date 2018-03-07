@@ -58,10 +58,12 @@ let color color  =
     (* a mapping from a node to a list moves it is associated with *)
     let moveList = ref TT.empty in
     
-    List.iter color.interference.graph ~f:(fun n -> moveList := TT.enter (!moveList, gtemp n, Set.empty ~comparator:MVComp.comparator));
     let addMove (n, m) = 
         let tmp = gtemp n in
-        let moves = TT.look_exn (!moveList, tmp) in
+        let moves = match TT.look (!moveList, tmp) with
+        | Some moves -> moves
+        | None -> Set.empty ~comparator:MVComp.comparator
+        in
         moveList := TT.enter (!moveList, tmp, (Set.add moves m))
     in
     List.iter color.interference.moves ~f:(fun ((src, dst) as m) ->
