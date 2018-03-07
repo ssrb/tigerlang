@@ -109,6 +109,7 @@ module Table = struct
   type 'a table = 'a Table.table
   let empty = Table.empty
   let look  = Table.look 
+  let look_exn  = Table.look_exn
   let enter = Table.enter
 
 end

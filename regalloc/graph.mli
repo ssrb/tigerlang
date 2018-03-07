@@ -18,6 +18,7 @@ module Table : sig
     type 'a table
     val empty : 'a table
     val look  : 'a table * node -> 'a option
+    val look_exn  : 'a table * node -> 'a
     val enter : 'a table * node * 'a -> 'a table
 end
 

@@ -24,19 +24,21 @@ let color color  =
 
     (* machine registers, pre-assigned a color *)
     let precolored = ref TT.empty in
-    
     (* Node succesfully colored *)
     let coloredNodes = ref (Set.empty ~comparator:Graph.Comp.comparator) in
+    (* Temporary registers, not precolored and not yet processed *)
+    let initial = ref [] in
 
-    let _ = List.iter ~f:(fun n -> 
+    List.iter ~f:(fun n -> 
       let tmp = color.interference.gtemp n in
       match Temp.Table.look (color.initial, tmp) with
       | Some r -> 
         (* precolored is a copy/subset of color.initial *)
         precolored := TT.enter(!precolored, tmp, r);
         coloredNodes := Set.add !coloredNodes n;
-      | None -> ()
-    ) color.interference.graph in
+      | None ->
+        initial := n::!initial
+    ) color.interference.graph;
 
     (* moves enabled for possible coalescing *)
     let worklistMoves = color.interference.moves in
@@ -58,7 +60,6 @@ let color color  =
     let spillWorklist = [] in
     let freezeWorklist = [] in
     let simplifyWorklist = [] in
-    let initial = [] in
     let spilledNodes = [] in
     let coalescedNodes = [] in
     let selectStack = [] in

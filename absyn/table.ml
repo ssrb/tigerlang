@@ -17,4 +17,6 @@ struct
   let enter (t, k, a) = Map.add t ~key:(Key.getInt k) ~data:a
   
   let look (t, k) = Map.find t (Key.getInt k)
+
+  let look_exn x = Option.value_exn (look x)
 end

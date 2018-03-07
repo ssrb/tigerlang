@@ -42,13 +42,13 @@ let liveness flowgraph : liveMap =
     let cmp = Temp.Comp.comparator in
 
     let aux (lins, louts, converged) node =
-        let use = Option.value_exn (GT.look (flowgraph.use, node)) |> Set.of_list ~comparator:cmp in
-        let def = Option.value_exn (GT.look (flowgraph.def, node)) |> Set.of_list ~comparator:cmp in
-        let lin = Option.value_exn (GT.look (lins, node)) in
-        let lout = Option.value_exn (GT.look (louts, node)) in
+        let use = GT.look_exn (flowgraph.use, node) |> Set.of_list ~comparator:cmp in
+        let def = GT.look_exn (flowgraph.def, node) |> Set.of_list ~comparator:cmp in
+        let lin = GT.look_exn (lins, node) in
+        let lout = GT.look_exn (louts, node) in
         let lin' = Set.union use (Set.diff lout def) in
         let lout' = Graph.succ node |> List.fold ~init:(Set.empty ~comparator:cmp) ~f:(fun out succ -> 
-            Set.union out (Option.value_exn (GT.look (lins, succ)))) 
+            Set.union out (GT.look_exn (lins, succ))) 
         in
         let converged = converged && Set.equal lin lin' && Set.equal lout lout' in
         (GT.enter (lins, node, lin'), GT.enter (louts, node, lout'), converged)
@@ -73,7 +73,7 @@ let liveness flowgraph : liveMap =
     let (_, louts) = iter nodes emptylivesets emptylivesets in
 
     nodes |> List.fold ~init:GT.empty ~f:(fun louts' n ->
-        let l = Option.value_exn (GT.look (louts, n)) |> Set.to_list in
+        let l = GT.look_exn (louts, n) |> Set.to_list in
         let s = l |> List.fold ~init:TT.empty ~f:(fun s lo -> TT.enter (s, lo, ())) in
         GT.enter (louts', n, (s, l)))
 
@@ -82,17 +82,17 @@ let interferenceGraph flowgraph =
     let louts = liveness flowgraph in
 
     let donode (igraph, tnode, gtemp, moves) n = 
-        let (s, l) = Option.value_exn (GT.look (louts, n)) in
-        let def = Option.value_exn (GT.look (flowgraph.def, n)) in
-        let use = Option.value_exn (GT.look (flowgraph.use, n)) in
-        let ismove = Option.value_exn (GT.look (flowgraph.ismove, n)) in
+        let (s, l) = GT.look_exn (louts, n) in
+        let def = GT.look_exn (flowgraph.def, n) in
+        let use = GT.look_exn (flowgraph.use, n) in
+        let ismove = GT.look_exn (flowgraph.ismove, n) in
         assert((not ismove) || (List.length def = 1 && List.length use = 1));
         let (tnode, gtemp, moves) = def |> List.fold ~init:(tnode, gtemp, moves) ~f:(fun _ d ->
             let node = Graph.newNode igraph in
             let tnode = TT.enter (tnode, d, node) in
             let gtemp = GT.enter (gtemp, node, d) in
             let moves = l |> List.fold ~init:moves ~f:(fun moves out -> 
-                let node' = Option.value_exn (TT.look (tnode, out)) in
+                let node' = TT.look_exn (tnode, out) in
                 if not ismove then begin
                     Graph.mk_edge {f = node; t= node'};
                     moves
@@ -117,8 +117,8 @@ let interferenceGraph flowgraph =
     
     {
         graph = Graph.nodes graph;
-        tnode = (fun t -> Option.value_exn (TT.look (tnode, t)));
-        gtemp = (fun n -> Option.value_exn (GT.look (gtemp, n)));
+        tnode = (fun t -> TT.look_exn (tnode, t));
+        gtemp = (fun n -> GT.look_exn (gtemp, n));
         moves = moves
     }
 

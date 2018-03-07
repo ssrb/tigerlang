@@ -5,6 +5,7 @@ module Table : sig
     type 'a table
     val empty : 'a table
     val look  : 'a table * temp -> 'a option
+    val look_exn : 'a table * temp -> 'a
     val enter : 'a table * temp * 'a -> 'a table
 end
 module Comp : Core.Comparator.S with type t := temp
