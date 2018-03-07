@@ -25,3 +25,10 @@ module Table = struct
     let enter = Table.enter
 
 end
+
+module Comp = Comparator.Make (
+        struct
+            type t = temp [@@deriving sexp]
+            let compare = cmptemp
+        end
+    )

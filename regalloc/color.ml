@@ -15,6 +15,7 @@ open Liveness
 module Frame = Frame
 module Liveness = Liveness
 module Temp = Frame.Temp
+module TT = Temp.Table
 
 type allocation = Frame.register Temp.Table.table
 type color = {interference: Liveness.igraph; initial: allocation; spillCost: Graph.node -> int; registers: Frame.register list} 
@@ -22,7 +23,7 @@ type color = {interference: Liveness.igraph; initial: allocation; spillCost: Gra
 let color color  = 
 
     (* machine registers, pre-assigned a color *)
-    let precolored = ref [] in
+    let precolored = ref TT.empty in
     
     (* Node succesfully colored *)
     let coloredNodes = ref [] in
@@ -30,8 +31,9 @@ let color color  =
     let _ = List.iter ~f:(fun n -> 
       let tmp = color.interference.gtemp n in
       match Temp.Table.look (color.initial, tmp) with
-      | Some _ -> 
-        precolored := tmp :: !precolored;
+      | Some r -> 
+        (* precolored is a copy/subset of color.initial *)
+        precolored := TT.enter(!precolored, tmp, r);
         coloredNodes := n :: !coloredNodes;
       | None -> ()
     ) color.interference.graph in

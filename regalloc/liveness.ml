@@ -39,15 +39,7 @@ type liveMap = liveSet GT.table
 
 let liveness flowgraph : liveMap =
 
-    let module Comp = Comparator.Make (
-        struct
-            type t = Temp.temp [@@deriving sexp]
-            let compare = Temp.cmptemp
-        end
-    ) 
-    in
-
-    let cmp = Comp.comparator in
+    let cmp = Temp.Comp.comparator in
 
     let aux (lins, louts, converged) node =
         let use = Option.value_exn (GT.look (flowgraph.use, node)) |> Set.of_list ~comparator:cmp in

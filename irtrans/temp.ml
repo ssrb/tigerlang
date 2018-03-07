@@ -7,6 +7,7 @@ module Table : sig
     val look  : 'a table * temp -> 'a option
     val enter : 'a table * temp * 'a -> 'a table
 end
+module Comp : Core.Comparator.S with type t := temp
 val newtemp : unit -> temp
 val makestring: temp -> string
 val newlabel : unit -> label
