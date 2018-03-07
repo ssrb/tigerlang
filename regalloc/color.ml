@@ -24,9 +24,9 @@ module MVComp = Comparator.Make(
     struct
         type t = Graph.node * Graph.node [@@deriving sexp]
         let compare (l1, l2) (r1, r2) = 
-            let open Graph.Comp in
-            let c = comparator.compare l1 r1 in
-            if c <> 0 then c else comparator.compare l2 r2
+            let cmp = Graph.Comp.comparator.compare in
+            let c = cmp l1 r1 in
+            if c <> 0 then c else cmp l2 r2
     end
 )
 
@@ -36,9 +36,9 @@ let color color  =
     let gtemp = color.interference.gtemp in
 
     (* machine registers, pre-assigned a color *)
-    let precolored = ref TT.empty in
+    let precolored = ref (Set.empty ~comparator:Graph.Comp.comparator) in
     (* Node succesfully colored *)
-    let coloredNodes = ref (Set.empty ~comparator:Graph.Comp.comparator) in
+    let coloredNodes = ref TT.empty in
     (* Temporary registers, not precolored and not yet processed *)
     let initial = ref [] in
 
@@ -47,18 +47,31 @@ let color color  =
       match Temp.Table.look (color.initial, tmp) with
       | Some r -> 
         (* precolored is a copy/subset of color.initial *)
-        precolored := TT.enter(!precolored, tmp, r);
-        coloredNodes := Set.add !coloredNodes n;
+        precolored := Set.add !precolored n;
+        coloredNodes := TT.enter(!coloredNodes, tmp, r);
       | None ->
         initial := n::!initial
     ) color.interference.graph;
 
     (* moves enabled for possible coalescing *)
-    let worklistMoves = color.interference.moves in
+    let worklistMoves = ref [] in
     (* a mapping from a node to a list moves it is associated with *)
     let moveList = ref TT.empty in
+    
     List.iter color.interference.graph ~f:(fun n -> moveList := TT.enter (!moveList, gtemp n, Set.empty ~comparator:MVComp.comparator));
-
+    let addMove (n, m) = 
+        let tmp = gtemp n in
+        let moves = TT.look_exn (!moveList, tmp) in
+        moveList := TT.enter (!moveList, tmp, (Set.add moves m))
+    in
+    List.iter color.interference.moves ~f:(fun ((src, dst) as m) ->
+        if not (Set.mem !precolored src) then
+            addMove (src, m)
+        else if not (Set.mem !precolored dst) then
+            addMove (dst, m)
+        else
+            worklistMoves := m::!worklistMoves
+    );
 
 
     let adjList = color.interference.graph in
