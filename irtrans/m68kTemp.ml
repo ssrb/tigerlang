@@ -9,7 +9,6 @@ let newtemp () = let t = !temps in temps := t + 1; t
 let makestring t = "t" ^ (Int.to_string t)
 let newlabel () = let l = !labs in labs := l + 1; Symbol.symbol (sprintf "L%d" l)  
 let namedlabel = Symbol.symbol
-let cmptemp = compare
 
 module Table = struct
 
@@ -27,8 +26,8 @@ module Table = struct
 end
 
 module Comp = Comparator.Make (
-        struct
-            type t = temp [@@deriving sexp]
-            let compare = cmptemp
-        end
-    )
+    struct
+        type t = temp [@@deriving sexp]
+        let compare = compare
+    end
+)

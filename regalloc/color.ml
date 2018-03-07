@@ -26,7 +26,7 @@ let color color  =
     let precolored = ref TT.empty in
     
     (* Node succesfully colored *)
-    let coloredNodes = ref [] in
+    let coloredNodes = ref (Set.empty ~comparator:Graph.Comp.comparator) in
 
     let _ = List.iter ~f:(fun n -> 
       let tmp = color.interference.gtemp n in
@@ -34,7 +34,7 @@ let color color  =
       | Some r -> 
         (* precolored is a copy/subset of color.initial *)
         precolored := TT.enter(!precolored, tmp, r);
-        coloredNodes := n :: !coloredNodes;
+        coloredNodes := Set.add !coloredNodes n;
       | None -> ()
     ) color.interference.graph in
 

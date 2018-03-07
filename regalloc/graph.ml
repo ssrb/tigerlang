@@ -1,6 +1,6 @@
 open Core
 
-type node' = int
+type node' = int [@@deriving sexp]
 
 type noderep = {succ: node' list; pred: node' list}
 
@@ -40,7 +40,7 @@ module A = DynArray
 
 type graph = noderep A.t
 
-type node = graph * node'
+type node = graph sexp_opaque * node' [@@deriving sexp]
 
 let eq((_, a),(_, b)) = a = b
 
@@ -112,5 +112,12 @@ module Table = struct
   let enter = Table.enter
 
 end
+
+module Comp = Comparator.Make( 
+  struct
+     type t = node [@@deriving sexp]
+      let compare (_, l) (_, r) = compare l r
+  end
+)
 
 let nodename (_, i) = "n" ^ Int.to_string(i)
