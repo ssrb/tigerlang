@@ -22,8 +22,6 @@ module Table : sig
     val enter : 'a table * node * 'a -> 'a table
 end
 
-module Comp : Core.Comparator.S with type t := node
-
-(*sharing type Table.key = node*)
-
 val nodename: node -> string  (* for debugging only *)
+
+include Core.Comparable.S with type t := node

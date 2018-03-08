@@ -24,7 +24,6 @@ module TT = Temp.Table
 module GT = Graph.Table
 
 open Core
-open Graph
 open Flow
 
 type igraph = {
@@ -39,18 +38,16 @@ type liveMap = liveSet GT.table
 
 let liveness flowgraph : liveMap =
 
-    let cmp = Temp.Comp.comparator in
-
     let aux (lins, louts, converged) node =
-        let use = GT.look_exn (flowgraph.use, node) |> Set.of_list ~comparator:cmp in
-        let def = GT.look_exn (flowgraph.def, node) |> Set.of_list ~comparator:cmp in
+        let use = GT.look_exn (flowgraph.use, node) |> Temp.Set.of_list in
+        let def = GT.look_exn (flowgraph.def, node) |> Temp.Set.of_list in
         let lin = GT.look_exn (lins, node) in
         let lout = GT.look_exn (louts, node) in
-        let lin' = Set.union use (Set.diff lout def) in
-        let lout' = Graph.succ node |> List.fold ~init:(Set.empty ~comparator:cmp) ~f:(fun out succ -> 
-            Set.union out (GT.look_exn (lins, succ))) 
+        let lin' = Temp.Set.union use (Temp.Set.diff lout def) in
+        let lout' = Graph.succ node |> List.fold ~init:Temp.Set.empty ~f:(fun out succ -> 
+            Temp.Set.union out (GT.look_exn (lins, succ))) 
         in
-        let converged = converged && Set.equal lin lin' && Set.equal lout lout' in
+        let converged = converged && Temp.Set.equal lin lin' && Temp.Set.equal lout lout' in
         (GT.enter (lins, node, lin'), GT.enter (louts, node, lout'), converged)
     in 
 
@@ -66,7 +63,7 @@ let liveness flowgraph : liveMap =
 
     let emptylivesets = nodes
         |> List.fold ~init:GT.empty ~f:(fun lin n ->
-            GT.enter (lin, n, Set.empty ~comparator:cmp) 
+            GT.enter (lin, n, Temp.Set.empty) 
         )
     in
 

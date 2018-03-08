@@ -20,23 +20,22 @@ module TT = Temp.Table
 type allocation = Frame.register Temp.Table.table
 type color = {interference: Liveness.igraph; initial: allocation; spillCost: Graph.node -> int; registers: Frame.register list} 
 
-module MVComp = Comparator.Make(
+module Move = Comparable.Make(
     struct
         type t = Graph.node * Graph.node [@@deriving sexp]
         let compare (l1, l2) (r1, r2) = 
-            let cmp = Graph.Comp.comparator.compare in
+            let cmp = Graph.compare in
             let c = cmp l1 r1 in
             if c <> 0 then c else cmp l2 r2
     end
 )
-
 
 let color color  = 
 
     let gtemp = color.interference.gtemp in
 
     (* machine registers, pre-assigned a color *)
-    let precolored = ref (Set.empty ~comparator:Graph.Comp.comparator) in
+    let precolored = ref Graph.Set.empty in
     (* Node succesfully colored *)
     let coloredNodes = ref TT.empty in
     (* Temporary registers, not precolored and not yet processed *)
@@ -62,7 +61,7 @@ let color color  =
         let tmp = gtemp n in
         let moves = match TT.look (!moveList, tmp) with
         | Some moves -> moves
-        | None -> Set.empty ~comparator:MVComp.comparator
+        | None -> Move.Set.empty
         in
         moveList := TT.enter (!moveList, tmp, (Set.add moves m))
     in

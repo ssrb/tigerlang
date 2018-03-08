@@ -1,6 +1,6 @@
 open Core
 
-type temp = int [@@deriving sexp]
+type temp = int [@@deriving sexp, compare]
 type label = Symbol.symbol [@@deriving sexp]
 
 let temps = ref 100
@@ -26,9 +26,8 @@ module Table = struct
 
 end
 
-module Comp = Comparator.Make (
+include Core.Comparable.Make (
     struct
-        type t = temp [@@deriving sexp]
-        let compare = compare
+        type t = temp [@@deriving sexp, compare] 
     end
 )
