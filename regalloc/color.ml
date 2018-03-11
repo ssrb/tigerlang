@@ -22,11 +22,7 @@ type color = {interference: Liveness.igraph; initial: allocation; spillCost: Gra
 
 module Move = Comparable.Make(
     struct
-        type t = Graph.node * Graph.node [@@deriving sexp]
-        let compare (l1, l2) (r1, r2) = 
-            let cmp = Graph.compare in
-            let c = cmp l1 r1 in
-            if c <> 0 then c else cmp l2 r2
+        type t = Graph.node * Graph.node [@@deriving sexp, compare]
     end
 )
 

@@ -24,4 +24,6 @@ end
 
 val nodename: node -> string  (* for debugging only *)
 
+val compare_node: node -> node -> int
+
 include Core.Comparable.S with type t := node

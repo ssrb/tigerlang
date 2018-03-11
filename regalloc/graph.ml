@@ -114,11 +114,12 @@ module Table = struct
 
 end
 
+let compare_node (_, l) (_, r) = compare l r
+
 let nodename (_, i) = "n" ^ Int.to_string(i)
 
 include Core.Comparable.Make (
   struct
-    type t = node [@@deriving sexp]
-    let compare (_, l) (_, r) = compare l r
+    type t = node [@@deriving sexp, compare]
   end
 )
