@@ -131,16 +131,18 @@ let color color  =
     (* An array containing the current degree of each node *)
     let degree = color.interference.graph |> List.fold ~init:NT.empty ~f:(fun degree n -> NT.enter (degree, n , ref (List.length (Graph.succ n)))) in
 
-    let decrementDegree n =
-
-        let enableMoves = NS.iter ~f:(fun n -> 
+    let enableMoves = NS.iter ~f:(fun n -> 
             MS.iter ~f:(fun mv -> 
+                (* Check in activeMoves in a first place ? *)
                 activeMoves := MS.remove !activeMoves mv;
                 worklistMoves := MS.add !worklistMoves mv
             ) (nodeMoves n)
         )
-        in
-        
+    in
+
+    let decrementDegree n =
+
+        (* check initAlloc ? *)
         let d = NT.look_exn (degree, n) in
         d := !d - 1;
         if !d = nreg - 1 then
