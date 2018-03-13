@@ -48,11 +48,22 @@ let color color  =
     (* Temporary registers, not precolored and not yet processed *)
     let initial = ref [] in
 
+    (* 
+        Move sets: there are 5 sets of move instructions, and every move is in exactly
+        one of these sets (after "build" through the end of "main")
+    *)
+
     (* Moves enabled for possible coalescing *)
     let worklistMoves = ref MS.empty in
 
     (* Moves not yet ready for coalescing *)
     let activeMoves = ref MS.empty in
+
+    (* Move that have been colaesced *)
+    let coalescedMoves = ref MS.empty in
+
+    (* Moves whose source and target interfere *)
+    let constrainedMoves = ref MS.empty in
 
     (* A mapping from a node to a list moves it is associated with *)
     let moveList = ref TT.empty in
@@ -108,13 +119,16 @@ let color color  =
     (* List of low-degree non-move-related nodes*)
     let simplifyWorklist = ref [] in
 
-    (* Adjacency list representation of the graph. For each non-precolored temporary u, adjList[u] is the set of nodes that interfere with u *)
-    (* let adjList = color.interference.graph in *)
-
     (* The set of interference edges (u,v) in the graph. (u,v) \in G => (v,u) \in G *)
-    let adjList = color.interference.graph |> List.fold ~init:NT.empty ~f:(fun adjSet n -> 
-        let succ = Graph.adj n |> List.fold ~init:NS.empty ~f:(fun succ n' -> NS.add succ n') in
-        NT.enter (adjSet, n , succ)
+    let adjSet = color.interference.graph |>  List.fold ~init:MS.empty ~f:(fun adjSet u -> 
+        Graph.adj u |> List.fold ~init:MS.empty ~f:(fun adjSet v -> MS.add adjSet (u, v))
+    )
+    in
+
+    (* Adjacency list representation of the graph. For each non-precolored temporary u, adjList[u] is the set of nodes that interfere with u *)
+    let adjList = color.interference.graph |> List.fold ~init:NT.empty ~f:(fun adjList u -> 
+        let succ = Graph.adj u |> List.fold ~init:NS.empty ~f:(fun succ v -> NS.add succ v) in
+        NT.enter (adjList, u , succ)
     ) 
     in
 
@@ -140,6 +154,24 @@ let color color  =
         )
     in
 
+    let makeWorkList () =
+        List.iter ~f:(fun n ->
+            let d = NT.look_exn (degree, n) in
+            if !d >= nreg then
+                spillWorklist := n::!spillWorklist
+            else if moveRelated n then
+                freezeWorklist := n::!freezeWorklist
+            else
+                simplifyWorklist := n::!simplifyWorklist
+        ) !initial
+    in
+
+    (* 
+        Removing a node from the graph involves decrementing the degree of its current neighbors.
+        If the degree of a neighbor is already less than K-1 then the neighbor must be move-related,
+        and is not added to the simplifyWorklist. When the degree of a neighbor transitions from K
+        to K-1, moves associated with its neighbors may be enabled.
+    *)
     let decrementDegree n =
 
         (* check initAlloc ? *)
@@ -156,18 +188,6 @@ let color color  =
         end
     in
 
-    let makeWorkList () =
-        List.iter ~f:(fun n ->
-            let d = NT.look_exn (degree, n) in
-            if !d >= nreg then
-                spillWorklist := n::!spillWorklist
-            else if moveRelated n then
-                freezeWorklist := n::!freezeWorklist
-            else
-                simplifyWorklist := n::!simplifyWorklist
-        ) !initial
-    in
-
     let simplify () =
         match !simplifyWorklist with
         | n::ns ->
@@ -177,9 +197,44 @@ let color color  =
         | _ -> ()
     in
 
+    let addWorkList n = () in
+
+    let getAlias x = x in
+
+    let combine _ = () in
+
+    let conservative _ = false in
+
+    let ok _ = false in
+
+    let coalesce () =
+        match MS.choose !worklistMoves with
+        | Some ((x,y) as m) ->
+            let x = getAlias x in
+            let y = getAlias y in
+            let u, v = if NS.mem !precolored y then y, x else x, y in
+            worklistMoves := MS.remove !worklistMoves m;
+            if u = v then (
+                coalescedMoves := MS.add !coalescedMoves m;
+                addWorkList u
+            ) else if (NS.mem !precolored v) || (MS.mem adjSet (u, v)) then (
+                constrainedMoves := MS.add !constrainedMoves m;
+                addWorkList u;
+                addWorkList v;
+            ) else if (NS.mem !precolored u)
+                    && (NS.for_all ~f:(fun t -> ok(t, u)) (adjacent v))
+                    || (not (NS.mem !precolored u))
+                    && (conservative (NS.union (adjacent u) (adjacent v))) then (
+                coalescedMoves := MS.add !coalescedMoves m;
+                combine (u, v);
+                addWorkList u
+            ) else (
+                activeMoves := MS.add !activeMoves m
+            );
+        | None -> ()
+    in
+        
     let spilledNodes = [] in
-    let coalescedMoves = [] in
-    let constrainedMoves = [] in
     let frozenMoves = [] in
     
 
