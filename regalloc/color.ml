@@ -159,10 +159,12 @@ let color color  =
     in
 
     let simplify () =
-         List.iter ~f:(fun n ->
+        match !simplifyWorklist with
+        | n::ns ->
+            simplifyWorklist := ns;
+    	    selectStack := n::!selectStack;
             NS.iter ~f:(fun m -> decrementDegree m) (adjacent n)
-         ) !simplifyWorklist;
-         selectStack := (List.rev !simplifyWorklist) @ !selectStack;
+        | _ -> ()
     in
 
     let spilledNodes = [] in
