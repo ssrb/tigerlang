@@ -78,27 +78,25 @@ let color color  =
             moveList := TT.enter (!moveList, tmp, (MS.add moves m))
         in
 
-        begin
-            List.iter ~f:(fun n -> 
-                let tmp = gtemp n in
-                match Temp.Table.look (color.initial, tmp) with
-                | Some r -> 
-                    (* precolored is a copy/subset of color.initial *)
-                    precolored := NS.add !precolored n;
-                    coloredNodes := TT.enter(!coloredNodes, tmp, r);
-                | None ->
-                    initial := n::!initial
-            ) color.interference.graph;
+        List.iter ~f:(fun n -> 
+            let tmp = gtemp n in
+            match Temp.Table.look (color.initial, tmp) with
+            | Some r -> 
+                (* precolored is a copy/subset of color.initial *)
+                precolored := NS.add !precolored n;
+                coloredNodes := TT.enter(!coloredNodes, tmp, r);
+            | None ->
+                initial := n::!initial
+        ) color.interference.graph;
 
-            List.iter color.interference.moves ~f:(fun ((src, dst) as m) ->
-                if not (NS.mem !precolored src) then
-                    addMove (src, m)
-                else if not (NS.mem !precolored dst) then
-                    addMove (dst, m)
-                else
-                    worklistMoves := MS.add !worklistMoves m
-            )
-        end
+        List.iter color.interference.moves ~f:(fun ((src, dst) as m) ->
+            if not (NS.mem !precolored src) then
+                addMove (src, m)
+            else if not (NS.mem !precolored dst) then
+                addMove (dst, m)
+            else
+                worklistMoves := MS.add !worklistMoves m
+        )
     in
 
     let nodeMoves n =
