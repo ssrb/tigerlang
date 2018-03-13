@@ -116,6 +116,8 @@ let color color  =
     (* List of low-degree non-move-related nodes*)
     let simplifyWorklist = ref [] in
 
+    let addEdge _ = () in
+
     (* The set of interference edges (u,v) in the graph. (u,v) \in G => (v,u) \in G *)
     let adjSet = color.interference.graph |>  List.fold ~init:MS.empty ~f:(fun adjSet u -> 
         Graph.adj u |> List.fold ~init:MS.empty ~f:(fun adjSet v -> 
@@ -131,6 +133,10 @@ let color color  =
     ) 
     in
 
+    (* An array containing the current degree of each node *)
+    let degree = color.interference.graph |> List.fold ~init:NT.empty ~f:(fun degree n -> NT.enter (degree, n , ref (List.length (Graph.succ n)))) in
+
+
     (* Registers that have been coalesced; when u <- v is coalesced, v is added to this set and u put back on some work-list (or vice versa). *)
     let coalescedNodes = ref NS.empty in
 
@@ -140,9 +146,6 @@ let color color  =
     let adjacent n =
         NS.diff (NT.look_exn (adjList, n)) (NS.union (NS.of_list !selectStack) !coalescedNodes)
     in
-
-    (* An array containing the current degree of each node *)
-    let degree = color.interference.graph |> List.fold ~init:NT.empty ~f:(fun degree n -> NT.enter (degree, n , ref (List.length (Graph.succ n)))) in
 
     let enableMoves = NS.iter ~f:(fun n -> 
         MS.iter ~f:(fun mv -> 
@@ -225,7 +228,7 @@ let color color  =
         enableMoves (NS.singleton v);
         
         NS.iter ~f:(fun t ->
-            (* addEdge (t, u); *)
+            addEdge (t, u);
             decrementDegree t
         ) (adjacent v);
         if !(NT.look_exn (degree, u)) >= nreg && List.mem ~equal:(=) !freezeWorklist u then
