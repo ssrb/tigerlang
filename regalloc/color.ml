@@ -217,7 +217,13 @@ let color color  =
             spillWorklist := remove !spillWorklist v;
         coalescedNodes := NS.add !coalescedNodes v;
         alias := NT.enter (!alias, v, u);
+
         (* nodeMoves[u] <- nodeMoves[u] U nodeMoves[v] *)
+        let mu = TT.look_exn (!moveList, (gtemp u)) in
+        let mv = TT.look_exn (!moveList, (gtemp v)) in
+        moveList := TT.enter (!moveList, (gtemp u), (MS.union mu mv));
+        enableMoves (NS.singleton v);
+        
         NS.iter ~f:(fun t ->
             (* addEdge (t, u); *)
             decrementDegree t
