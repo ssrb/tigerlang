@@ -20,7 +20,7 @@ module TT = Temp.Table
 type allocation = Frame.register Temp.Table.table
 type color = {interference: Liveness.igraph; initial: allocation; spillCost: Graph.node -> int; registers: Frame.register list} 
 
-module Move = Comparable.Make(
+module Move = Comparable.Make (
     struct
         type t = Graph.node * Graph.node [@@deriving sexp, compare]
     end
@@ -31,7 +31,6 @@ module NS = Graph.Set
 module NT = Graph.Table
 
 let remove l e = List.filter ~f:((<>) e) l
-
 
 let color color  = 
 
@@ -121,7 +120,9 @@ let color color  =
 
     (* The set of interference edges (u,v) in the graph. (u,v) \in G => (v,u) \in G *)
     let adjSet = color.interference.graph |>  List.fold ~init:MS.empty ~f:(fun adjSet u -> 
-        Graph.adj u |> List.fold ~init:MS.empty ~f:(fun adjSet v -> MS.add adjSet (u, v))
+        Graph.adj u |> List.fold ~init:MS.empty ~f:(fun adjSet v -> 
+            MS.add (MS.add adjSet (u, v))  (v, u)
+        )
     )
     in
 
@@ -146,24 +147,23 @@ let color color  =
     let degree = color.interference.graph |> List.fold ~init:NT.empty ~f:(fun degree n -> NT.enter (degree, n , ref (List.length (Graph.succ n)))) in
 
     let enableMoves = NS.iter ~f:(fun n -> 
-            MS.iter ~f:(fun mv -> 
-                (* Check in activeMoves in a first place ? *)
-                activeMoves := MS.remove !activeMoves mv;
-                worklistMoves := MS.add !worklistMoves mv
-            ) (nodeMoves n)
-        )
+        MS.iter ~f:(fun mv -> 
+            (* Check in activeMoves in a first place ? *)
+            activeMoves := MS.remove !activeMoves mv;
+            worklistMoves := MS.add !worklistMoves mv
+        ) (nodeMoves n)
+    )
     in
 
-    let makeWorkList () =
-        List.iter ~f:(fun n ->
-            let d = NT.look_exn (degree, n) in
-            if !d >= nreg then
-                spillWorklist := n::!spillWorklist
-            else if moveRelated n then
-                freezeWorklist := n::!freezeWorklist
-            else
-                simplifyWorklist := n::!simplifyWorklist
-        ) !initial
+    let makeWorkList () = List.iter ~f:(fun n ->
+        let d = NT.look_exn (degree, n) in
+        if !d >= nreg then
+            spillWorklist := n::!spillWorklist
+        else if moveRelated n then
+            freezeWorklist := n::!freezeWorklist
+        else
+            simplifyWorklist := n::!simplifyWorklist
+    ) !initial
     in
 
     (* 
@@ -173,7 +173,6 @@ let color color  =
         to K-1, moves associated with its neighbors may be enabled.
     *)
     let decrementDegree n =
-
         (* check initAlloc ? *)
         let d = NT.look_exn (degree, n) in
         d := !d - 1;
@@ -197,17 +196,53 @@ let color color  =
         | _ -> ()
     in
 
-    let addWorkList n = () in
+    let alias = ref NT.empty in
 
-    let getAlias x = x in
+    let rec getAlias x =
+        if NS.mem !coalescedNodes x then getAlias (NT.look_exn (!alias, x)) else x
+    in
 
-    let combine _ = () in
+    let addWorkList n = 
+        if not (NS.mem !precolored n)
+        && not (moveRelated n)
+        && !(NT.look_exn (degree, n)) < nreg then
+        begin
+            freezeWorklist := remove !freezeWorklist n;
+            simplifyWorklist := n::!simplifyWorklist
+        end
+    in
 
-    let conservative _ = false in
-
-    let ok _ = false in
+    let combine (u, v) =
+        if List.mem ~equal:(=) !freezeWorklist v then
+            freezeWorklist := remove !freezeWorklist v
+        else
+            spillWorklist := remove !spillWorklist v;
+        coalescedNodes := NS.add !coalescedNodes v;
+        alias := NT.enter (!alias, v, u);
+        (* nodeMoves[u] <- nodeMoves[u] U nodeMoves[v] *)
+        NS.iter ~f:(fun t ->
+            (* addEdge (t, u); *)
+            decrementDegree t
+        ) (adjacent v);
+        if !(NT.look_exn (degree, u)) >= nreg && List.mem ~equal:(=) !freezeWorklist u then
+        begin
+            freezeWorklist := remove !freezeWorklist u;
+            spillWorklist := u::!spillWorklist
+        end
+    in
 
     let coalesce () =
+
+        let ok (t, s) = !(NT.look_exn (degree, t)) < nreg || NS.mem !precolored t || MS.mem adjSet (t, s) in
+        
+        let conservative ns = NS.fold ~init:0 ~f:(fun cnt n -> 
+            if !(NT.look_exn (degree, n)) >= nreg then
+                cnt + 1
+            else
+                cnt
+        ) ns < nreg 
+        in
+
         match MS.choose !worklistMoves with
         | Some ((x,y) as m) ->
             let x = getAlias x in
@@ -217,28 +252,26 @@ let color color  =
             if u = v then (
                 coalescedMoves := MS.add !coalescedMoves m;
                 addWorkList u
-            ) else if (NS.mem !precolored v) || (MS.mem adjSet (u, v)) then (
+            ) else if NS.mem !precolored v || MS.mem adjSet (u, v) then (
                 constrainedMoves := MS.add !constrainedMoves m;
                 addWorkList u;
                 addWorkList v;
-            ) else if (NS.mem !precolored u)
-                    && (NS.for_all ~f:(fun t -> ok(t, u)) (adjacent v))
-                    || (not (NS.mem !precolored u))
-                    && (conservative (NS.union (adjacent u) (adjacent v))) then (
+            ) else if NS.mem !precolored u
+                    && NS.for_all ~f:(fun t -> ok(t, u)) (adjacent v)
+                    || not (NS.mem !precolored u)
+                    && conservative (NS.union (adjacent u) (adjacent v)) then (
                 coalescedMoves := MS.add !coalescedMoves m;
                 combine (u, v);
                 addWorkList u
             ) else (
                 activeMoves := MS.add !activeMoves m
-            );
+            )
         | None -> ()
+
     in
         
     let spilledNodes = [] in
     let frozenMoves = [] in
-    
-
-    let alias = () in
     let color = () in
     
     ((Temp.Table.empty : allocation), ([] : Temp.temp list))
