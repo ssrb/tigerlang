@@ -30,6 +30,9 @@ module MS = Move.Set
 module NS = Graph.Set
 module NT = Graph.Table
 
+let remove l e = List.filter ~f:((<>) e) l
+
+
 let color color  = 
 
     let nreg = List.length color.registers in
@@ -89,7 +92,7 @@ let color color  =
     in
 
     let nodeMoves n =
-        MS.inter (TT.look_exn (!moveList, (gtemp n))) (MS.union !worklistMoves !activeMoves)
+        MS.inter (TT.look_exn (!moveList, (gtemp n))) (MS.union !activeMoves !worklistMoves)
     in
 
     let moveRelated n =
@@ -114,9 +117,34 @@ let color color  =
         NT.enter (adjSet, n , succ)
     ) 
     in
-    
+
+    (* Registers that have been coalesced; when u <- v is coalesced, v is added to this set and u put back on some work-list (or vice versa). *)
+    let coalescedNodes = ref NS.empty in
+
+    (* Stack containing temporaries removed from the graph *)
+    let selectStack = ref [] in
+
+    let adjacent n =
+        NS.diff (NT.look_exn (adjList, n)) (NS.union (NS.of_list !selectStack) !coalescedNodes)
+    in
+
     (* An array containing the current degree of each node *)
     let degree = color.interference.graph |> List.fold ~init:NT.empty ~f:(fun degree n -> NT.enter (degree, n , ref (List.length (Graph.succ n)))) in
+
+    let decrementDegree n =
+        let enableMoves ns = () in
+        let d = NT.look_exn (degree, n) in
+        d := !d - 1;
+        if !d = nreg then
+        begin
+            enableMoves (NS.add (adjacent n) n);
+            spillWorklist := remove !spillWorklist n;
+            if moveRelated n then
+                freezeWorklist := n::!freezeWorklist
+            else
+                simplifyWorklist := n::!simplifyWorklist
+        end
+    in
 
     let makeWorkList () =
         List.iter ~f:(fun n ->
@@ -130,14 +158,11 @@ let color color  =
         ) !initial
     in
 
-    (* Registers that have been coalesced; when u <- v is coalesced, v is added to this set and u put back on some work-list (or vice versa). *)
-    let coalescedNodes = ref NS.empty in
-
-    (* Stack containing temporaries removed from the graph *)
-    let selectStack = ref [] in
-
-    let adjacent n =
-        NS.diff (NT.look_exn (adjList, n)) (NS.union (NS.of_list !selectStack) !coalescedNodes)
+    let simplify () =
+         List.iter ~f:(fun n ->
+            NS.iter ~f:(fun m -> decrementDegree m) (adjacent n)
+         ) !simplifyWorklist;
+         selectStack := (List.rev !simplifyWorklist) @ !selectStack;
     in
 
     let spilledNodes = [] in
