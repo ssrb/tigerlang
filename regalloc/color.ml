@@ -54,9 +54,6 @@ let color color  =
         one of these sets (after "build" through the end of "main")
     *)
 
-    (* Moves enabled for possible coalescing *)
-    let worklistMoves = ref MS.empty in
-
     (* Moves not yet ready for coalescing *)
     let activeMoves = ref MS.empty in
 
@@ -65,6 +62,13 @@ let color color  =
 
     (* Moves whose source and target interfere *)
     let constrainedMoves = ref MS.empty in
+
+    (* Moves that will no longer be considered for coalescing *)
+    let frozenMoves = ref MS.empty in
+
+    (* Moves enabled for possible coalescing *)
+    let worklistMoves = ref MS.empty in
+
 
     (* A mapping from a node to a list moves it is associated with *)
     let moveList = ref TT.empty in
@@ -94,7 +98,7 @@ let color color  =
                         | Some vs -> NS.add vs v 
                         | None -> NS.singleton v
                     );
-                    
+
                     degree := NT.enter (!degree, u, 
                         match NT.look (!degree, u) with
                         | Some d ->  d + 1
@@ -218,7 +222,7 @@ let color color  =
             simplifyWorklist := ns;
     	    selectStack := n::!selectStack;
             NS.iter ~f:(fun m -> decrementDegree m) (adjacent n)
-        | _ -> ()
+        | [] -> ()
     in
 
     let alias = ref NT.empty in
@@ -275,7 +279,7 @@ let color color  =
         in
 
         match MS.choose !worklistMoves with
-        | Some ((x,y) as m) ->
+        | Some ((x, y) as m) ->
             let x = getAlias x in
             let y = getAlias y in
             let u, v = if NS.mem !precolored y then y, x else x, y in
@@ -300,9 +304,31 @@ let color color  =
         | None -> ()
 
     in
-        
+    
+    let freezeMoves u = 
+        MS.iter ~f:(fun ((x, y) as m) -> 
+            let v = if (getAlias u) = (getAlias y) then x else y in
+            activeMoves := MS.remove !activeMoves m;
+            frozenMoves := MS.add !frozenMoves m;
+            if not (moveRelated v) && NT.look_exn (!degree, v) < nreg then
+            begin
+                freezeWorklist := remove !freezeWorklist v;
+                simplifyWorklist := v::!simplifyWorklist
+            end
+        ) (nodeMoves u)
+    in
+    
+    let freeze () =
+        match !freezeWorklist with
+        | n::ns ->
+            freezeWorklist := ns;
+            simplifyWorklist := n::!freezeWorklist;
+            freezeMoves n
+        | [] -> ()
+    in
+
     let spilledNodes = [] in
-    let frozenMoves = [] in
+    
     let color = () in
     
     ((Temp.Table.empty : allocation), ([] : Temp.temp list))
