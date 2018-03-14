@@ -127,7 +127,7 @@ let color color  =
             | Some r -> 
                 (* precolored is a copy/subset of color.initial *)
                 precolored := NS.add !precolored n;
-                coloredNodes := TT.enter(!coloredNodes, tmp, r);
+                coloredNodes := TT.enter(!coloredNodes, tmp, fst (Option.value_exn (List.findi ~f:(fun _ e -> e = r) color.registers)))
             | None ->
                 initial := n::!initial
         ) color.interference.graph;
@@ -343,9 +343,33 @@ let color color  =
         | None -> ()
     in
 
-    let spilledNodes = [] in
-    
-    let color = () in
-    
+    let spilledNodes = ref [] in
+
+    let assignColors () = 
+        List.iter ~f:(fun n ->
+            let okColors = ref (List.init ~f:(fun x -> x) nreg) in
+            NS.iter ~f:(fun w -> 
+                let a = getAlias w in
+                let c = TT.look (!coloredNodes, (gtemp a)) in
+                if NS.mem !precolored a || Option.is_some c then
+                    okColors := remove !okColors (TT.look_exn (!coloredNodes, (gtemp a)))
+            ) (NT.look_exn (!adjList, n));
+
+            if List.is_empty !okColors then
+                spilledNodes := n::!spilledNodes
+            else
+            begin
+                let c = List.hd_exn !okColors in
+                coloredNodes := TT.enter (!coloredNodes, (gtemp n), c);
+            end
+        ) !selectStack;
+
+        NS.iter ~f:(fun n ->
+            let a = getAlias n in
+            let c = TT.look_exn (!coloredNodes, (gtemp a)) in
+            coloredNodes := TT.enter (!coloredNodes, (gtemp n), c)
+        ) !coalescedNodes
+    in
+
     ((Temp.Table.empty : allocation), ([] : Temp.temp list))
 end
