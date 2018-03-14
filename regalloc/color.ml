@@ -127,7 +127,7 @@ let color color  =
             | Some r -> 
                 (* precolored is a copy/subset of color.initial *)
                 precolored := NS.add !precolored n;
-                coloredNodes := TT.enter(!coloredNodes, tmp, fst (Option.value_exn (List.findi ~f:(fun _ e -> e = r) color.registers)))
+                coloredNodes := TT.enter(!coloredNodes, tmp, r)
             | None ->
                 initial := n::!initial
         ) color.interference.graph;
@@ -347,7 +347,7 @@ let color color  =
 
     let assignColors () = 
         List.iter ~f:(fun n ->
-            let okColors = ref (List.init ~f:(fun x -> x) nreg) in
+            let okColors = ref color.registers in
             NS.iter ~f:(fun w -> 
                 let a = getAlias w in
                 let c = TT.look (!coloredNodes, (gtemp a)) in
