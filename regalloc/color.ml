@@ -371,5 +371,39 @@ let color color  =
         ) !coalescedNodes
     in
 
+    let rewriteProgram _ = () in
+
+    let rec main0 () = 
+
+        if not (List.is_empty !simplifyWorklist) then
+            simplify ()
+        else if not (MS.is_empty !worklistMoves) then
+            coalesce ()
+        else if not (List.is_empty !freezeWorklist) then
+            freeze ()
+        else if not (List.is_empty !spillWorklist) then
+            selectSpill ();
+    
+        if not (List.is_empty !simplifyWorklist)
+        || not (MS.is_empty !worklistMoves)
+        || not (List.is_empty !freezeWorklist)
+        || not (List.is_empty !spillWorklist)
+        then 
+            main0 ()
+
+    in
+
+    let rec main () =
+        build();
+        makeWorkList ();
+        main0 ();
+        assignColors ();
+        if not (List.is_empty !spilledNodes) then
+        begin
+            rewriteProgram ();
+            main ()
+        end
+    in
+
     ((Temp.Table.empty : allocation), ([] : Temp.temp list))
 end
