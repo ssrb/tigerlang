@@ -347,6 +347,7 @@ let color color  =
 
     let assignColors () = 
         List.iter ~f:(fun n ->
+
             let okColors = ref color.registers in
             NS.iter ~f:(fun w -> 
                 let a = getAlias w in
@@ -355,12 +356,13 @@ let color color  =
                     okColors := remove !okColors (TT.look_exn (!coloredNodes, (gtemp a)))
             ) (NT.look_exn (!adjList, n));
 
+            let t = gtemp n in
             if List.is_empty !okColors then
-                spilledNodes := n::!spilledNodes
+                spilledNodes := t::!spilledNodes
             else
             begin
                 let c = List.hd_exn !okColors in
-                coloredNodes := TT.enter (!coloredNodes, (gtemp n), c);
+                coloredNodes := TT.enter (!coloredNodes, t, c);
             end
         ) !selectStack;
 
@@ -400,5 +402,6 @@ let color color  =
 
     main ();
 
-    ((Temp.Table.empty : allocation), ([] : Temp.temp list))
+    (!coloredNodes, !spilledNodes)
+
 end
