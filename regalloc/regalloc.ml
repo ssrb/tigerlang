@@ -27,8 +27,8 @@ let rec alloc (asm, (frame : Frame.frame)) =
             | A.MOVE {assem; dst; src} ->
                 let dst = Temp.Table.look_exn (colors, dst) in
                 let src = Temp.Table.look_exn (colors, src) in
-                dst = src
-            | _ -> false
+                dst <> src
+            | _ -> true
         ) asm
         in
         (asm, colors)
