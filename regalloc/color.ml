@@ -326,6 +326,22 @@ let color color  =
             freezeMoves n
         | [] -> ()
     in
+    
+    let selectSpill () =
+        let m = List.fold ~init:None ~f:(fun m s ->
+            let c =  color.spillCost s in
+            match m with 
+            | Some (ms, mc) -> if c > mc then Some (ms, mc) else  m
+            | None -> Some (s, c)
+        ) !spillWorklist
+        in
+        match m with
+        | Some (m, _) ->
+            spillWorklist := remove !spillWorklist m;
+            simplifyWorklist := m::!simplifyWorklist;
+            freezeMoves m
+        | None -> ()
+    in
 
     let spilledNodes = [] in
     
