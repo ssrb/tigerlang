@@ -394,7 +394,7 @@ let color color  =
     in
 
     let main () =
-        build();
+        build ();
         makeWorkList ();
         main0 ();
         assignColors ();
