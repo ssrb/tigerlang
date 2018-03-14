@@ -371,8 +371,6 @@ let color color  =
         ) !coalescedNodes
     in
 
-    let rewriteProgram _ = () in
-
     let rec main0 () = 
 
         if not (List.is_empty !simplifyWorklist) then
@@ -393,17 +391,14 @@ let color color  =
 
     in
 
-    let rec main () =
+    let main () =
         build();
         makeWorkList ();
         main0 ();
         assignColors ();
-        if not (List.is_empty !spilledNodes) then
-        begin
-            rewriteProgram ();
-            main ()
-        end
     in
+
+    main ();
 
     ((Temp.Table.empty : allocation), ([] : Temp.temp list))
 end
