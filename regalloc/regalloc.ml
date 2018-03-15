@@ -18,11 +18,30 @@ open Color
 let rec alloc (asm, frame) = 
 
     let rewriteProgram (asm, frame, spills) = 
-        let rewriteProgram' asm spill = 
+        let rewriteProgram' asm (spill : Temp.temp) = 
             let ae = Frame.exp ((Frame.allocLocal frame true), (Tree.TEMP Frame.fp)) in
             let fetch t = Codegen.codegen frame (Tree.MOVE (ae, Tree.TEMP(t))) in
             let store t = Codegen.codegen frame (Tree.MOVE (Tree.TEMP(t), ae)) in
-            asm
+            let rewriteOperands fs args  = 
+                if List.mem ~equal:(=) args spill then
+                    let t = Temp.newtemp () in
+                    (fs t, List.map ~f:(fun a -> if a = spill then t else a) args)
+                else
+                    ([], args)
+            in
+            let rewriteInstruction asm instr =
+                match instr with
+                | A.OPER {assem; dst; src; jump} ->
+                    let (fetch, src') = rewriteOperands fetch src in
+                    let (store, dst') = rewriteOperands store dst in
+                    fetch @ [ A.OPER {assem; dst = dst'; src = src'; jump} ] @ store @ asm
+                | A.MOVE {assem; dst; src} ->
+                    let (fetch, [ src' ]) = rewriteOperands fetch [ src ] in
+                    let (store, [ dst' ]) = rewriteOperands store [ dst ] in
+                    fetch @ [ A.MOVE {assem; dst = dst'; src = src'} ] @ store @ asm
+                | _ -> instr::asm
+            in
+            List.fold ~init:[] ~f:rewriteInstruction (List.rev asm)
         in
         List.fold ~init:asm ~f:rewriteProgram' spills
     in
