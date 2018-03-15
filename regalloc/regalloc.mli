@@ -1,7 +1,7 @@
-module F : functor(Frame : Frame.T) ->
+module F : functor(Codegen : Codegen.T) ->
 sig
-    module Temp : Temp.T
-    module Assem : Assem.T with module Temp = Temp
-    module Color : Color.T with module Temp = Temp
+    module Frame : Frame.T
+    module Assem : Assem.T
+    module Color : Color.T with module Frame = Frame and module Temp = Frame.Temp
     val alloc : Assem.instr list * Frame.frame -> Assem.instr list * Color.allocation
-end with module Temp = Frame.Temp and module Assem = Frame.Assem
+end with module Frame = Codegen.Frame and module Assem = Codegen.Assem

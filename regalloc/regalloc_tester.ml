@@ -3,7 +3,7 @@ module Translate = Translate.F(M68kFrame)
 module Semant = Semant.F(Translate)
 module Canon = Canon.F(M68kFrame.Tree)
 module M68K = M68kCodegen
-module Regalloc = Regalloc.F(M68kFrame)
+module Regalloc = Regalloc.F(M68K)
 
 open Core
 

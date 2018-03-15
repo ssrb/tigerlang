@@ -1,13 +1,16 @@
-module F = functor(Frame : Frame.T) ->
+module F = functor(Codegen : Codegen.T) ->
 struct
-module Temp = Frame.Temp
-module Assem = Frame.Assem
+module Frame = Codegen.Frame
+module Assem = Codegen.Assem
 
 module Makegraph = Makegraph.F(Assem)
 module Liveness = Liveness.F(Makegraph.Flow)
 module Color = Color.F (Frame) (Liveness)
 module A = Assem
+
+module Temp = Assem.Temp
 module TT = Temp.Table
+module Tree = Frame.Tree
 
 open Core
 open Color
@@ -16,6 +19,9 @@ let rec alloc (asm, frame) =
 
     let rewriteProgram (asm, frame, spills) = 
         let rewriteProgram' asm spill = 
+            let ae = Frame.exp ((Frame.allocLocal frame true), (Tree.TEMP Frame.fp)) in
+            let fetch t = Codegen.codegen frame (Tree.MOVE (ae, Tree.TEMP(t))) in
+            let store t = Codegen.codegen frame (Tree.MOVE (Tree.TEMP(t), ae)) in
             asm
         in
         List.fold ~init:asm ~f:rewriteProgram' spills
