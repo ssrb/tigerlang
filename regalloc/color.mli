@@ -3,7 +3,7 @@ module Temp : Temp.T
 module Frame : Frame.T
 module Liveness : Liveness.T
 type allocation = Frame.register Temp.Table.table
-type color = {interference: Liveness.igraph; initial: allocation; spillCost: Graph.node -> int; registers: Frame.register list} 
+type color = {interference: Liveness.igraph; initial: allocation; spillCost: Graph.node -> float; registers: Frame.register list} 
 val color :  color -> allocation * Temp.temp list
 end
 

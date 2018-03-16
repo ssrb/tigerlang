@@ -3,7 +3,7 @@ module Temp : Temp.T
 module Frame : Frame.T
 module Liveness : Liveness.T
 type allocation = Frame.register Temp.Table.table
-type color = {interference: Liveness.igraph; initial: allocation; spillCost: Graph.node -> int; registers: Frame.register list} 
+type color = {interference: Liveness.igraph; initial: allocation; spillCost: Graph.node -> float; registers: Frame.register list} 
 val color :  color -> allocation * Temp.temp list
 end
 
@@ -18,7 +18,7 @@ module Temp = Frame.Temp
 module TT = Temp.Table
 
 type allocation = Frame.register Temp.Table.table
-type color = {interference: Liveness.igraph; initial: allocation; spillCost: Graph.node -> int; registers: Frame.register list} 
+type color = {interference: Liveness.igraph; initial: allocation; spillCost: Graph.node -> float; registers: Frame.register list} 
 
 module Move = Comparable.Make (
     struct
@@ -331,7 +331,7 @@ let color color  =
         let m = List.fold ~init:None ~f:(fun m s ->
             let c =  color.spillCost s in
             match m with 
-            | Some (ms, mc) -> if c > mc then Some (ms, mc) else  m
+            | Some (ms, mc) -> if c < mc then Some (ms, mc) else m
             | None -> Some (s, c)
         ) !spillWorklist
         in
