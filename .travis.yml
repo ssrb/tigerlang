@@ -18,7 +18,6 @@ script:
 - wget http://sun.hasenbraten.de/vlink/release/vlink.tar.gz
 - tar xzvf vlink.tar.gz
 - pushd vlink
-- mkdir objects
 - make
 - popd
 - wget http://www.ibaug.de/vbcc/vbcc.tar.gz
