@@ -7,6 +7,7 @@ before_install:
 - sudo wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sh -s /usr/local/bin
 - export OPAMYES=1
 - opam install jbuilder.1.0+beta17 ocamlfind core menhir ppx_deriving
+- apt-get install jlha-utils
 script:
 - eval $(opam config env)
 - make
@@ -26,3 +27,6 @@ script:
 - mkdir bin
 - yes "" | make TARGET=m68k
 - yes "" | make TARGET=m68ks
+- popd
+- wget http://server.owl.de/~frank/vbcc/2017-08-14/vbcc_unix_config.tar.gz
+- wget http://server.owl.de/~frank/vbcc/2017-08-14/vbcc_target_m68k-kick13.lha
