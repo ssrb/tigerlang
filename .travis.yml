@@ -41,5 +41,5 @@ script:
 - mv vbcc_target_m68k-kick13/targets ${VBCC}/
 - export PATH=${VBCC}/bin:${PATH}
 - pushd main
-- vc +kick13 -c runtime.c
+- vc +kick13 runtime.c foo.S 
 - popd
