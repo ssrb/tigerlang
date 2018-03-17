@@ -35,6 +35,7 @@ script:
 - wget http://server.owl.de/~frank/vbcc/2017-08-14/vbcc_unix_config.tar.gz
 - tar xzvf vbcc_unix_config.tar.gz
 - mv config ${VBCC}
+- sed -i 's/-no-cpp-warn//' ${VBCC}/config/*
 - wget http://server.owl.de/~frank/vbcc/2017-08-14/vbcc_target_m68k-kick13.lha
 - lha x vbcc_target_m68k-kick13.lha
 - mv vbcc_target_m68k-kick13/targets ${VBCC}/
