@@ -59,9 +59,8 @@ let format saytemp =
 		  | [] -> []
 	  in implode(f(explode assem))
   in (fun x -> match x with
-	 	| OPER {assem;dst;src;jump=None} -> speak(assem, dst, src, [])
-    | OPER {assem;dst;src;jump=Some j} -> speak(assem, dst, src,j)
-	  | LABEL {assem} -> assem
-	  | MOVE {assem;dst;src} -> speak(assem, [dst], [src], []))
+	 	| LABEL lbl -> lbl.assem
+	 	| OPER op -> "\t" ^ speak(op.assem, op.dst, op.src, Option.value op.jump ~default:[])
+	  | MOVE mv -> "\t" ^ speak(mv.assem, [mv.dst], [mv.src], []))
 
 end
