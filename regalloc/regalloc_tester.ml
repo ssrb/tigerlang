@@ -21,15 +21,15 @@ let f acc frag =
 	match frag with
 	| Translate.Frame.PROC proc -> 
 
-		let res = proc.body 
+		let asm = proc.body 
 			|> Canon.linearize 
 			|> Canon.basicBlocks 
 			|> Canon.traceSchedule 
 			|> List.map ~f:(M68K.codegen proc.frame)
-			|> List.map ~f:(fun asm -> Regalloc.alloc (asm, proc.frame))
+			|> List.concat
 		in 
 
-		res::acc
+		Regalloc.alloc (asm, proc.frame)::acc
 
 	| Translate.Frame.STRING _ -> acc
 in

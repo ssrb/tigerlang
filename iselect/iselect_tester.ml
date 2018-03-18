@@ -23,14 +23,13 @@ let f frag =
 		|> Canon.linearize 
 		|> Canon.basicBlocks 
 		|> Canon.traceSchedule 
-		|> List.iter ~f:(fun tree -> 
-			tree
-			|> M68K.codegen proc.frame
-			|> List.iter ~f:(fun asm -> 
-				asm
-				|> M68K.Assem.sexp_of_instr
-				|> Sexp.output_hum stdout;
-				newline stdout))
+		|> List.map ~f:(M68K.codegen proc.frame)
+		|> List.concat
+		|> List.iter ~f:(fun instr -> 
+			instr
+			|> M68K.Assem.format M68kTemp.makestring
+			|> Out_channel.print_endline
+		)
 	| Translate.Frame.STRING _ -> ()
 in
 
