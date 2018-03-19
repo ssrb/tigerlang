@@ -7,13 +7,22 @@ open Core
 open Assem
 open Graph
 
+let dotGraph flowgraph = 
+    Out_channel.print_endline "digraph G {";
+    List.iter ~f:(fun n -> 
+        List.iter ~f:(fun m ->
+            Out_channel.print_endline ((Graph.nodename n) ^ " -> " ^ (Graph.nodename m) ^ ";");
+        ) (Graph.succ n)
+    ) flowgraph.control;
+    Out_channel.print_endline "}"
+
 let instrs2graph instrs =
     
     let create_nodes instrs = 
 
         let graph = Graph.newGraph () in
 
-        let aux (fgraph, labToNode, lnodes, labels) instr = 
+        let aux (fgraph, labToNode, lnodes, labels, ginstr) instr = 
 
             match instr with
             | OPER op ->
@@ -30,7 +39,7 @@ let instrs2graph instrs =
                 
                 let labToNode = List.fold ~init:labToNode ~f:(fun t l -> Symbol.enter (t, l, node)) labels in
                 
-                (fgraph, labToNode, (node, op.jump)::lnodes, [])
+                (fgraph, labToNode, (node, op.jump)::lnodes, [], Graph.Table.enter (ginstr, node, instr))
 
             | MOVE mv ->
                 
@@ -46,17 +55,17 @@ let instrs2graph instrs =
 
                 let labToNode = List.fold ~init:labToNode ~f:(fun t l -> Symbol.enter (t, l, node)) labels in
 
-                (fgraph, labToNode, (node, None)::lnodes, [])
+                (fgraph, labToNode, (node, None)::lnodes, [], Graph.Table.enter (ginstr, node, instr))
 
-            | LABEL lab -> (fgraph, labToNode, lnodes, lab.lab::labels)
+            | LABEL lab -> (fgraph, labToNode, lnodes, lab.lab::labels, ginstr)
         in
 
-        let (fgraph, labToNode, lnodes, labels) = List.fold ~init:({ 
+        let (fgraph, labToNode, lnodes, labels, ginstr) = List.fold ~init:({ 
             control = []; 
             def = Graph.Table.empty; 
             use = Graph.Table.empty;
             ismove = Graph.Table.empty
-        }, Symbol.empty, [], []) ~f:aux instrs
+        }, Symbol.empty, [], [], Graph.Table.empty) ~f:aux instrs
         in
 
         let (labToNode, lnodes) = 
@@ -68,7 +77,7 @@ let instrs2graph instrs =
                 (labToNode, (node, None)::lnodes)
         in
 
-        (fgraph, labToNode, List.rev lnodes)
+        (fgraph, labToNode, List.rev lnodes, ginstr)
     in
 
     let rec create_edges labToNode lnodes =
@@ -90,10 +99,14 @@ let instrs2graph instrs =
         | _ ->  ()
     in
 
-    let (flowgraph, labToNode, lnodes) = create_nodes instrs in
+    let (flowgraph, labToNode, lnodes, ginstr) = create_nodes instrs in
 
     create_edges labToNode lnodes;
-    
-    {flowgraph with control = List.map ~f:(fun (n, _) -> n) lnodes}
+
+    let flowgraph =  {flowgraph with control = List.map ~f:(fun (n, _) -> n) lnodes} in
+
+    dotGraph flowgraph;
+
+    (flowgraph, (fun node -> Graph.Table.look_exn (ginstr, node)))
 
 end

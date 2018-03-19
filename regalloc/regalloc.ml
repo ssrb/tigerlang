@@ -54,7 +54,7 @@ let rec alloc (asm, frame) =
         List.fold ~init:asm ~f:rewriteProgram' spills
     in
 
-    let fgraph =  Makegraph.instrs2graph asm in
+    let fgraph, _ginstr =  Makegraph.instrs2graph asm in
     let igraph = Liveness.interferenceGraph fgraph in
 
     let spillCost n =

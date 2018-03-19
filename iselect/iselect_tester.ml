@@ -30,7 +30,10 @@ let f frag =
 			|> M68K.Assem.format M68kTemp.makestring
 			|> Out_channel.print_endline
 		)
-	| Translate.Frame.STRING _ -> ()
+	| Translate.Frame.STRING _ -> ();
+	Out_channel.newline Out_channel.stdout;
+	Out_channel.newline Out_channel.stdout
+
 in
 
 let _ = fragments |> List.iter ~f:f in
