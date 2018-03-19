@@ -89,15 +89,17 @@ let interferenceGraph flowgraph =
             let tnode = TT.enter (tnode, d, node) in
             let gtemp = GT.enter (gtemp, node, d) in
             let moves = l |> List.fold ~init:moves ~f:(fun moves out -> 
-                let node' = TT.look_exn (tnode, out) in
-                if not ismove then begin
-                    Graph.mk_edge {f = node; t= node'};
-                    moves
-                end else begin
-                    if List.hd_exn use <> out then
-                        Graph.mk_edge {f = node; t= node'};
-                    (node, node')::moves
-                end
+                match TT.look (tnode, out) with
+                | Some node' ->
+                    if not ismove then begin
+                        Graph.mk_edge Graph.{f = node; t= node'};
+                        moves
+                    end else begin
+                        if List.hd_exn use <> out then
+                            Graph.mk_edge Graph.{f = node; t= node'};
+                        (node, node')::moves
+                    end
+                | None -> moves
             )
             in
             (tnode, gtemp, moves)

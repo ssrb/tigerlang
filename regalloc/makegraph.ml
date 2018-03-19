@@ -7,9 +7,10 @@ open Core
 open Assem
 open Graph
 
-let dotGraph flowgraph = 
+let dotGraph flowgraph ginstr = 
     Out_channel.print_endline "digraph G {";
     List.iter ~f:(fun n -> 
+        Out_channel.print_endline ((Graph.nodename n) ^ "[shape=box,label=\"" ^ (Assem.format Assem.Temp.makestring (ginstr n)) ^ "\"]");
         List.iter ~f:(fun m ->
             Out_channel.print_endline ((Graph.nodename n) ^ " -> " ^ (Graph.nodename m) ^ ";");
         ) (Graph.succ n)
@@ -68,13 +69,20 @@ let instrs2graph instrs =
         }, Symbol.empty, [], [], Graph.Table.empty) ~f:aux instrs
         in
 
-        let (labToNode, lnodes) = 
+        let (fgraph, labToNode, lnodes, ginstr) = 
             match labels with
-            | [] -> (labToNode, lnodes)
+            | [] -> (fgraph, labToNode, lnodes, ginstr)
             | _ -> 
                 let node = Graph.newNode graph in
                 let labToNode = List.fold ~init:labToNode ~f:(fun t l -> Symbol.enter (t, l, node)) labels in
-                (labToNode, (node, None)::lnodes)
+                let fgraph = { 
+                    control = [];
+                    def = Graph.Table.enter (fgraph.def, node, []);
+                    use = Graph.Table.enter (fgraph.use, node, []);
+                    ismove = Graph.Table.enter (fgraph.ismove, node, false)
+                } 
+                in
+                (fgraph, labToNode, (node, None)::lnodes, Graph.Table.enter (ginstr, node, Assem.OPER {assem = "nop"; dst = []; src = []; jump = None}))
         in
 
         (fgraph, labToNode, List.rev lnodes, ginstr)
@@ -105,8 +113,10 @@ let instrs2graph instrs =
 
     let flowgraph =  {flowgraph with control = List.map ~f:(fun (n, _) -> n) lnodes} in
 
-    dotGraph flowgraph;
+    let ginstr = (fun node -> Graph.Table.look_exn (ginstr, node)) in
 
-    (flowgraph, (fun node -> Graph.Table.look_exn (ginstr, node)))
+    dotGraph flowgraph ginstr;
+
+    (flowgraph, ginstr)
 
 end

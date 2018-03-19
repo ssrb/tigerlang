@@ -27,7 +27,7 @@ let f frag =
 		|> List.concat
 		|> List.iter ~f:(fun instr -> 
 			instr
-			|> M68K.Assem.format M68kTemp.makestring
+			|> M68K.Assem.format_hum M68kTemp.makestring
 			|> Out_channel.print_endline
 		)
 	| Translate.Frame.STRING _ -> ();

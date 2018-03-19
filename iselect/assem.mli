@@ -14,6 +14,7 @@ type instr =
 	| MOVE of {assem: string; dst: temp; src: temp} [@@deriving sexp]
 
 val format : (temp -> string) -> instr -> string
+val format_hum : (temp -> string) -> instr -> string
 
 end
 

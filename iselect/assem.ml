@@ -14,6 +14,7 @@ type instr =
 	| MOVE of {assem: string; dst: temp; src: temp} [@@deriving sexp]
 
 val format : (temp -> string) -> instr -> string
+val format_hum : (temp -> string) -> instr -> string
 
 end
 
@@ -60,7 +61,13 @@ let format saytemp =
 	  in implode(f(explode assem))
   in (fun x -> match x with
 	 	| LABEL lbl -> lbl.assem
-	 	| OPER op -> "\t" ^ speak(op.assem, op.dst, op.src, Option.value op.jump ~default:[])
-	  | MOVE mv -> "\t" ^ speak(mv.assem, [mv.dst], [mv.src], []))
+	 	| OPER op -> speak(op.assem, op.dst, op.src, Option.value op.jump ~default:[])
+	  | MOVE mv -> speak(mv.assem, [mv.dst], [mv.src], []))
+
+let format_hum saytemp x =
+		(match x with
+	 	| LABEL lbl -> ""
+	 	| _ -> "\t") ^
+		(format saytemp x)
 
 end
