@@ -101,7 +101,7 @@ let rm_edge = diddle_edge delete
 module Table = struct
 
   module NodeKey = struct
-        type t = node
+        type t = node [@@deriving sexp]
         let getInt (g, n) = n
   end
 

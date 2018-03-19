@@ -2,13 +2,13 @@ open Core
 
 module type IntMapTableKey = 
 sig
-	type t
+	type t [@@deriving sexp]
 	val getInt: t -> int
 end
 
 module IntMapTable = functor(Key: IntMapTableKey) ->
 struct
-  type key = Key.t
+  type key = Key.t [@@deriving sexp]
 
   type 'a table = 'a Int.Map.t
   
@@ -18,5 +18,5 @@ struct
   
   let look (t, k) = Map.find t (Key.getInt k)
 
-  let look_exn x = Option.value_exn (look x)
+  let look_exn (t, k) = Option.value_exn ~error:(Error.create "Unknown key" k [%sexp_of: key]) (look (t, k))
 end

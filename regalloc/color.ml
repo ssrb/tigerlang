@@ -54,19 +54,19 @@ let color color  =
         one of these sets (after "build" through the end of "main")
     *)
 
-    (* Moves not yet ready for coalescing *)
+    (* 1 - Moves not yet ready for coalescing *)
     let activeMoves = ref MS.empty in
 
-    (* Move that have been colaesced *)
+    (* 2 - Moves that have been colaesced *)
     let coalescedMoves = ref MS.empty in
 
-    (* Moves whose source and target interfere *)
+    (* 3 - Moves whose source and target interfere *)
     let constrainedMoves = ref MS.empty in
 
-    (* Moves that will no longer be considered for coalescing *)
+    (* 4 - Moves that will no longer be considered for coalescing *)
     let frozenMoves = ref MS.empty in
 
-    (* Moves enabled for possible coalescing *)
+    (* 5 - Moves enabled for possible coalescing *)
     let worklistMoves = ref MS.empty in
 
 
@@ -82,8 +82,6 @@ let color color  =
     (* An array containing the current degree of each node *)
     let degree = ref NT.empty in
     
-    (* color.interference.graph |> List.fold ~init:NT.empty ~f:(fun degree n -> NT.enter (degree, n , ref (List.length (Graph.succ n)))) *)
-
     let addEdge (u, v) =
 
         let add (u, v) = 
@@ -91,7 +89,7 @@ let color color  =
             begin
                 adjSet := MS.add !adjSet (u, v);
 
-                if not (NS.mem !precolored u) then
+                (*if not (NS.mem !precolored u) then*)
                 begin
                     adjList := NT.enter (!adjList, u, 
                         match NT.look (!adjList, u) with
@@ -104,7 +102,7 @@ let color color  =
                         | Some d ->  d + 1
                         | None -> 1
                     );
-                end;
+                end
             end
         in 
         add (u, v);

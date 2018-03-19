@@ -24,7 +24,7 @@ let name (s, n) = s
 
 module SymbolKey =
 struct
- type t = symbol
+ type t = symbol [@@deriving sexp]
  let getInt (s, n) = n
 end
 

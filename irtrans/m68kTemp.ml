@@ -13,7 +13,7 @@ let namedlabel = Symbol.symbol
 module Table = struct
 
     module SymbolKey = struct
-        type t = temp
+        type t = temp [@@deriving sexp]
         let getInt t = t
     end
 
