@@ -13,7 +13,11 @@ type frame = {name: Temp.label; formals: access list; offset: int ref}  [@@deriv
 type frag = PROC of {body: Tree.stm; frame: frame} | STRING of Temp.label * string [@@deriving sexp]
 type register = string [@@deriving sexp]
 
-let registers = []
+let registers = 
+    (List.init 7 ~f:(fun i -> "d" ^ Int.to_string i)) @ 
+    (List.init 7 ~f:(fun i -> "a" ^ Int.to_string i)) @
+    [ "pc"; "ccr" ]
+    
 let specialregs = []
 let argregs = []
 let calleesaves = []

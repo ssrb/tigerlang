@@ -35,34 +35,29 @@ type instr =
 	| LABEL of {assem: string; lab: Temp.label}
 	| MOVE of {assem: string; dst: temp; src: temp} [@@deriving sexp]
 
-let explode s =
-  let rec exp i l =
-    if i < 0 then l else exp (i - 1) (s.[i] :: l) in
-  exp (String.length s - 1) [];;
-
-let implode l =
-  let res = String.create (List.length l) in
-  let rec imp i = function
-  | [] -> res
-  | c :: l -> res.[i] <- c; imp (i + 1) l in
-  imp 0 l;;
+let atoi c = (int_of_char c) - (int_of_char '0')
 
 let format saytemp =
 	let speak(assem, dst, src, jump) =
 		let saylab = Symbol.name in
 		let rec f = function
-			| '`'::'s'::i::rest -> (explode(saytemp(List.nth_exn src ((int_of_char i) - (int_of_char '0'))))) @ (f rest)
-		  |  '`'::'d'::i::rest -> (explode(saytemp(List.nth_exn dst ((int_of_char i) - (int_of_char '0'))))) @ (f rest)
-		  | '`'::'j':: i:: rest -> (explode(saylab(List.nth_exn jump ((int_of_char i) - (int_of_char '0'))))) @ (f rest)
-		  | '`'::'`'::rest -> '`'::(f rest)
-		  | '`'::_::rest -> raise (Assem_error "bad Assem format")
-		  | c::rest -> c::(f rest)
-		  | [] -> []
-	  in implode(f(explode assem))
-  in (fun x -> match x with
+			| '`'::'s'::c::rest -> (String.to_list (saytemp (List.nth_exn src (atoi c)))) @ (f rest)
+			| '`'::'d'::c::rest -> (String.to_list (saytemp (List.nth_exn dst (atoi c)))) @ (f rest)
+			| '`'::'j'::c:: rest -> (String.to_list (saylab (List.nth_exn jump (atoi c)))) @ (f rest)
+			| '`'::'`'::rest -> '`'::(f rest)
+			| '`'::_::rest -> raise (Assem_error "bad Assem format")
+			| c::rest -> c::(f rest)
+			| [] -> []
+	  in 
+	  assem 
+	  |> String.to_list 
+	  |> f 
+	  |> String.of_char_list
+
+	in (fun x -> match x with
 	 	| LABEL lbl -> lbl.assem
-	 	| OPER op -> speak(op.assem, op.dst, op.src, Option.value op.jump ~default:[])
-	  | MOVE mv -> speak(mv.assem, [mv.dst], [mv.src], []))
+		| OPER op -> speak(op.assem, op.dst, op.src, Option.value op.jump ~default:[])
+		| MOVE mv -> speak(mv.assem, [mv.dst], [mv.src], []))
 
 let format_hum saytemp x =
 		(match x with

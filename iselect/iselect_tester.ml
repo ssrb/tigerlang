@@ -30,9 +30,8 @@ let f frag =
 			|> M68K.Assem.format_hum M68kTemp.makestring
 			|> Out_channel.print_endline
 		)
-	| Translate.Frame.STRING _ -> ();
-	Out_channel.newline Out_channel.stdout;
-	Out_channel.newline Out_channel.stdout
+	| Translate.Frame.STRING (lbl, str) -> 
+		Out_channel.print_endline ((Symbol.name lbl) ^ ": \"" ^ str ^ "\"");
 
 in
 
