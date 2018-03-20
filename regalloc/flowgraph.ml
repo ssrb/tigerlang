@@ -24,7 +24,8 @@ type flowgraph = {
 }
 
 let show outstream flowgraph ginstr = 
-    Out_channel.print_endline "digraph G {";
+    Out_channel.output_string outstream "digraph G {";
+    Out_channel.newline outstream;
     List.iter ~f:(fun n -> 
         let ms = Graph.succ n in
         
@@ -33,13 +34,16 @@ let show outstream flowgraph ginstr =
         ^ (if List.length ms > 1 then "diamond" else "box") 
         ^ ",label=\"" 
         ^ (ginstr n) ^ "\"]")
-        |> Out_channel.print_endline;
+        |> Out_channel.output_string outstream;
+        Out_channel.newline outstream;
         
         List.iter ~f:(fun m ->
-            Out_channel.print_endline ((Graph.nodename n) ^ " -> " ^ (Graph.nodename m) ^ ";");
+            Out_channel.output_string outstream ((Graph.nodename n) ^ " -> " ^ (Graph.nodename m) ^ ";");
+            Out_channel.newline outstream;
         ) ms
     ) flowgraph.control;
-    Out_channel.print_endline "}"
+    Out_channel.output_string outstream "}";
+    Out_channel.newline outstream;
 
 end   
   (* Note:  any "use" within the block is assumed to be BEFORE a "def" 
