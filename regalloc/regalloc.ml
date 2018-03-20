@@ -79,9 +79,11 @@ let rec alloc (asm, frame) =
         let asm = List.filter ~f:(fun instr ->
             match instr with
             | A.MOVE {assem; dst; src} ->
-                let dst = TT.look_exn (colors, dst) in
-                let src = TT.look_exn (colors, src) in
-                dst <> src
+            begin
+                match TT.look (colors, dst), TT.look (colors, src) with
+                | Some dst, Some src -> dst <> src
+                | _ -> true
+            end
             | _ -> true
         ) asm
         in

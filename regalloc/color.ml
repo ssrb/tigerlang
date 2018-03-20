@@ -89,19 +89,10 @@ let color color  =
             begin
                 adjSet := MS.add !adjSet (u, v);
 
-                (*if not (NS.mem !precolored u) then*)
+                if not (NS.mem !precolored u) then
                 begin
-                    adjList := NT.enter (!adjList, u, 
-                        match NT.look (!adjList, u) with
-                        | Some vs -> NS.add vs v 
-                        | None -> NS.singleton v
-                    );
-
-                    degree := NT.enter (!degree, u, 
-                        match NT.look (!degree, u) with
-                        | Some d ->  d + 1
-                        | None -> 1
-                    );
+                    adjList := NT.enter (!adjList, u, (NS.add (NT.look_exn (!adjList, u)) v));
+                    degree := NT.enter (!degree, u, 1 + NT.look_exn (!degree, u))
                 end
             end
         in 
@@ -110,13 +101,10 @@ let color color  =
     in
 
     let build () =
+
         let addMove (n, m) = 
             let tmp = gtemp n in
-            moveList := TT.enter (!moveList, tmp, 
-                match TT.look (!moveList, tmp) with
-                | Some moves -> MS.add moves m
-                | None -> MS.singleton m
-            )
+            moveList := TT.enter (!moveList, tmp, MS.add (TT.look_exn (!moveList, tmp)) m)
         in
 
         List.iter ~f:(fun n -> 
@@ -127,7 +115,8 @@ let color color  =
                 precolored := NS.add !precolored n;
                 coloredNodes := TT.enter(!coloredNodes, tmp, r)
             | None ->
-                initial := n::!initial
+                initial := n::!initial;
+             moveList := TT.enter (!moveList, (gtemp n), MS.empty)
         ) color.interference.graph;
 
         List.iter ~f:(fun ((src, dst) as m) ->
@@ -139,11 +128,13 @@ let color color  =
                 worklistMoves := MS.add !worklistMoves m
         ) color.interference.moves;
 
-         List.iter ~f:(fun u ->
+        List.iter ~f:(fun u ->
+            adjList := NT.enter (!adjList, u, NS.empty);
+            degree := NT.enter (!degree, u, 0);
             List.iter ~f:(fun v ->
                 addEdge (u, v)
             ) (Graph.succ u)
-         ) color.interference.graph
+        ) color.interference.graph
     in
 
     let nodeMoves n =
@@ -358,10 +349,9 @@ let color color  =
             if List.is_empty !okColors then
                 spilledNodes := t::!spilledNodes
             else
-            begin
                 let c = List.hd_exn !okColors in
                 coloredNodes := TT.enter (!coloredNodes, t, c);
-            end
+
         ) !selectStack;
 
         NS.iter ~f:(fun n ->

@@ -4,6 +4,8 @@ module Semant = Semant.F(Translate)
 module Canon = Canon.F(M68kFrame.Tree)
 module M68K = M68kCodegen
 module Regalloc = Regalloc.F(M68K)
+module Temp = M68kFrame.Temp
+module TT = Temp.Table
 
 open Core
 
@@ -17,7 +19,7 @@ let fragments =
 	|> Semant.transProg2
 in
 
-let f acc frag =
+let f frag =
 	match frag with
 	| Translate.Frame.PROC proc -> 
 
@@ -29,10 +31,16 @@ let f acc frag =
 			|> List.concat
 		in 
 
-		Regalloc.alloc (asm, proc.frame)::acc
+		let asm, allocation = Regalloc.alloc (asm, proc.frame) in
 
-	| Translate.Frame.STRING _ -> acc
+		List.iter ~f:(fun instr -> 
+			instr
+			|> M68K.Assem.format_hum (fun tmp -> Option.value ~default:(Temp.makestring tmp) (TT.look (allocation, tmp)))
+			|> Out_channel.print_endline) asm
+	
+	| Translate.Frame.STRING (lbl, str) -> 
+		Out_channel.print_endline ((Symbol.name lbl) ^ ": \"" ^ str ^ "\"");
 in
 
-let _ = fragments |> List.fold ~init:[] ~f:f in
+let _ = fragments |> List.iter ~f:f in
 ()
