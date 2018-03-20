@@ -7,24 +7,6 @@ open Flow
 open Core
 open Assem
 
-let dotGraph flowgraph ginstr = 
-    Out_channel.print_endline "digraph G {";
-    List.iter ~f:(fun n -> 
-        let ms = Graph.succ n in
-        
-        ((Graph.nodename n) 
-        ^ "[shape=" 
-        ^ (if List.length ms > 1 then "diamond" else "box") 
-        ^ ",label=\"" 
-        ^ (Assem.format Assem.Temp.makestring (ginstr n)) ^ "\"]")
-        |> Out_channel.print_endline;
-        
-        List.iter ~f:(fun m ->
-            Out_channel.print_endline ((Graph.nodename n) ^ " -> " ^ (Graph.nodename m) ^ ";");
-        ) ms
-    ) flowgraph.control;
-    Out_channel.print_endline "}"
-
 let instrs2graph instrs =
     
     let create_nodes instrs = 
@@ -122,8 +104,6 @@ let instrs2graph instrs =
     let flowgraph =  {flowgraph with control = List.map ~f:(fun (n, _) -> n) lnodes} in
 
     let ginstr = (fun node -> GT.look_exn (ginstr, node)) in
-
-    dotGraph flowgraph ginstr;
 
     (flowgraph, ginstr)
 

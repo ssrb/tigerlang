@@ -4,7 +4,8 @@ module Frame = Codegen.Frame
 module Assem = Codegen.Assem
 
 module Makegraph = Makegraph.F(Assem)
-module Liveness = Liveness.F(Makegraph.Flow)
+module Flowgraph = Makegraph.Flow
+module Liveness = Liveness.F(Flowgraph)
 module Color = Color.F (Frame) (Liveness)
 module A = Assem
 
@@ -54,7 +55,10 @@ let rec alloc (asm, frame) =
         List.fold ~init:asm ~f:rewriteProgram' spills
     in
 
-    let fgraph, _ginstr =  Makegraph.instrs2graph asm in
+    let fgraph, ginstr =  Makegraph.instrs2graph asm in
+
+    Flowgraph.show Out_channel.stdout fgraph (fun n -> n |> ginstr |> Assem.format Temp.makestring);
+
     let igraph = Liveness.interferenceGraph fgraph in
 
     let spillCost n =

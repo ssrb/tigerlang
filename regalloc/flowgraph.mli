@@ -6,6 +6,9 @@ type flowgraph = {
       use: Temp.temp list Graph.Table.table;
       ismove: bool Graph.Table.table
 }
+
+val show : Core.Out_channel.t -> flowgraph -> (Graph.node -> string) -> unit 
+
 end
 
 module F : functor(Temp : Temp.T) -> T with module Temp = Temp
