@@ -1,19 +1,27 @@
 module F = functor(Assem : Assem.T) -> struct
 
 module Flow = Flowgraph.F(Assem.Temp)
+module GT = Graph.Table
 
 open Flow
 open Core
 open Assem
-open Graph
 
 let dotGraph flowgraph ginstr = 
     Out_channel.print_endline "digraph G {";
     List.iter ~f:(fun n -> 
-        Out_channel.print_endline ((Graph.nodename n) ^ "[shape=box,label=\"" ^ (Assem.format Assem.Temp.makestring (ginstr n)) ^ "\"]");
+        let ms = Graph.succ n in
+        
+        ((Graph.nodename n) 
+        ^ "[shape=" 
+        ^ (if List.length ms > 1 then "diamond" else "box") 
+        ^ ",label=\"" 
+        ^ (Assem.format Assem.Temp.makestring (ginstr n)) ^ "\"]")
+        |> Out_channel.print_endline;
+        
         List.iter ~f:(fun m ->
             Out_channel.print_endline ((Graph.nodename n) ^ " -> " ^ (Graph.nodename m) ^ ";");
-        ) (Graph.succ n)
+        ) ms
     ) flowgraph.control;
     Out_channel.print_endline "}"
 
@@ -32,15 +40,15 @@ let instrs2graph instrs =
 
                 let fgraph = { 
                     control = [];
-                    def = Graph.Table.enter (fgraph.def, node, op.dst);
-                    use = Graph.Table.enter (fgraph.use, node, op.src);
-                    ismove = Graph.Table.enter (fgraph.ismove, node, false)
+                    def = GT.enter (fgraph.def, node, op.dst);
+                    use = GT.enter (fgraph.use, node, op.src);
+                    ismove = GT.enter (fgraph.ismove, node, false)
                 }
                 in
                 
                 let labToNode = List.fold ~init:labToNode ~f:(fun t l -> Symbol.enter (t, l, node)) labels in
                 
-                (fgraph, labToNode, (node, op.jump)::lnodes, [], Graph.Table.enter (ginstr, node, instr))
+                (fgraph, labToNode, (node, op.jump)::lnodes, [], GT.enter (ginstr, node, instr))
 
             | MOVE mv ->
                 
@@ -48,25 +56,25 @@ let instrs2graph instrs =
 
                 let fgraph = { 
                     control = [];
-                    def = Graph.Table.enter (fgraph.def, node, [ mv.dst ]);
-                    use = Graph.Table.enter (fgraph.use, node, [ mv.src ]);
-                    ismove = Graph.Table.enter (fgraph.ismove, node, true)
+                    def = GT.enter (fgraph.def, node, [ mv.dst ]);
+                    use = GT.enter (fgraph.use, node, [ mv.src ]);
+                    ismove = GT.enter (fgraph.ismove, node, true)
                 } 
                 in
 
                 let labToNode = List.fold ~init:labToNode ~f:(fun t l -> Symbol.enter (t, l, node)) labels in
 
-                (fgraph, labToNode, (node, None)::lnodes, [], Graph.Table.enter (ginstr, node, instr))
+                (fgraph, labToNode, (node, None)::lnodes, [], GT.enter (ginstr, node, instr))
 
             | LABEL lab -> (fgraph, labToNode, lnodes, lab.lab::labels, ginstr)
         in
 
         let (fgraph, labToNode, lnodes, labels, ginstr) = List.fold ~init:({ 
             control = []; 
-            def = Graph.Table.empty; 
-            use = Graph.Table.empty;
-            ismove = Graph.Table.empty
-        }, Symbol.empty, [], [], Graph.Table.empty) ~f:aux instrs
+            def = GT.empty; 
+            use = GT.empty;
+            ismove = GT.empty
+        }, Symbol.empty, [], [], GT.empty) ~f:aux instrs
         in
 
         let (fgraph, labToNode, lnodes, ginstr) = 
@@ -77,12 +85,12 @@ let instrs2graph instrs =
                 let labToNode = List.fold ~init:labToNode ~f:(fun t l -> Symbol.enter (t, l, node)) labels in
                 let fgraph = { 
                     control = [];
-                    def = Graph.Table.enter (fgraph.def, node, []);
-                    use = Graph.Table.enter (fgraph.use, node, []);
-                    ismove = Graph.Table.enter (fgraph.ismove, node, false)
+                    def = GT.enter (fgraph.def, node, []);
+                    use = GT.enter (fgraph.use, node, []);
+                    ismove = GT.enter (fgraph.ismove, node, false)
                 } 
                 in
-                (fgraph, labToNode, (node, None)::lnodes, Graph.Table.enter (ginstr, node, Assem.OPER {assem = "nop"; dst = []; src = []; jump = None}))
+                (fgraph, labToNode, (node, None)::lnodes, GT.enter (ginstr, node, Assem.OPER {assem = "nop"; dst = []; src = []; jump = None}))
         in
 
         (fgraph, labToNode, List.rev lnodes, ginstr)
@@ -95,13 +103,13 @@ let instrs2graph instrs =
         | (n, Some ls)::lnodes ->
             List.iter ~f:(fun l ->
                 match Symbol.look (labToNode, l) with
-                | Some n' -> Graph.mk_edge {f = n; t = n'}
+                | Some n' -> Graph.(mk_edge {f = n; t = n'})
                 | None -> assert(false)
             ) ls;
             create_edges labToNode lnodes
         
         | (n, None)::(((n', _)::_) as lnodes) -> 
-            Graph.mk_edge {f = n; t = n'};
+            Graph.(mk_edge {f = n; t = n'});
             create_edges labToNode lnodes
         
         | _ ->  ()
@@ -113,7 +121,7 @@ let instrs2graph instrs =
 
     let flowgraph =  {flowgraph with control = List.map ~f:(fun (n, _) -> n) lnodes} in
 
-    let ginstr = (fun node -> Graph.Table.look_exn (ginstr, node)) in
+    let ginstr = (fun node -> GT.look_exn (ginstr, node)) in
 
     dotGraph flowgraph ginstr;
 
