@@ -61,6 +61,8 @@ let rec alloc (asm, frame) =
 
     let igraph = Liveness.interferenceGraph fgraph in
 
+    Liveness.show Out_channel.stdout igraph;
+
     let spillCost n =
         let tmp = igraph.gtemp n in
         let used t l = if member l t then 1 else 0 in

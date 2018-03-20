@@ -21,6 +21,7 @@ module Flow = Flow
 module Temp = Flow.Temp
 
 module TT = Temp.Table
+module TS = Temp.Set
 module GT = Graph.Table
 
 open Core
@@ -33,21 +34,24 @@ type igraph = {
     moves: (Graph.node * Graph.node) list
 }
 
-type liveSet = unit TT.table * Temp.temp list 
+type liveSet = TS.t * Temp.temp list 
 type liveMap = liveSet GT.table
 
 let liveness flowgraph : liveMap =
 
     let aux (lins, louts, converged) node =
-        let use = GT.look_exn (flowgraph.use, node) |> Temp.Set.of_list in
-        let def = GT.look_exn (flowgraph.def, node) |> Temp.Set.of_list in
+        let def = GT.look_exn (flowgraph.def, node) |> TS.of_list in
+        let use = GT.look_exn (flowgraph.use, node) |> TS.of_list in
         let lin = GT.look_exn (lins, node) in
         let lout = GT.look_exn (louts, node) in
-        let lin' = Temp.Set.union use (Temp.Set.diff lout def) in
-        let lout' = Graph.succ node |> List.fold ~init:Temp.Set.empty ~f:(fun out succ -> 
-            Temp.Set.union out (GT.look_exn (lins, succ))) 
+        let lin' = TS.union use (TS.diff lout def) in
+        let lout' = node 
+            |> Graph.succ 
+            |> List.fold ~init:TS.empty ~f:(fun out succ -> 
+                TS.union out (GT.look_exn (lins, succ))
+            ) 
         in
-        let converged = converged && Temp.Set.equal lin lin' && Temp.Set.equal lout lout' in
+        let converged = converged && TS.equal lin lin' && TS.equal lout lout' in
         (GT.enter (lins, node, lin'), GT.enter (louts, node, lout'), converged)
     in 
 
@@ -67,36 +71,37 @@ let liveness flowgraph : liveMap =
         )
     in
 
-    let (_, louts) = iter nodes emptylivesets emptylivesets in
+    let (_lins, louts) = iter nodes emptylivesets emptylivesets in
 
-    nodes |> List.fold ~init:GT.empty ~f:(fun louts' n ->
-        let l = GT.look_exn (louts, n) |> Set.to_list in
-        let s = l |> List.fold ~init:TT.empty ~f:(fun s lo -> TT.enter (s, lo, ())) in
-        GT.enter (louts', n, (s, l)))
+    List.fold ~init:GT.empty ~f:(fun louts' n ->
+        let s = GT.look_exn (louts, n) in
+        let l = TS.to_list s in
+        GT.enter (louts', n, (s, l))
+    ) nodes
 
 let interferenceGraph flowgraph = 
 
     let louts = liveness flowgraph in
 
     let donode (igraph, tnode, gtemp, moves) n = 
-        let (s, l) = GT.look_exn (louts, n) in
+        let (louts, _) = GT.look_exn (louts, n) in
         let def = GT.look_exn (flowgraph.def, n) in
         let use = GT.look_exn (flowgraph.use, n) in
         let ismove = GT.look_exn (flowgraph.ismove, n) in
         assert((not ismove) || (List.length def = 1 && List.length use = 1));
-        let (tnode, gtemp, moves) = def |> List.fold ~init:(tnode, gtemp, moves) ~f:(fun _ d ->
+        let (tnode, gtemp, moves) = def |> List.fold ~init:(tnode, gtemp, moves) ~f:(fun (tnode, gtemp, moves) d ->
             let node = Graph.newNode igraph in
             let tnode = TT.enter (tnode, d, node) in
             let gtemp = GT.enter (gtemp, node, d) in
-            let moves = l |> List.fold ~init:moves ~f:(fun moves out -> 
+            let moves = louts |> TS.fold ~init:moves ~f:(fun moves out -> 
                 match TT.look (tnode, out) with
                 | Some node' ->
                     if not ismove then begin
-                        Graph.mk_edge Graph.{f = node; t= node'};
+                        Graph.(mk_edge {f = node; t= node'});
                         moves
                     end else begin
                         if List.hd_exn use <> out then
-                            Graph.mk_edge Graph.{f = node; t= node'};
+                            Graph.(mk_edge {f = node; t= node'});
                         (node, node')::moves
                     end
                 | None -> moves
