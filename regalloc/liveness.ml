@@ -146,6 +146,13 @@ let show outstream graph =
                 Out_channel.newline outstream
         )
     );
+    graph.moves |> List.iter ~f:(fun (n, m) ->
+        let n = n |> graph.gtemp |> Temp.makestring in
+        let m = m |> graph.gtemp |> Temp.makestring in
+        Out_channel.output_string outstream (n ^ "--" ^ m ^ "[style=dashed]");
+        Out_channel.newline outstream
+        
+    );
     Out_channel.output_string outstream "}";
     Out_channel.newline outstream
 
