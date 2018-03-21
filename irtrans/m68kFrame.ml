@@ -4,6 +4,7 @@ module Temp = M68kTemp
 module Tree = Tree.F(Temp)
 module Assem = Assem.F(Temp) 
 module TT = Temp.Table
+module SM = String.Map
 
 let wordSize = 4
 
@@ -36,18 +37,19 @@ let registers =
     (List.init 7 ~f:(fun i -> "a" ^ Int.to_string i)) @
     [ "usp"; "ssp"; "pc"; "ccr" ]
 
-let fp = Temp.newtemp ()
-let rv = Temp.newtemp ()
-let tempMap = 
-    let m = TT.empty in
-    let m = TT.enter (m, rv, "d0") in
-    let m = TT.enter (m, fp, "a5") in
-    m
+let regMap, tempMap = List.fold ~init:(SM.empty, TT.empty) ~f:(fun (rmap, tmap) reg ->
+    let tmp = Temp.newtemp () in
+    SM.set rmap reg tmp,
+    TT.enter (tmap, tmp, reg)
+) registers
+
+let fp = SM.find_exn regMap "a5"
+let rv = SM.find_exn regMap "d0" 
 
 let specialregs = []
 let argregs = []
-let calleesaves = [ (*"d2"; "d3"; "d4"; "d5"; "d6"; "d7"*) ]
-let callersaves = [ (*"d0"; "d1"; "a0"; "a1"*) ]
+let calleesaves = [ "d2"; "d3"; "d4"; "d5"; "d6"; "d7" ] |> List.map ~f:(SM.find_exn regMap)
+let callersaves = [ "d0"; "d1"; "a0"; "a1" ] |> List.map ~f:(SM.find_exn regMap)
 
 let externalCall (name, exps) = 
     Tree.CALL (Tree.NAME (Temp.namedlabel ("_" ^ name)), exps)
@@ -63,7 +65,7 @@ let name {name; _} = name
 
 let formals {formals; _} = formals
 
-let allocLocal f  escape = InFrame (f.offset ++ 4)
+let allocLocal f escape = InFrame (f.offset ++ 4)
 
 let exp (access, exp) =
     let module T = Tree in
@@ -78,5 +80,5 @@ let procEntryExit2 (frame, body) =
     [ Assem.OPER {assem = ""; src = [fp; rv] @ calleesaves; dst = []; jump = None} ]
 
 type procEntryExit3 = {prolog: string; body: Assem.instr list; epilog: string} [@@deriving sexp]
-let procEntryExit3 (frame, body) = {prolog = ""; body; epilog = ""}
+let procEntryExit3 (frame, body) = { prolog = ""; body; epilog = "" }
 
