@@ -80,7 +80,7 @@ let rec alloc (asm, frame) =
     match spills with
     | [] ->
         
-        Liveness.show Out_channel.stdout igraph (fun n -> 
+        Liveness.show Out_channel.stdout igraph ~color:(fun n -> 
             match TT.look (colors, igraph.gtemp n) with
             | Some c ->
             begin
