@@ -38,7 +38,7 @@ type liveSet = TS.t * Temp.temp list
 type liveMap = liveSet GT.table
 
 let liveness flowgraph : liveMap =
-
+    
     let aux (lins, louts, converged) node =
         let def = GT.look_exn (flowgraph.def, node) |> TS.of_list in
         let use = GT.look_exn (flowgraph.use, node) |> TS.of_list in
@@ -90,26 +90,34 @@ let interferenceGraph flowgraph =
         let ismove = GT.look_exn (flowgraph.ismove, n) in
         assert((not ismove) || (List.length def = 1 && List.length use = 1));
         let (tnode, gtemp, moves) = def |> List.fold ~init:(tnode, gtemp, moves) ~f:(fun (tnode, gtemp, moves) d ->
-            let node = Graph.newNode igraph in
-            let tnode = TT.enter (tnode, d, node) in
-            let gtemp = GT.enter (gtemp, node, d) in
+
+            let node, tnode, gtemp = 
+            match TT.look (tnode, d) with
+            | Some node -> node, tnode, gtemp
+            | None ->
+                let node = Graph.newNode igraph in
+                node, TT.enter (tnode, d, node), GT.enter (gtemp, node, d)
+            in
+
             let moves = louts |> TS.fold ~init:moves ~f:(fun moves out -> 
                 match TT.look (tnode, out) with
-                | Some node' ->
-                    if not ismove then begin
-                        Graph.(mk_edge {f = node; t= node'});
+                | Some node' when node <> node' ->
+                    if not ismove then (
+                        Graph.(mk_edge {f = node; t = node'});
                         moves
-                    end else begin
+                    ) else (
                         if List.hd_exn use <> out then
                             Graph.(mk_edge {f = node; t= node'});
                         (node, node')::moves
-                    end
-                | None -> moves
+                    )
+                | _ -> moves
             )
             in
+
             (tnode, gtemp, moves)
         )
-        in 
+        in
+
         (igraph, tnode, gtemp, moves)
     in
 
@@ -133,9 +141,9 @@ let show outstream graph =
     graph.graph |> List.iter ~f:(fun n ->
         let ntmp = n |> graph.gtemp |> Temp.makestring in
         Graph.succ n |> List.iter ~f:(fun m ->
-            let mtmp = m |> graph.gtemp |> Temp.makestring in
-            Out_channel.output_string outstream (ntmp ^ "--" ^ mtmp);
-            Out_channel.newline outstream
+                let mtmp = m |> graph.gtemp |> Temp.makestring in
+                Out_channel.output_string outstream (ntmp ^ "--" ^ mtmp);
+                Out_channel.newline outstream
         )
     );
     Out_channel.output_string outstream "}";

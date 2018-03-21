@@ -4,7 +4,7 @@ type node' = int [@@deriving sexp]
 
 type noderep = {succ: node' list; pred: node' list}
 
-let emptyNode = {succ=[] ;pred=[]}
+let emptyNode = {succ = []; pred = []}
 
 let bogusNode = {succ=[ lnot 1 ]; pred=[]}
 
@@ -95,7 +95,7 @@ let diddle_edge change ({f = ((g : graph), i); t = ((g': graph), j)} : edge) =
   A.set(g, j, {succ = sj; pred = change(i, pj)});
   ()
 
-let mk_edge = diddle_edge (fun (a, b) -> a::b)
+let mk_edge = diddle_edge (fun (a, b) -> if List.mem ~equal:(=) b a then b else a::b)
 let rm_edge = diddle_edge delete
 
 module Table = struct
