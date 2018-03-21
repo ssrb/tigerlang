@@ -39,9 +39,21 @@ type liveMap = liveSet GT.table
 
 let liveness flowgraph : liveMap =
     
+    let nodes = flowgraph.control |> List.rev in
+
+    let defs = nodes |> List.fold ~init:GT.empty ~f:(fun t n ->
+        GT.enter (t, n, GT.look_exn (flowgraph.def, n) |> TS.of_list)
+    )
+    in
+
+    let uses = nodes |> List.fold ~init:GT.empty ~f:(fun t n ->
+        GT.enter (t, n, GT.look_exn (flowgraph.use, n) |> TS.of_list)
+    )
+    in
+
     let aux (lins, louts, converged) node =
-        let def = GT.look_exn (flowgraph.def, node) |> TS.of_list in
-        let use = GT.look_exn (flowgraph.use, node) |> TS.of_list in
+        let def = GT.look_exn (defs, node) in
+        let use = GT.look_exn (uses, node) in
         let lin = GT.look_exn (lins, node) in
         let lout = GT.look_exn (louts, node) in
         let lin' = TS.union use (TS.diff lout def) in
@@ -62,8 +74,6 @@ let liveness flowgraph : liveMap =
         else
             iter nodes lins louts
     in
-
-    let nodes = flowgraph.control |> List.rev in
 
     let emptylivesets = nodes
         |> List.fold ~init:GT.empty ~f:(fun lin n ->
