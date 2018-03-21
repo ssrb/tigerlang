@@ -12,7 +12,7 @@ type igraph = {
 
 val interferenceGraph : Flow.flowgraph -> igraph
 
-val show : Core.Out_channel.t -> igraph -> unit
+val show : Core.Out_channel.t -> igraph -> (Graph.node -> string) -> unit
 end 
 
 module F : functor(Flow : Flowgraph.T) -> T with module Flow = Flow and module Temp = Flow.Temp 

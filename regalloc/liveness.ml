@@ -12,7 +12,7 @@ type igraph = {
 
 val interferenceGraph : Flow.flowgraph -> igraph
 
-val show : Core.Out_channel.t -> igraph -> unit
+val show : Core.Out_channel.t -> igraph -> (Graph.node -> string) -> unit
 end 
 
 module F = functor(Flow : Flowgraph.T) -> struct
@@ -134,12 +134,14 @@ let interferenceGraph flowgraph =
         moves = moves
     }
 
-let show outstream graph =
+let show outstream graph color =
 
     Out_channel.output_string outstream "graph G {";
     Out_channel.newline outstream;
     graph.graph |> List.iter ~f:(fun n ->
         let ntmp = n |> graph.gtemp |> Temp.makestring in
+        Out_channel.output_string outstream (ntmp ^ "[color=" ^ (color n) ^ "]");
+        Out_channel.newline outstream;
         Graph.succ n |> List.iter ~f:(fun m ->
                 let mtmp = m |> graph.gtemp |> Temp.makestring in
                 Out_channel.output_string outstream (ntmp ^ "--" ^ mtmp);

@@ -61,8 +61,6 @@ let rec alloc (asm, frame) =
 
     let igraph = Liveness.interferenceGraph fgraph in
 
-    Liveness.show Out_channel.stdout igraph;
-
     let spillCost n =
         let tmp = igraph.gtemp n in
         let used t l = if member l t then 1 else 0 in
@@ -82,6 +80,43 @@ let rec alloc (asm, frame) =
     match spills with
     | [] ->
         
+        Liveness.show Out_channel.stdout igraph (fun n -> 
+            match TT.look (colors, igraph.gtemp n) with
+            | Some c ->
+            begin
+                match List.findi Frame.registers ~f:(fun _ e -> c = e)  with
+                | Some (i, _) -> 
+                    List.nth_exn ["Aquamarine";
+                    "Blue";
+                    "\"Slate Blue\"";
+                    "\"Sky Blue\"";
+                    "\"Steel Blue\"";
+                    "Coral";
+                    "Cyan";
+                    "Goldenrod";
+                    "Gray";
+                    "\"Slate Gray\"";
+                    "Green";
+                    "\"Olive Green\"";
+                    "\"Sea Green\"";
+                    "\"Spring Green\"";
+                    "Khaki";
+                    "Magenta";
+                    "Orange";
+                    "Orchid";
+                    "Pink";
+                    "Purple";
+                    "\"Violet Red\"";
+                    "Red";
+                    "Salmon";
+                    "Turquoise";
+                    "Violet";
+                    "Yellow"] i
+                | None -> "black"
+            end
+            | None -> "black"
+        );
+
         let asm = List.filter ~f:(fun instr ->
             match instr with
             | A.MOVE {assem; dst; src} ->
