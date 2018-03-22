@@ -119,24 +119,21 @@ let interferenceGraph flowgraph =
                 let (node', tnode, gtemp) = tempnode (out, tnode, gtemp) in
 
                 if node <> node' then (
-                    if not ismove then (
+                    if not ismove then
                         Graph.(mk_edge {f = node; t = node'})
-                    ) else (
-                        if List.hd_exn use <> out then
-                            Graph.(mk_edge {f = node; t= node'})
-                    )
+                    else if List.hd_exn use <> out then
+                        Graph.(mk_edge {f = node; t= node'})
                 );
 
                 (tnode, gtemp)
             )
             in
 
-            if ismove then (
+            if ismove then
                 let (node', tnode, gtemp) = tempnode ((List.hd_exn use), tnode, gtemp) in
                 (tnode, gtemp, (node, node')::moves)
-            ) else (
+            else
                 (tnode, gtemp, moves)
-            )
         )
         in
 

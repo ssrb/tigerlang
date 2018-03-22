@@ -36,17 +36,16 @@ let rec alloc (asm, frame) =
                     ([], ops)
             in
 
-            let rewriteInstruction instr =
-                match instr with
-                | A.OPER {assem; dst; src; jump} ->
-                    let (fetch, src') = rewriteOperands fetch src in
-                    let (store, dst') = rewriteOperands store dst in
-                    fetch @ A.OPER {assem; dst = dst'; src = src'; jump}::store
-                | A.MOVE {assem; dst; src} ->
-                    let (fetch, [ src' ]) = rewriteOperands fetch [ src ] in
-                    let (store, [ dst' ]) = rewriteOperands store [ dst ] in
-                    fetch @ A.MOVE {assem; dst = dst'; src = src'}::store
-                | _ -> [ instr ]
+            let rewriteInstruction = function
+                | A.OPER op ->
+                    let (fetch, src') = rewriteOperands fetch op.src in
+                    let (store, dst') = rewriteOperands store op.dst in
+                    fetch @ A.OPER {op with dst = dst'; src = src'}::store
+                | A.MOVE mv ->
+                    let (fetch, [ src' ]) = rewriteOperands fetch [ mv.src ] in
+                    let (store, [ dst' ]) = rewriteOperands store [ mv.dst ] in
+                    fetch @ A.MOVE {mv with dst = dst'; src = src'}::store
+                | instr -> [ instr ]
             in
 
             List.fold ~init:[] ~f:(fun asm instr -> (rewriteInstruction instr) @ asm) (List.rev asm)
@@ -55,7 +54,7 @@ let rec alloc (asm, frame) =
         List.fold ~init:asm ~f:rewriteProgram' spills
     in
 
-    let fgraph, ginstr =  Makegraph.instrs2graph asm in
+    let fgraph, ginstr = Makegraph.instrs2graph asm in
 
     Flowgraph.show Out_channel.stdout fgraph (fun n -> n |> ginstr |> Assem.format Temp.makestring);
 
@@ -66,10 +65,10 @@ let rec alloc (asm, frame) =
         let used t l = if member l t then 1 else 0 in
         let usecnt = List.fold ~init:0 ~f:(fun usecnt instr ->
             match instr with
-            | A.OPER {assem; dst; src; jump} ->
-                usecnt + (used tmp dst) + (used tmp src)
-            | A.MOVE {assem; dst; src} ->
-                usecnt + (used tmp [ dst ]) + (used tmp [ src ])
+            | A.OPER op ->
+                usecnt + (used tmp op.dst) + (used tmp op.src)
+            | A.MOVE mv ->
+                usecnt + (used tmp [ mv.dst ]) + (used tmp [ mv.src ])
             | _ -> usecnt
         ) asm
         in
@@ -117,11 +116,10 @@ let rec alloc (asm, frame) =
             | None -> "black"
         );
 
-        let asm = List.filter ~f:(fun instr ->
-            match instr with
-            | A.MOVE {assem; dst; src} ->
+        let asm = List.filter ~f:(function
+            | A.MOVE mv ->
             begin
-                match TT.look (colors, dst), TT.look (colors, src) with
+                match TT.look (colors, mv.dst), TT.look (colors, mv.src) with
                 | Some dst, Some src -> dst <> src
                 | _ -> true
             end
