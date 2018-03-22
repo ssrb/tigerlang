@@ -93,38 +93,50 @@ let interferenceGraph flowgraph =
 
     let louts = liveness flowgraph in
 
-    let donode (igraph, tnode, gtemp, moves) n = 
-        let (louts, _) = GT.look_exn (louts, n) in
-        let def = GT.look_exn (flowgraph.def, n) in
-        let use = GT.look_exn (flowgraph.use, n) in
-        let ismove = GT.look_exn (flowgraph.ismove, n) in
-        assert((not ismove) || (List.length def = 1 && List.length use = 1));
-        let (tnode, gtemp, moves) = def |> List.fold ~init:(tnode, gtemp, moves) ~f:(fun (tnode, gtemp, moves) d ->
+    let donode (igraph, tnode, gtemp, moves) n =
 
-            let node, tnode, gtemp = 
-            match TT.look (tnode, d) with
+        let tempnode (tmp, tnode, gtemp) =
+            match TT.look (tnode, tmp) with
             | Some node -> node, tnode, gtemp
             | None ->
                 let node = Graph.newNode igraph in
-                node, TT.enter (tnode, d, node), GT.enter (gtemp, node, d)
-            in
+                node, TT.enter (tnode, tmp, node), GT.enter (gtemp, node, tmp)
+        in
 
-            let moves = louts |> TS.fold ~init:moves ~f:(fun moves out -> 
-                match TT.look (tnode, out) with
-                | Some node' when node <> node' ->
+        let (louts, _lins) = GT.look_exn (louts, n) in
+        let def = GT.look_exn (flowgraph.def, n) in
+        let use = GT.look_exn (flowgraph.use, n) in
+        let ismove = GT.look_exn (flowgraph.ismove, n) in
+
+        assert((not ismove) || (List.length def = 1 && List.length use = 1));
+
+        let (tnode, gtemp, moves) = def |> List.fold ~init:(tnode, gtemp, moves) ~f:(fun (tnode, gtemp, moves) d ->
+
+            let (node, tnode, gtemp) = tempnode (d, tnode, gtemp) in
+
+            let (tnode, gtemp) = louts |> TS.fold ~init:(tnode, gtemp) ~f:(fun (tnode, gtemp) out -> 
+
+                let (node', tnode, gtemp) = tempnode (out, tnode, gtemp) in
+
+                if node <> node' then (
                     if not ismove then (
-                        Graph.(mk_edge {f = node; t = node'});
-                        moves
+                        Graph.(mk_edge {f = node; t = node'})
                     ) else (
                         if List.hd_exn use <> out then
-                            Graph.(mk_edge {f = node; t= node'});
-                        (node, node')::moves
+                            Graph.(mk_edge {f = node; t= node'})
                     )
-                | _ -> moves
+                );
+
+                (tnode, gtemp)
             )
             in
 
-            (tnode, gtemp, moves)
+            if ismove then (
+                let (node', tnode, gtemp) = tempnode ((List.hd_exn use), tnode, gtemp) in
+                (tnode, gtemp, (node, node')::moves)
+            ) else (
+                (tnode, gtemp, moves)
+            )
         )
         in
 
