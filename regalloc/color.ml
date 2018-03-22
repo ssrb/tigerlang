@@ -109,14 +109,16 @@ let color color  =
 
         List.iter ~f:(fun n -> 
             let tmp = gtemp n in
+            moveList := TT.enter (!moveList, tmp, MS.empty);
+            adjList := NT.enter (!adjList, n, NS.empty);
+            degree := NT.enter (!degree, n, 0);
             match Temp.Table.look (color.initial, tmp) with
             | Some r -> 
                 (* precolored is a copy/subset of color.initial *)
                 precolored := NS.add !precolored n;
                 coloredNodes := TT.enter(!coloredNodes, tmp, r)
             | None ->
-                initial := n::!initial;
-             moveList := TT.enter (!moveList, (gtemp n), MS.empty)
+                initial := n::!initial
         ) color.interference.graph;
 
         List.iter ~f:(fun ((src, dst) as m) ->
@@ -129,8 +131,6 @@ let color color  =
         ) color.interference.moves;
 
         List.iter ~f:(fun u ->
-            adjList := NT.enter (!adjList, u, NS.empty);
-            degree := NT.enter (!degree, u, 0);
             List.iter ~f:(fun v ->
                 addEdge (u, v)
             ) (Graph.succ u)
@@ -350,7 +350,7 @@ let color color  =
                 spilledNodes := t::!spilledNodes
             else
                 let c = List.hd_exn !okColors in
-                coloredNodes := TT.enter (!coloredNodes, t, c);
+                coloredNodes := TT.enter (!coloredNodes, t, c)
 
         ) !selectStack;
 
