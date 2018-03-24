@@ -210,7 +210,6 @@ let color color  =
         if d = k then
         begin
             (* 
-                Seb:
                 We enable move associated with
                 - n itself as Briggs strategy might now apply; ie coalescing might lead to an insignificant degree node 
                     thus not changing the colorability of the graph;
@@ -370,6 +369,10 @@ let color color  =
     in
     
     let freeze () =
+        (* 
+            No more coalescing is possible at that stage.
+            We got no choice but to freeze the moves of a node in the "freezeWorklist".
+        *)
         match !freezeWorklist with
         | n::ns ->
             freezeWorklist := ns;
@@ -390,6 +393,7 @@ let color color  =
         | Some (n, _) ->
             spillWorklist := remove !spillWorklist n;
             simplifyWorklist := n::!simplifyWorklist;
+            (* No coalescing for "n" as it might go into memory if it's an actual spill *)
             freezeMoves n
         | None -> ()
     in
