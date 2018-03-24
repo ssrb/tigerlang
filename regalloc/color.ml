@@ -272,8 +272,16 @@ let color color  =
         end
     in
 
+    (*
+        Only moves in the worklist are considered in the coalesce phase.
+        When a node is coalesced, it may no longer be move-related and can be
+        added to the "simplifyWorklist" by the procedurer "addWorklist". 
+        "ok" implements the heuristic used for coalescing a precolored register.
+        "conservative" implements the coonservative coalescing heuristic.
+    *)
     let coalesce () =
 
+        (* George strategy for a precolored node: we check that colorability won't change *)
         let ok (t, s) = NT.look_exn (!degree, t) < k || NS.mem !precolored t || MS.mem !adjSet (t, s) in
         
         (* Briggs strategy *)
@@ -289,25 +297,48 @@ let color color  =
         | Some ((x, y) as m) ->
             let x = getAlias x in
             let y = getAlias y in
+
+            (* Swap "x" & "y" so that if "v" is precolored both "u" & "v" are and if "u" is at least "u" is *)
             let u, v = if NS.mem !precolored y then y, x else x, y in
+
             worklistMoves := MS.remove !worklistMoves m;
+
+            (* 
+                Trivial case where nodes "x" and "y" have already been coalesced to a same node "u" via other moves.
+                There is no need to "combine" here.
+            *)
             if u = v then (
                 coalescedMoves := MS.add !coalescedMoves m;
+                (* Simplification opportunity have been created as "u" might no longer been move related *)
                 addWorkList u
-            ) else if NS.mem !precolored v || MS.mem !adjSet (u, v) then (
+            ) 
+            
+            (* The constrained case: both x & y move are precolored or they interfere *)
+            else if NS.mem !precolored v || MS.mem !adjSet (u, v) then (
+                (* Seb "constrainedMoves" is actually not required, we could simply discard "m" *)
                 constrainedMoves := MS.add !constrainedMoves m;
+                (* More simplification opportunities *)
                 addWorkList u;
                 addWorkList v;
-            ) else if NS.mem !precolored u
-                    && NS.for_all ~f:(fun t -> ok(t, u)) (adjacent v)
-                    || not (NS.mem !precolored u)
-                    && conservative (NS.union (adjacent u) (adjacent v)) then (
+            ) 
+            
+            (* *)
+            else if (NS.mem !precolored u && NS.for_all ~f:(fun t -> ok(t, u)) (adjacent v))
+                || (not (NS.mem !precolored u) && conservative (NS.union (adjacent u) (adjacent v))) then (
                 coalescedMoves := MS.add !coalescedMoves m;
                 combine (u, v);
                 addWorkList u
-            ) else (
+            ) 
+            
+             (* 
+                    That move nodes cannot be coalesced yet, put it appart in the activeMoves list.
+                    We might put it back into the worklistMoves later on via enableMoves after some
+                    nodes have been simplified.
+            *)
+            else (
                 activeMoves := MS.add !activeMoves m
             )
+
         | None -> ()
 
     in
