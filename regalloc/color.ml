@@ -246,6 +246,10 @@ let color color  =
 
     let combine (u, v) =
 
+        (* 
+            At the begining of the coalesce phase, "simplifyWorklist" is empty.
+            "v" is either in "freezeWorklist" or "spillWorklist"
+        *)
         if member !freezeWorklist v then
             freezeWorklist := remove !freezeWorklist v
         else
@@ -255,16 +259,25 @@ let color color  =
         alias := NT.enter (!alias, v, u);
 
         (* nodeMoves[u] <- nodeMoves[u] U nodeMoves[v] *)
-        let mu = TT.look_exn (!moveList, (gtemp u)) in
-        let mv = TT.look_exn (!moveList, (gtemp v)) in
-        moveList := TT.enter (!moveList, (gtemp u), (MS.union mu mv));
+        let tu = gtemp u in
+        let tv = gtemp v in
+        let mu = TT.look_exn (!moveList, tu) in
+        let mv = TT.look_exn (!moveList, tv) in
+        moveList := TT.enter (!moveList, tu, (MS.union mu mv));
         enableMoves (NS.singleton v);
         
         NS.iter ~f:(fun t ->
+            (* "addEdge" increments degrees of both "t" and "u" *)
             addEdge (t, u);
+            (* but degree of "t" must stay unchanged as we "remove" "v" *)
             decrementDegree t
         ) (adjacent v);
 
+        (* 
+            Again, at the begining of the coalesce phase, "simplifyWorklist" is empty.
+            We might only add neighbor of "v" into it but not "u".
+            So that we only check if "u" is in "freezeWorklist"
+         *)
         if NT.look_exn (!degree, u) >= k && member !freezeWorklist u then
         begin
             freezeWorklist := remove !freezeWorklist u;
@@ -277,7 +290,7 @@ let color color  =
         When a node is coalesced, it may no longer be move-related and can be
         added to the "simplifyWorklist" by the procedurer "addWorklist". 
         "ok" implements the heuristic used for coalescing a precolored register.
-        "conservative" implements the coonservative coalescing heuristic.
+        "conservative" implements the conservative coalescing heuristic.
     *)
     let coalesce () =
 
@@ -322,7 +335,7 @@ let color color  =
                 addWorkList v;
             ) 
             
-            (* *)
+            (* George is expensive: we do it only for precolored nodes. Otherwise we do Brigggs *)
             else if (NS.mem !precolored u && NS.for_all ~f:(fun t -> ok(t, u)) (adjacent v))
                 || (not (NS.mem !precolored u) && conservative (NS.union (adjacent u) (adjacent v))) then (
                 coalescedMoves := MS.add !coalescedMoves m;
