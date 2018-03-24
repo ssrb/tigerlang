@@ -109,9 +109,11 @@ let color color  =
 
         color.interference.graph |> List.iter ~f:(fun n -> 
             let tmp = gtemp n in
+
             moveList := TT.enter (!moveList, tmp, MS.empty);
             adjList := NT.enter (!adjList, n, NS.empty);
             degree := NT.enter (!degree, n, 0);
+            
             match TT.look (color.initial, tmp) with
             | Some r ->
                 precolored := NS.add !precolored n;
@@ -122,11 +124,10 @@ let color color  =
 
         color.interference.moves |> List.iter ~f:(fun ((src, dst) as m) ->
             if not (NS.mem !precolored src) then
-                addMove (src, m)
-            else if not (NS.mem !precolored dst) then
-                addMove (dst, m)
-            else
-                worklistMoves := MS.add !worklistMoves m
+                addMove (src, m);
+            if not (NS.mem !precolored dst) then
+                addMove (dst, m);
+            worklistMoves := MS.add !worklistMoves m
         );
 
         color.interference.graph |> List.iter ~f:(fun u ->
@@ -275,6 +276,7 @@ let color color  =
 
         let ok (t, s) = NT.look_exn (!degree, t) < k || NS.mem !precolored t || MS.mem !adjSet (t, s) in
         
+        (* Briggs strategy *)
         let conservative ns = NS.fold ~init:0 ~f:(fun cnt n -> 
             if NT.look_exn (!degree, n) >= k then
                 cnt + 1
