@@ -36,7 +36,7 @@ let member = List.mem ~equal:(=)
 
 let color color  = 
 
-    let nreg = List.length color.registers in
+    let k = List.length color.registers in
 
     let gtemp = color.interference.gtemp in
 
@@ -107,42 +107,34 @@ let color color  =
             moveList := TT.enter (!moveList, tmp, MS.add (TT.look_exn (!moveList, tmp)) m)
         in
 
-        List.iter ~f:(fun n -> 
+        color.interference.graph |> List.iter ~f:(fun n -> 
             let tmp = gtemp n in
             moveList := TT.enter (!moveList, tmp, MS.empty);
             adjList := NT.enter (!adjList, n, NS.empty);
             degree := NT.enter (!degree, n, 0);
-            match Temp.Table.look (color.initial, tmp) with
-            | Some r -> 
-                (* precolored is a copy/subset of color.initial *)
+            match TT.look (color.initial, tmp) with
+            | Some r ->
                 precolored := NS.add !precolored n;
                 coloredNodes := TT.enter(!coloredNodes, tmp, r)
             | None ->
                 initial := n::!initial
-        ) color.interference.graph;
+        );
 
-        List.iter ~f:(fun ((src, dst) as m) ->
+        color.interference.moves |> List.iter ~f:(fun ((src, dst) as m) ->
             if not (NS.mem !precolored src) then
                 addMove (src, m)
             else if not (NS.mem !precolored dst) then
                 addMove (dst, m)
             else
                 worklistMoves := MS.add !worklistMoves m
-        ) color.interference.moves;
+        );
 
-        List.iter ~f:(fun u ->
+        color.interference.graph |> List.iter ~f:(fun u ->
             List.iter ~f:(fun v ->
                 addEdge (u, v)
             ) (Graph.succ u)
-        ) color.interference.graph
-    in
+        )
 
-    let nodeMoves n =
-        MS.inter (TT.look_exn (!moveList, (gtemp n))) (MS.union !activeMoves !worklistMoves)
-    in
-
-    let moveRelated n =
-        not (MS.is_empty (nodeMoves n))
     in
 
     (* High-degree nodes *)
@@ -164,24 +156,44 @@ let color color  =
         NS.diff (NT.look_exn (!adjList, n)) (NS.union (NS.of_list !selectStack) !coalescedNodes)
     in
 
-    let enableMoves = NS.iter ~f:(fun n -> 
-        MS.iter ~f:(fun mv -> 
-            (* Check in activeMoves in a first place ? *)
-            activeMoves := MS.remove !activeMoves mv;
-            worklistMoves := MS.add !worklistMoves mv
-        ) (nodeMoves n)
-    )
+    let nodeMoves n =
+        MS.inter (TT.look_exn (!moveList, (gtemp n))) (MS.union !activeMoves !worklistMoves)
+    in
+
+    let moveRelated n =
+        not (MS.is_empty (nodeMoves n))
     in
 
     let makeWorkList () = List.iter ~f:(fun n ->
         let d = NT.look_exn (!degree, n) in
-        if d >= nreg then
+        if d >= k then
             spillWorklist := n::!spillWorklist
         else if moveRelated n then
             freezeWorklist := n::!freezeWorklist
         else
             simplifyWorklist := n::!simplifyWorklist
     ) !initial
+    in
+
+    let addWorkList n = 
+        if not (NS.mem !precolored n)
+        && not (moveRelated n)
+        && NT.look_exn (!degree, n) < k then
+        begin
+            freezeWorklist := remove !freezeWorklist n;
+            simplifyWorklist := n::!simplifyWorklist
+        end
+    in
+
+    let enableMoves = NS.iter ~f:(fun n -> 
+        MS.iter ~f:(fun mv -> 
+            if MS.mem !activeMoves mv then
+            begin
+                activeMoves := MS.remove !activeMoves mv;
+                worklistMoves := MS.add !worklistMoves mv
+            end
+        ) (nodeMoves n)
+    )
     in
 
     (* 
@@ -194,8 +206,19 @@ let color color  =
         (* check initAlloc ? *)
         let d = NT.look_exn (!degree, n) in
         degree := NT.enter (!degree, n, d - 1);
-        if d = nreg then
+        if d = k then
         begin
+            (* 
+                Seb:
+                We enable move associated with
+                - n itself as Briggs strategy might now apply; ie coalescing might lead to an insignificant degree node 
+                    thus not changing the colorability of the graph;
+                - neighbors of n as George strategy might now apply too; ie combination of insignificant degree neighbor or
+                    shared interfering neighbors
+                
+                Enabling too many moves is "harmless" to the result as long as we always check that coalescing is conservative.
+                It will have a performance impact though.
+            *)
             enableMoves (NS.add (adjacent n) n);
             spillWorklist := remove !spillWorklist n;
             if moveRelated n then
@@ -220,21 +243,13 @@ let color color  =
         if NS.mem !coalescedNodes x then getAlias (NT.look_exn (!alias, x)) else x
     in
 
-    let addWorkList n = 
-        if not (NS.mem !precolored n)
-        && not (moveRelated n)
-        && NT.look_exn (!degree, n) < nreg then
-        begin
-            freezeWorklist := remove !freezeWorklist n;
-            simplifyWorklist := n::!simplifyWorklist
-        end
-    in
-
     let combine (u, v) =
+
         if member !freezeWorklist v then
             freezeWorklist := remove !freezeWorklist v
         else
             spillWorklist := remove !spillWorklist v;
+
         coalescedNodes := NS.add !coalescedNodes v;
         alias := NT.enter (!alias, v, u);
 
@@ -248,7 +263,8 @@ let color color  =
             addEdge (t, u);
             decrementDegree t
         ) (adjacent v);
-        if NT.look_exn (!degree, u) >= nreg && member !freezeWorklist u then
+
+        if NT.look_exn (!degree, u) >= k && member !freezeWorklist u then
         begin
             freezeWorklist := remove !freezeWorklist u;
             spillWorklist := u::!spillWorklist
@@ -257,14 +273,14 @@ let color color  =
 
     let coalesce () =
 
-        let ok (t, s) = NT.look_exn (!degree, t) < nreg || NS.mem !precolored t || MS.mem !adjSet (t, s) in
+        let ok (t, s) = NT.look_exn (!degree, t) < k || NS.mem !precolored t || MS.mem !adjSet (t, s) in
         
         let conservative ns = NS.fold ~init:0 ~f:(fun cnt n -> 
-            if NT.look_exn (!degree, n) >= nreg then
+            if NT.look_exn (!degree, n) >= k then
                 cnt + 1
             else
                 cnt
-        ) ns < nreg 
+        ) ns < k 
         in
 
         match MS.choose !worklistMoves with
@@ -295,16 +311,16 @@ let color color  =
     in
     
     let freezeMoves u = 
-        MS.iter ~f:(fun ((x, y) as m) -> 
+         u |> nodeMoves |> MS.iter ~f:(fun ((x, y) as m) -> 
             let v = if (getAlias u) = (getAlias y) then x else y in
             activeMoves := MS.remove !activeMoves m;
             frozenMoves := MS.add !frozenMoves m;
-            if not (moveRelated v) && NT.look_exn (!degree, v) < nreg then
+            if not (moveRelated v) && NT.look_exn (!degree, v) < k then
             begin
                 freezeWorklist := remove !freezeWorklist v;
                 simplifyWorklist := v::!simplifyWorklist
             end
-        ) (nodeMoves u)
+        )
     in
     
     let freeze () =
@@ -317,48 +333,47 @@ let color color  =
     in
     
     let selectSpill () =
-        let m = List.fold ~init:None ~f:(fun m s ->
-            let c =  color.spillCost s in
-            match m with 
-            | Some (ms, mc) -> if c < mc then Some (ms, mc) else m
-            | None -> Some (s, c)
+        let n = List.fold ~init:None ~f:(fun acc n ->
+            let c = color.spillCost n in
+            match acc with 
+            | Some (_, c') when c >= c' -> acc
+            | _ -> Some (n, c)
         ) !spillWorklist
         in
-        match m with
-        | Some (m, _) ->
-            spillWorklist := remove !spillWorklist m;
-            simplifyWorklist := m::!simplifyWorklist;
-            freezeMoves m
+        match n with
+        | Some (n, _) ->
+            spillWorklist := remove !spillWorklist n;
+            simplifyWorklist := n::!simplifyWorklist;
+            freezeMoves n
         | None -> ()
     in
 
     let spilledNodes = ref [] in
 
     let assignColors () = 
-        List.iter ~f:(fun n ->
+        
+        !selectStack |> List.iter ~f:(fun n ->
 
             let okColors = ref color.registers in
             NS.iter ~f:(fun w -> 
                 let a = getAlias w in
-                let c = TT.look (!coloredNodes, (gtemp a)) in
-                if NS.mem !precolored a || Option.is_some c then
-                    okColors := remove !okColors (TT.look_exn (!coloredNodes, (gtemp a)))
+                match TT.look (!coloredNodes, (gtemp a)) with
+                | Some c -> okColors := remove !okColors c
+                | None -> ()
             ) (NT.look_exn (!adjList, n));
 
             let t = gtemp n in
-            if List.is_empty !okColors then
-                spilledNodes := t::!spilledNodes
-            else
-                let c = List.hd_exn !okColors in
-                coloredNodes := TT.enter (!coloredNodes, t, c)
+            match !okColors with
+            | c::_ -> coloredNodes := TT.enter (!coloredNodes, t, c)
+            | [] -> spilledNodes := t::!spilledNodes
+                
+        );
 
-        ) !selectStack;
-
-        NS.iter ~f:(fun n ->
+        !coalescedNodes |> NS.iter ~f:(fun n ->
             let a = getAlias n in
             let c = TT.look_exn (!coloredNodes, (gtemp a)) in
             coloredNodes := TT.enter (!coloredNodes, (gtemp n), c)
-        ) !coalescedNodes
+        )
     in
 
     let rec main0 () = 

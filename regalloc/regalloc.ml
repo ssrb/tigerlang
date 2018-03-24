@@ -63,8 +63,7 @@ let rec alloc (asm, frame) =
     let spillCost n =
         let tmp = igraph.gtemp n in
         let used t l = if member l t then 1 else 0 in
-        let usecnt = List.fold ~init:0 ~f:(fun usecnt instr ->
-            match instr with
+        let usecnt = List.fold ~init:0 ~f:(fun usecnt -> function
             | A.OPER op ->
                 usecnt + (used tmp op.dst) + (used tmp op.src)
             | A.MOVE mv ->
