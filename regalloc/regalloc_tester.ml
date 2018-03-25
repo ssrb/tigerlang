@@ -31,12 +31,20 @@ let f frag =
 			|> List.concat
 		in 
 
-		let asm, allocation = Regalloc.alloc (asm, proc.frame) in
+		let asm, allocation = Regalloc.alloc (M68kFrame.procEntryExit2 (proc.frame, asm), proc.frame) in
 
-		List.iter ~f:(fun instr -> 
-			instr
-			|> M68K.Assem.format_hum (fun tmp -> Option.value ~default:(Temp.makestring tmp) (TT.look (allocation, tmp)))
-			|> Out_channel.print_endline) asm
+		let asm = M68kFrame.procEntryExit3 (proc.frame, asm) in
+
+		M68kFrame.(
+			Out_channel.print_endline asm.prolog;
+
+			asm.body |> List.iter ~f:(fun instr -> 
+				instr
+				|> M68K.Assem.format_hum (fun tmp -> Option.value ~default:(Temp.makestring tmp) (TT.look (allocation, tmp)))
+				|> Out_channel.print_endline);
+
+			Out_channel.print_endline asm.epilog;
+		)
 	
 	| Translate.Frame.STRING (lbl, str) -> 
 		Out_channel.print_endline ((Symbol.name lbl) ^ ": \"" ^ str ^ "\"");

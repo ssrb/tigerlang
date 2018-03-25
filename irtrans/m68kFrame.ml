@@ -43,7 +43,8 @@ let regMap, tempMap = List.fold ~init:(SM.empty, TT.empty) ~f:(fun (rmap, tmap) 
 ) registers
 
 let fp = SM.find_exn regMap "a5"
-let rv = SM.find_exn regMap "d0" 
+let rv = SM.find_exn regMap "d0"
+let usp = SM.find_exn regMap "usp"
 
 let specialregs = []
 let argregs = []
@@ -76,7 +77,11 @@ let exp (access, exp) =
     | InFrame off -> T.MEM (T.BINOP (T.PLUS, exp, (T.CONST off)))
     | InReg temp -> T.TEMP temp
 
-let procEntryExit1 (frame, body) = body
+let procEntryExit1 (frame, body) = 
+    (*let memory = exp ((allocLocal frame true), (Tree.TEMP fp)) in
+    [ Tree.MOVE (memory, (Tree.TEMP fp)),
+    Tree.MOVE ((Tree.TEMP fp), (Tree.TEMP usp)) ] @*)
+    body
 
 let procEntryExit2 (frame, body) = 
     body @ 

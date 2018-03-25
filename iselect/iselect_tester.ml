@@ -19,17 +19,28 @@ in
 let f frag =
 	match frag with
 	| Translate.Frame.PROC proc -> 
-		proc.body 
-		|> Canon.linearize 
-		|> Canon.basicBlocks 
-		|> Canon.traceSchedule 
-		|> List.map ~f:(M68K.codegen proc.frame)
-		|> List.concat
-		|> List.iter ~f:(fun instr -> 
-			instr
-			|> M68K.Assem.format_hum M68kTemp.makestring
-			|> Out_channel.print_endline
+		let asm = proc.body 
+			|> Canon.linearize 
+			|> Canon.basicBlocks 
+			|> Canon.traceSchedule 
+			|> List.map ~f:(M68K.codegen proc.frame)
+			|> List.concat
+		in
+		let asm = M68kFrame.procEntryExit2 (proc.frame, asm) in
+		let asm = M68kFrame.procEntryExit3 (proc.frame, asm) in
+
+		M68kFrame.(
+			Out_channel.print_endline asm.prolog;
+
+			asm.body |> List.iter ~f:(fun instr -> 
+				instr
+				|> M68K.Assem.format_hum M68kTemp.makestring
+				|> Out_channel.print_endline
+			);
+
+			Out_channel.print_endline asm.epilog
 		)
+
 	| Translate.Frame.STRING (lbl, str) -> 
 		Out_channel.print_endline ((Symbol.name lbl) ^ ": \"" ^ str ^ "\"");
 
