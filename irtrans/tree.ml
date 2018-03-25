@@ -29,6 +29,7 @@ and relop = EQ | NE | LT | GT | LE | GE
 
 val notRel : relop -> relop
 val commute: relop -> relop
+val seq: stm list -> stm
 end
 
 module F  = functor(Temp: Temp.T) -> struct
@@ -75,5 +76,17 @@ let notRel = function
 | UGE -> ULT
 
 let commute relop = relop
+
+let seq stms =
+    let rec aux stms res =
+        match stms with
+        | [] -> assert(false)
+        | [ stm ] -> SEQ (res, stm)
+        | stm::stms' -> aux stms' (SEQ (res, stm))
+    in
+    match stms with
+    | [] -> assert(false)
+    | [ stm ] -> stm
+    | stm::stms' -> aux stms' stm
 
 end

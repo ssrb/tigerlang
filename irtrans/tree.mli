@@ -28,6 +28,7 @@ and relop = EQ | NE | LT | GT | LE | GE
 
 val notRel : relop -> relop
 val commute: relop -> relop
+val seq: stm list -> stm
 end
 
 module F : functor(Temp: Temp.T) -> T with module Temp = Temp

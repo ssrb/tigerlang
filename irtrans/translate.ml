@@ -40,11 +40,11 @@ struct
 
 module Frame = Frame
 module Temp = Frame.Temp
-module Tree = Frame.Tree
+module T = Frame.Tree
 
 open Core
 
-type exp = Ex of Tree.exp | Nx of Tree.stm | Cx of (Tree.label * Tree.label -> Tree.stm)
+type exp = Ex of T.exp | Nx of T.stm | Cx of (T.label * T.label -> T.stm)
 type _level = {level: level; frame: Frame.frame}
 and level = Outermost | Level of _level * unit ref [@@deriving sexp]
 type access = level * Frame.access
@@ -68,21 +68,6 @@ let allocLocal lvl escape =
 
 let getResult () = !fragments
 
-module T = Tree
-
-let seq stms =
-    let rec aux stms res =
-        match stms with
-        | [] -> assert(false)
-        | [ stm ] -> T.SEQ (res, stm)
-        | stm::stms' -> aux stms' (T.SEQ (res, stm))
-    in
-    match stms with
-    | [] -> assert(false)
-    | [ stm ] -> stm
-    | stm::stms' -> aux stms' stm
-
-
 let unEx exp = 
     match exp with 
     | Ex ex -> ex
@@ -91,11 +76,11 @@ let unEx exp =
         let r = Temp.newtemp () in
         let t = Temp.newlabel () in
         let f = Temp.newlabel () in
-        T.ESEQ(seq [
-            T.MOVE(Tree.TEMP r, T.CONST 1); 
+        T.ESEQ(T.seq [
+            T.MOVE(T.TEMP r, T.CONST 1); 
             cx (t, f); 
             T.LABEL f; 
-            T.MOVE(Tree.TEMP r, T.CONST 0); 
+            T.MOVE(T.TEMP r, T.CONST 0); 
             T.LABEL t], 
             T.TEMP r)
 
@@ -105,7 +90,7 @@ let unNx exp =
     | Nx nx -> nx
     | Cx cx -> 
         let l = Temp.newlabel() in
-        seq [cx(l, l); T.LABEL l]
+        T.seq [cx(l, l); T.LABEL l]
 
 let unCx exp = 
     match exp with 
@@ -119,11 +104,11 @@ let unCx exp =
     | Nx nx -> assert(false)
     | Cx cx -> cx
 
-let transNop () = Nx (Tree.EXP (Tree.CONST 0))
+let transNop () = Nx (T.EXP (T.CONST 0))
 
-let transNil () = Ex (Tree.CONST 0)
+let transNil () = Ex (T.CONST 0)
 
-let transInt i = Ex (Tree.CONST i)
+let transInt i = Ex (T.CONST i)
 
 let transOp (op, left, right, ty) =
     let module A = Absyn in
@@ -217,7 +202,7 @@ let transRecord fldxp =
     in
     let alloc = T.MOVE ((T.TEMP r), Frame.externalCall ("malloc", [ T.CONST ((List.length fldxp) * Frame.wordSize) ])) in        
     let inits = List.mapi fldxp ~f:init in    
-    Ex (T.ESEQ (seq (alloc::inits), T.TEMP r))
+    Ex (T.ESEQ (T.seq (alloc::inits), T.TEMP r))
 
 let transAssign (left, right) =
     Nx (T.MOVE ((unEx left), (unEx right)))
@@ -234,7 +219,7 @@ let transIf (test, then', else') =
         let f = Temp.newlabel () in
         match (then', else') with
         | (Nx then' , Nx else') ->
-            Nx (seq [
+            Nx (T.seq [
                 (unCx test) (t, f);
                 T.LABEL t;
                 then';
@@ -253,7 +238,7 @@ let transIf (test, then', else') =
                 | Cx exp -> [ exp(t1, j) ]
                 | _ -> [ T.MOVE ((T.TEMP r), (unEx exp)); T.JUMP ((T.NAME j), [j])]
             in
-            Ex (T.ESEQ (seq ([
+            Ex (T.ESEQ (T.seq ([
                 T.MOVE ((T.TEMP r), (T.CONST 0));
                 (unCx test) (t, f);
                 T.LABEL t] 
@@ -267,7 +252,7 @@ let transIf (test, then', else') =
         end
         | _ ->
             let r = Temp.newtemp () in
-            Ex (T.ESEQ (seq [
+            Ex (T.ESEQ (T.seq [
                 (unCx test) (t, f);
                 T.LABEL t;
                 T.MOVE ((T.TEMP r), (unEx then'));
@@ -283,14 +268,14 @@ let transIf (test, then', else') =
     begin
         match then' with 
         | Cx then' ->
-            Nx (seq [
+            Nx (T.seq [
             (unCx test) (t, j);
             T.LABEL t;
             then' (j, j);
             T.LABEL j ])
 
         | _ ->
-            Nx (seq [
+            Nx (T.seq [
                 (unCx test) (t, j);
                 T.LABEL t;
                 unNx then';
@@ -302,7 +287,7 @@ let transWhile (test, body, finish) =
     let r = Temp.newtemp () in
     let start = Temp.newlabel () in
     let work = Temp.newlabel () in
-    Ex (T.ESEQ (seq [
+    Ex (T.ESEQ (T.seq [
         T.LABEL start;
         (unCx test) (work, finish);
         T.LABEL work;
@@ -316,7 +301,7 @@ let transFor (var, lo, hi, body, finish) =
     let r = Temp.newtemp () in
     let work = Temp.newlabel () in
     let increment = Temp.newlabel () in
-    Ex (T.ESEQ (seq [
+    Ex (T.ESEQ (T.seq [
         unNx lo;
         T.CJUMP (T.GT, var, (unEx hi), finish, work);
         T.LABEL work;
@@ -329,19 +314,19 @@ let transFor (var, lo, hi, body, finish) =
         T.TEMP r))
 
 let transBreak label =
-    Nx (Tree.JUMP (Tree.NAME label, [label]))
+    Nx (T.JUMP (T.NAME label, [label]))
 
 let transLet (inits, body) =
     match inits with
     | [] -> body
-    | _ -> Ex (T.ESEQ (inits |> List.map ~f:unNx |> seq, unEx body))
+    | _ -> Ex (T.ESEQ (inits |> List.map ~f:unNx |> T.seq, unEx body))
 
 let transArray (size, init) =
     let r = Temp.newtemp () in
     let size = (unEx size) in
     let alloc = T.MOVE ((T.TEMP r), Frame.externalCall ("malloc", [ T.BINOP (T.MUL, size, (T.CONST Frame.wordSize)) ])) in
     let init = T.EXP (Frame.externalCall ("initArray", [ (T.TEMP r); size; (unEx init) ])) in
-    Ex (T.ESEQ (seq [alloc; init], T.TEMP r))
+    Ex (T.ESEQ (T.seq [alloc; init], T.TEMP r))
 
 let transField (var, fidx) =
     Ex (T.MEM (T.BINOP (T.PLUS, (unEx var), (T.BINOP (T.MUL, (T.CONST fidx), (T.CONST Frame.wordSize))))))
