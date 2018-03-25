@@ -14,7 +14,6 @@ type frag = PROC of {body: Tree.stm; frame: frame} | STRING of Temp.label * stri
 type register = string [@@deriving sexp]
 
 (*
-
 Does anybody know a ABI reference for m68k ? Interested in the argument passing for a function call. 
 All C language arguments are passed via the stack (for non-LVO calls). 
 The return value from a C function is in D0. Registers D0/D1 and A0/A1 may be used as scratch by the called function, 
@@ -54,18 +53,22 @@ let callersaves = [ "d0"; "d1"; "a0"; "a1" ] |> List.map ~f:(SM.find_exn regMap)
 let externalCall (name, exps) = 
     Tree.CALL (Tree.NAME (Temp.namedlabel ("_" ^ name)), exps)
 
-let (++) r inc = let x = !r in r := x + inc; x
+let (--) r inc = let x = !r in r := x - inc; x
 
 let newFrame ~name ~formals = 
     let off = ref 0 in
-    let formals = formals |> List.map ~f:(fun f -> InFrame (off ++ 4)) in
+    let formals = formals |> List.map ~f:(fun f -> InFrame (off -- 4)) in
     {name; formals; offset = off}
 
 let name {name; _} = name
 
 let formals {formals; _} = formals
 
-let allocLocal f escape = InFrame (f.offset ++ 4)
+let allocLocal f escape = 
+    if escape then
+        InFrame (f.offset -- 4)
+    else
+        InReg (Temp.newtemp ())
 
 let exp (access, exp) =
     let module T = Tree in
