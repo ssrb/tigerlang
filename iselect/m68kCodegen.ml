@@ -225,68 +225,68 @@ let codegen frame stm =
                         let e1 = munchDataExp e1 in
                         result(fun r -> 
                             emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = e1});
-                            emit(A.OPER {assem = "add.l (`s0),`d0"; dst = [r]; src = [r; e0]; jump = None}))
+                            emit(A.OPER {assem = "add.l (`s0),`d0"; dst = [r]; src = [e0; r]; jump = None}))
                     | _ ->
                         let e0 = munchDataExp e0 in
                         let e1 = munchDataExp e1 in
                         result(fun r -> 
                             emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = e0});
-                            emit(A.OPER {assem = "add.l `s0,`d0"; dst = [r]; src = [r; e1]; jump = None}))                
+                            emit(A.OPER {assem = "add.l `s0,`d0"; dst = [r]; src = [e1; r]; jump = None}))   
                 end
             | T.MINUS ->
                 let e0 = munchDataExp e0 in
                 let e1 = munchDataExp e1 in
                  result(fun r -> 
                     emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = e0});
-                    emit(A.OPER {assem = "sub.l `s0,`d0"; dst = [r]; src = [r; e1]; jump = None})) 
+                    emit(A.OPER {assem = "sub.l `s0,`d0"; dst = [r]; src = [e1; r]; jump = None})) 
             | T.MUL ->
                 let e0 = munchDataExp e0 in
                 let e1 = munchDataExp e1 in
                  result(fun r -> 
                     emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = e0});
-                    emit(A.OPER {assem = "mul.l `s0,`d0"; dst = [r]; src = [r; e1]; jump = None})) 
+                    emit(A.OPER {assem = "mul.l `s0,`d0"; dst = [r]; src = [e1; r]; jump = None})) 
             | T.DIV ->
                 let e0 = munchDataExp e0 in
                 let e1 = munchDataExp e1 in
                  result(fun r -> 
                     emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = e0});
-                    emit(A.OPER {assem = "div.l `s0,`d0"; dst = [r]; src = [r; e1]; jump = None})) 
+                    emit(A.OPER {assem = "div.l `s0,`d0"; dst = [r]; src = [e1; r]; jump = None})) 
             | T.AND ->
                 let e0 = munchDataExp e0 in
                 let e1 = munchDataExp e1 in
                  result(fun r -> 
                     emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = e0});
-                    emit(A.OPER {assem = "and.l `s0,`d0"; dst = [r]; src = [r; e1]; jump = None})) 
+                    emit(A.OPER {assem = "and.l `s0,`d0"; dst = [r]; src = [e1; r]; jump = None})) 
             | T.OR ->
                 let e0 = munchDataExp e0 in
                 let e1 = munchDataExp e1 in
                  result(fun r -> 
                     emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = e0});
-                    emit(A.OPER {assem = "or.l `s0,`d0"; dst = [r]; src = [r; e1]; jump = None})) 
+                    emit(A.OPER {assem = "or.l `s0,`d0"; dst = [r]; src = [e1; r]; jump = None})) 
             | T.LSHIFT ->
                 let e0 = munchDataExp e0 in
                 let e1 = munchDataExp e1 in
                  result(fun r -> 
                     emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = e0});
-                    emit(A.OPER {assem = "lsl.l `s0,`d0"; dst = [r]; src = [r; e1]; jump = None})) 
+                    emit(A.OPER {assem = "lsl.l `s0,`d0"; dst = [r]; src = [e1; r]; jump = None})) 
             | T.RSHIFT ->
                 let e0 = munchDataExp e0 in
                 let e1 = munchDataExp e1 in
                  result(fun r -> 
                     emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = e0});
-                    emit(A.OPER {assem = "lsr.l `s0,`d0"; dst = [r]; src = [r; e1]; jump = None})) 
+                    emit(A.OPER {assem = "lsr.l `s0,`d0"; dst = [r]; src = [e1; r]; jump = None})) 
             | T.ARSHIFT ->
                 let e0 = munchDataExp e0 in
                 let e1 = munchDataExp e1 in
                  result(fun r -> 
                     emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = e0});
-                    emit(A.OPER {assem = "asr.l `s0,`d0"; dst = [r]; src = [r; e1]; jump = None})) 
+                    emit(A.OPER {assem = "asr.l `s0,`d0"; dst = [r]; src = [e1; r]; jump = None})) 
             | T.XOR ->
                 let e0 = munchDataExp e0 in
                 let e1 = munchDataExp e1 in
                  result(fun r -> 
                     emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = e0});
-                    emit(A.OPER {assem = "eor.l `s0,`d0"; dst = [r]; src = [r; e1]; jump = None})) 
+                    emit(A.OPER {assem = "eor.l `s0,`d0"; dst = [r]; src = [e1; r]; jump = None})) 
         end
         | T.MEM(T.BINOP(T.PLUS, T.CONST i, e0)) -> result(fun r -> emit(A.OPER {assem = "move.l " ^ Int.to_string (i / 4) ^ "(`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
         | T.MEM(T.BINOP(T.MINUS, T.CONST i, e0)) -> result(fun r -> emit(A.OPER {assem = "move.l " ^ Int.to_string (-i / 4) ^ "(`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
@@ -325,20 +325,20 @@ let codegen frame stm =
                         let e1 = munchDataExp e1 in
                         result(fun r -> 
                             emit(A.MOVE {assem = "movea.l `s0,`d0"; dst = r; src = e1});
-                            emit(A.OPER {assem = "adda.l (`s0),`d0"; dst = [r]; src = [r; e0]; jump = None}))
+                            emit(A.OPER {assem = "adda.l (`s0),`d0"; dst = [r]; src = [e0; r]; jump = None}))
                     | _ ->
                         let e0 = munchDataExp e0 in
                         let e1 = munchDataExp e1 in
                         result(fun r -> 
                             emit(A.MOVE {assem = "movea.l `s0,`d0"; dst = r; src = e0});
-                            emit(A.OPER {assem = "adda.l `s0,`d0"; dst = [r]; src = [r; e1]; jump = None}))                
+                            emit(A.OPER {assem = "adda.l `s0,`d0"; dst = [r]; src = [e1; r]; jump = None}))                
                 end
             | T.MINUS ->
                 let e0 = munchDataExp e0 in
                 let e1 = munchDataExp e1 in
                  result(fun r -> 
                     emit(A.MOVE {assem = "movea.l `s0,`d0"; dst = r; src = e0});
-                    emit(A.OPER {assem = "suba.l `s0,`d0"; dst = [r]; src = [r; e1]; jump = None})) 
+                    emit(A.OPER {assem = "suba.l `s0,`d0"; dst = [r]; src = [e1; r]; jump = None})) 
             
             | _ -> assert(false)
         end
