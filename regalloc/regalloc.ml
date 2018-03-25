@@ -25,8 +25,8 @@ let rec alloc (asm, frame) =
         let rewriteProgram' asm (spill : Temp.temp) = 
 
             let memory = Frame.exp ((Frame.allocLocal frame true), (Tree.TEMP Frame.fp)) in
-            let fetch t = Codegen.codegen frame (Tree.MOVE (memory, Tree.TEMP(t))) in
-            let store t = Codegen.codegen frame (Tree.MOVE (Tree.TEMP(t), memory)) in
+            let fetch t = Codegen.codegen frame (Tree.MOVE (memory, (Tree.TEMP t))) in
+            let store t = Codegen.codegen frame (Tree.MOVE ((Tree.TEMP t), memory)) in
 
             let rewriteOperands fs ops  = 
                 if member ops spill then

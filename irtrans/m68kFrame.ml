@@ -56,20 +56,20 @@ let externalCall (name, exps) =
 
 let (--) r inc = let x = !r in r := x - inc; x
 
-let newFrame ~name ~formals = 
-    let off = ref 0 in
-    let formals = formals |> List.map ~f:(fun f -> InFrame (off -- 4)) in
-    {name; formals; offset = off}
-
-let name {name; _} = name
-
-let formals {formals; _} = formals
-
 let allocLocal f escape = 
     if escape then
         InFrame (f.offset -- 4)
     else
         InReg (Temp.newtemp ())
+
+let newFrame ~name ~formals =
+    let f  = {name; formals = []; offset = ref 0} in
+    let formals = formals |> List.map ~f:(allocLocal f) in
+    {f with formals}
+
+let name {name; _} = name
+
+let formals {formals; _} = formals
 
 let exp (access, exp) =
     let module T = Tree in
@@ -78,10 +78,13 @@ let exp (access, exp) =
     | InReg temp -> T.TEMP temp
 
 let procEntryExit1 (frame, body) = 
-    (*let memory = exp ((allocLocal frame true), (Tree.TEMP fp)) in
-    [ Tree.MOVE (memory, (Tree.TEMP fp)),
-    Tree.MOVE ((Tree.TEMP fp), (Tree.TEMP usp)) ] @*)
-    body
+    let saverestore = calleesaves |> List.map ~f:(fun reg ->
+        let memory = exp ((allocLocal frame true), (Tree.TEMP fp)) in
+        (Tree.MOVE (memory, (Tree.TEMP reg)) , Tree.MOVE ((Tree.TEMP reg), memory))
+    )
+    in
+    let params = [] in
+    Tree.seq ((saverestore |> List.map ~f:fst) @ params @ [ body ] @ (saverestore |> List.map ~f:snd))
 
 let procEntryExit2 (frame, body) = 
     body @ 
