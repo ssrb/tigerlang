@@ -31,10 +31,12 @@ LVO calling convention: LibCalls always allow D0/D1/A0/A1 to be used as scratch 
 Standard calling convention: Just like LVO Calling convention except no library base is required. Requires a stub function written in C calling convention to implement variadic arguments as they are not supported from here.
 *)
 
+(* Seb: LVO := Library Vector offset*)
+
 let registers = 
     (List.init 8 ~f:(fun i -> "d" ^ Int.to_string i)) @ 
-    (List.init 7 ~f:(fun i -> "a" ^ Int.to_string i)) @
-    [ "usp"; "ssp"; "pc"; "ccr" ]
+    (List.init 8 ~f:(fun i -> "a" ^ Int.to_string i)) @
+    [ "ssp"; "pc"; "ccr" ]
 
 let regMap, tempMap = List.fold ~init:(SM.empty, TT.empty) ~f:(fun (rmap, tmap) reg ->
     let tmp = Temp.newtemp () in
@@ -44,11 +46,11 @@ let regMap, tempMap = List.fold ~init:(SM.empty, TT.empty) ~f:(fun (rmap, tmap) 
 
 let fp = SM.find_exn regMap "a5"
 let rv = SM.find_exn regMap "d0"
-let usp = SM.find_exn regMap "usp"
+let usp = SM.find_exn regMap "a7"
 
 let specialregs = []
 let argregs = []
-let calleesaves = [ "d2"; "d3"; "d4"; "d5"; "d6"; "d7" ] |> List.map ~f:(SM.find_exn regMap)
+let calleesaves = [ "d2"; "d3"; "d4"; "d5"; "d6"; "d7"; "a2"; "a3"; "a4"; "a5"; "a6"; "a7" ] |> List.map ~f:(SM.find_exn regMap)
 let callersaves = [ "d0"; "d1"; "a0"; "a1" ] |> List.map ~f:(SM.find_exn regMap)
 
 let externalCall (name, exps) = 
@@ -58,7 +60,7 @@ let (--) r inc = let x = !r in r := x - inc; x
 
 let allocLocal f escape = 
     if escape then
-        InFrame (f.offset -- 4)
+        InFrame (f.offset -- wordSize)
     else
         InReg (Temp.newtemp ())
 
@@ -78,12 +80,20 @@ let exp (access, exp) =
     | InReg temp -> T.TEMP temp
 
 let procEntryExit1 (frame, body) = 
+    
     let saverestore = calleesaves |> List.map ~f:(fun reg ->
         let memory = exp ((allocLocal frame true), (Tree.TEMP fp)) in
         (Tree.MOVE (memory, (Tree.TEMP reg)) , Tree.MOVE ((Tree.TEMP reg), memory))
     )
     in
-    let params = [] in
+    
+    let params = frame.formals |> List.mapi ~f:(fun i f -> 
+        let frame = exp (InFrame (i * wordSize), (Tree.TEMP fp)) in
+        let reg = exp (f, (Tree.TEMP fp)) in
+        Tree.MOVE (reg, frame)
+    ) 
+    in
+    
     Tree.seq ((saverestore |> List.map ~f:fst) @ params @ [ body ] @ (saverestore |> List.map ~f:snd))
 
 let procEntryExit2 (frame, body) = 
