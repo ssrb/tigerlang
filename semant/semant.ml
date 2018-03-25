@@ -324,9 +324,9 @@ and transDec (venv, tenv, lvl, dec, break) =
 
       let lvl' = T.newLevel ~parent:lvl ~name:lab ~formals:(List.map typarams ~f:(fun (_, _, e) -> e)) in
 
-      let venv'' = typarams |> List.fold ~init:venv' ~f:(fun v (n, t, e) ->
-        S.enter (v, n, VarEntry {access = T.allocLocal lvl' e; ty = t})
-      )
+      let venv'' = List.fold2_exn ~init:venv' ~f:(fun v (n, ty, _) access ->
+        S.enter (v, n, VarEntry {access; ty})
+      ) typarams (T.formals lvl')
       in
       
       let body = transExp(venv'' , tenv, lvl', body, None) in
