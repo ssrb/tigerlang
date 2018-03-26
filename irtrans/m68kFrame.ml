@@ -50,7 +50,7 @@ let usp = SM.find_exn regMap "a7"
 
 let specialregs = []
 let argregs = []
-let calleesaves = [ "d2"; "d3"; "d4"; "d5"; "d6"; "d7"; "a2"; "a3"; "a4"; "a5"; "a6"; "a7" ] |> List.map ~f:(SM.find_exn regMap)
+let calleesaves = [ "d2"; "d3"; "d4"; "d5"; "d6"; "d7"; "a2"; "a3"; "a4"; (* "a5" ;*) "a6"; "a7" ] |> List.map ~f:(SM.find_exn regMap)
 let callersaves = [ "d0"; "d1"; "a0"; "a1" ] |> List.map ~f:(SM.find_exn regMap)
 
 let externalCall (name, exps) = 
@@ -88,7 +88,7 @@ let procEntryExit1 (frame, body) =
     in
     
     let params = frame.formals |> List.mapi ~f:(fun i f -> 
-        let frame = exp (InFrame (i * wordSize), (Tree.TEMP fp)) in
+        let frame = exp (InFrame ((i + 1)* wordSize), (Tree.TEMP fp)) in
         let reg = exp (f, (Tree.TEMP fp)) in
         Tree.MOVE (reg, frame)
     ) 
