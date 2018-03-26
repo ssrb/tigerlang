@@ -36,7 +36,7 @@ Standard calling convention: Just like LVO Calling convention except no library 
 let registers = 
     (List.init 8 ~f:(fun i -> "d" ^ Int.to_string i)) @ 
     (List.init 8 ~f:(fun i -> "a" ^ Int.to_string i)) @
-    [ "ssp"; "pc"; "ccr" ]
+    [ (* "ssp" ;*) "pc"; "ccr" ]
 
 let regMap, tempMap = List.fold ~init:(SM.empty, TT.empty) ~f:(fun (rmap, tmap) reg ->
     let tmp = Temp.newtemp () in
@@ -88,7 +88,7 @@ let procEntryExit1 (frame, body) =
     in
     
     let params = frame.formals |> List.mapi ~f:(fun i f -> 
-        let frame = exp (InFrame ((i + 1)* wordSize), (Tree.TEMP fp)) in
+        let frame = exp (InFrame ((i + 2)* wordSize), (Tree.TEMP fp)) in
         let reg = exp (f, (Tree.TEMP fp)) in
         Tree.MOVE (reg, frame)
     ) 
@@ -101,5 +101,9 @@ let procEntryExit2 (frame, body) =
     [ Assem.OPER {assem = ""; src = [fp; rv] @ calleesaves; dst = []; jump = None} ]
 
 type procEntryExit3 = {prolog: string; body: Assem.instr list; epilog: string} [@@deriving sexp]
-let procEntryExit3 (frame, body) = { prolog = ""; body; epilog = "" }
+let procEntryExit3 (frame, body) = 
+    let format asm = asm |> List.map ~f:(fun i -> "\t" ^ i ^ "\n") |> String.concat in
+    let prolog = format [ "move fp,-(sp)"; "move sp,fp"; "suba.l #" ^ (Int.to_string !(frame.offset)) ^ ",sp" ] in
+    let epilog = format [ "move fp,sp"; "move (sp)+,fp"; "rts" ] in
+    { prolog; body; epilog}
 

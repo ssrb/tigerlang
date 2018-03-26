@@ -300,16 +300,32 @@ let codegen frame stm =
  
         | T.CALL (l, args) ->
 
-            let saverestore = Frame.callersaves |> List.map ~f:(fun reg ->
-                let memory = Frame.exp ((Frame.allocLocal frame false), (Tree.TEMP Frame.fp)) in
-                (Tree.MOVE (memory, (Tree.TEMP reg)) , Tree.MOVE ((Tree.TEMP reg), memory))
-            )
-            in
+            result(fun r ->
 
-            result(fun r -> 
-                munchStm (Tree.seq (List.map ~f:fst saverestore));            
-                emit(A.OPER {assem = "CALL `s0"; dst = []; src = (munchAddrExp l)::(munchArgs (0, args)); jump = None});
-                munchStm (Tree.seq (List.map ~f:snd saverestore))
+                let saverestore = Frame.callersaves |> List.map ~f:(fun reg ->
+                    let memory = Frame.exp ((Frame.allocLocal frame false), (Tree.TEMP Frame.fp)) in
+                        (Tree.MOVE (memory, (Tree.TEMP reg)) , Tree.MOVE ((Tree.TEMP reg), memory))
+                    )
+                in
+
+                let nargs = List.length args in
+                
+                saverestore |> List.iter ~f:(fun (s, _) -> munchStm s);
+
+                (* We pass everything on the stack *)
+                if nargs > 0 then
+                    emit(A.OPER {assem = "suba.l #" ^ (Int.to_string nargs) ^ ",sp"; dst = []; src = []; jump = None});
+
+                args |> List.iteri ~f:(fun i a -> 
+                    emit(A.OPER {assem = "movea.l `s0,-" ^ (Int.to_string (nargs - 1 - i)) ^ "(sp)"; dst = []; src = [ munchDataExp a ]; jump = None})
+                );
+
+                emit(A.OPER {assem = "bsr `s0"; dst = []; src = [ munchAddrExp l ]; jump = None});
+
+                if nargs > 0 then
+                    emit(A.OPER {assem = "adda.l #" ^ (Int.to_string nargs) ^ ",sp"; dst = []; src = []; jump = None});
+
+                saverestore |> List.iter ~f:(fun (_, r) -> munchStm r)
             )
             
         | exp -> 
@@ -363,19 +379,9 @@ let codegen frame stm =
         
         | T.CONST i -> result(fun r -> emit(A.OPER {assem = "lea.l $" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
  
-        | T.CALL (l, args) ->
+        | T.CALL (l, args) as call ->
 
-            let saverestore = Frame.callersaves |> List.map ~f:(fun reg ->
-                let memory = Frame.exp ((Frame.allocLocal frame false), (Tree.TEMP Frame.fp)) in
-                (Tree.MOVE (memory, (Tree.TEMP reg)) , Tree.MOVE ((Tree.TEMP reg), memory))
-            )
-            in
-
-            result(fun r -> 
-                munchStm (Tree.seq (List.map ~f:fst saverestore));            
-                emit(A.OPER {assem = "bsr `s0"; dst = []; src = (munchAddrExp l)::(munchArgs (0, args)); jump = None});
-                munchStm (Tree.seq (List.map ~f:snd saverestore))
-            )
+           munchDataExp call
 
         | exp -> 
             exp
@@ -383,8 +389,6 @@ let codegen frame stm =
             |> Sexp.output_hum Out_channel.stdout;
             assert(false)
 
-    and munchArgs (i, args) = 
-        List.map ~f:munchDataExp args
     in 
     munchStm stm;
     List.rev(!ilist)
