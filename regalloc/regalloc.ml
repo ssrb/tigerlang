@@ -56,7 +56,7 @@ let rec alloc (asm, frame) =
 
     let fgraph, ginstr = Makegraph.instrs2graph asm in
 
-    Flowgraph.show Out_channel.stdout fgraph (fun n -> n |> ginstr |> Assem.format Temp.makestring);
+    (* Flowgraph.show Out_channel.stdout fgraph (fun n -> n |> ginstr |> Assem.format Temp.makestring); *)
 
     let igraph = Liveness.interferenceGraph fgraph in
 
@@ -78,7 +78,7 @@ let rec alloc (asm, frame) =
     match spills with
     | [] ->
         
-        Liveness.show Out_channel.stdout igraph ~color:(fun n -> 
+        (* Liveness.show Out_channel.stdout igraph ~color:(fun n -> 
             match TT.look (colors, igraph.gtemp n) with
             | Some c ->
             begin
@@ -113,7 +113,7 @@ let rec alloc (asm, frame) =
                 | None -> "black"
             end
             | None -> "black"
-        );
+        ); *)
 
         let asm = List.filter ~f:(function
             | A.MOVE mv ->
