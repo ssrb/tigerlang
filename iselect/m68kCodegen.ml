@@ -298,9 +298,20 @@ let codegen frame stm =
         
         | T.CONST i -> result(fun r -> emit(A.OPER {assem = "move.l #$" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
  
-        | T.CALL (l, args) -> 
-            result(fun r -> emit(A.OPER {assem = "CALL `s0"; dst = []; src = (munchAddrExp l)::(munchArgs (0, args)); jump = None}))
+        | T.CALL (l, args) ->
 
+            let saverestore = Frame.callersaves |> List.map ~f:(fun reg ->
+                let memory = Frame.exp ((Frame.allocLocal frame false), (Tree.TEMP Frame.fp)) in
+                (Tree.MOVE (memory, (Tree.TEMP reg)) , Tree.MOVE ((Tree.TEMP reg), memory))
+            )
+            in
+
+            result(fun r -> 
+                munchStm (Tree.seq (List.map ~f:fst saverestore));            
+                emit(A.OPER {assem = "CALL `s0"; dst = []; src = (munchAddrExp l)::(munchArgs (0, args)); jump = None});
+                munchStm (Tree.seq (List.map ~f:snd saverestore))
+            )
+            
         | exp -> 
             exp
             |> Tree.sexp_of_exp
@@ -352,8 +363,19 @@ let codegen frame stm =
         
         | T.CONST i -> result(fun r -> emit(A.OPER {assem = "lea.l $" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
  
-        | T.CALL (l, args) -> 
-            result(fun r -> emit(A.OPER {assem = "CALL `s0"; dst = []; src = (munchAddrExp l)::(munchArgs (0, args)); jump = None}))
+        | T.CALL (l, args) ->
+        
+            let saverestore = Frame.callersaves |> List.map ~f:(fun reg ->
+                let memory = Frame.exp ((Frame.allocLocal frame false), (Tree.TEMP Frame.fp)) in
+                (Tree.MOVE (memory, (Tree.TEMP reg)) , Tree.MOVE ((Tree.TEMP reg), memory))
+            )
+            in
+
+            result(fun r -> 
+                munchStm (Tree.seq (List.map ~f:fst saverestore));            
+                emit(A.OPER {assem = "CALL `s0"; dst = []; src = (munchAddrExp l)::(munchArgs (0, args)); jump = None});
+                munchStm (Tree.seq (List.map ~f:snd saverestore))
+            )
 
         | exp -> 
             exp

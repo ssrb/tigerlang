@@ -13,6 +13,8 @@ val fp: Temp.temp
 val rv: Temp.temp
 val wordSize: int
 val registers: register list
+val calleesaves: Temp.temp list
+val callersaves: Temp.temp list
 
 val externalCall: string * Tree.exp list -> Tree.exp
 
