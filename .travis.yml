@@ -41,5 +41,6 @@ script:
 - mv vbcc_target_m68k-kick13/targets ${VBCC}/
 - export PATH=${VBCC}/bin:${PATH}
 - pushd main
-- vc +kick13 runtime.c foo.S 
+- ../regalloc/regalloc_tester ../testcases/queens.tig  > queens.S
+- vc +kick13 runtime.c queens.S
 - popd

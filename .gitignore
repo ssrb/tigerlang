@@ -16,3 +16,6 @@ semant/semant_tester
 canon/canon_tester
 iselect/iselect_tester
 regalloc/regalloc_tester
+main/*.S
+main/*.out
+main/*.i64
