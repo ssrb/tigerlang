@@ -36,7 +36,7 @@ Standard calling convention: Just like LVO Calling convention except no library 
 let registers = 
     (List.init 8 ~f:(fun i -> "d" ^ Int.to_string i)) @ 
     (List.init 8 ~f:(fun i -> "a" ^ Int.to_string i)) @
-    [ (* "ssp" ;*) "pc"; "ccr" ]
+    [ (* "ssp" ;*) (* "pc" ;*) (*"ccr"*) ]
 
 let regMap, tempMap = List.fold ~init:(SM.empty, TT.empty) ~f:(fun (rmap, tmap) reg ->
     let tmp = Temp.newtemp () in
