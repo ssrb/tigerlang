@@ -9,6 +9,9 @@ type access  [@@deriving sexp]
 type frag = PROC of {body: Tree.stm; frame: frame} | STRING of Temp.label * string [@@deriving sexp]
 type register = string [@@deriving sexp]
 
+type targetmodel = { regs: register list; conflict: register -> register -> bool; classes: register list list }
+val targetmodel: targetmodel
+
 val fp: Temp.temp
 val rv: Temp.temp
 val wordSize: int

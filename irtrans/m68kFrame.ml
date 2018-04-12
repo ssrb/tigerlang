@@ -13,6 +13,8 @@ type frame = {name: Temp.label; formals: access list; offset: int ref}  [@@deriv
 type frag = PROC of {body: Tree.stm; frame: frame} | STRING of Temp.label * string [@@deriving sexp]
 type register = string [@@deriving sexp]
 
+type targetmodel = { regs: register list; conflict: register -> register -> bool; classes: register list list }
+let targetmodel = { regs = []; conflict = (fun _ _ -> false); classes = []}
 (*
 Does anybody know a ABI reference for m68k ? Interested in the argument passing for a function call. 
 All C language arguments are passed via the stack (for non-LVO calls). 
