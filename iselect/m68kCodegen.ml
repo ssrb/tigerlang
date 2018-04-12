@@ -244,7 +244,7 @@ let codegen frame stm =
                 let e1 = munchDataExp e1 in
                  result(fun r -> 
                     emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = e0});
-                    emit(A.OPER {assem = "mul.l `s0,`d0"; dst = [r]; src = [e1; r]; jump = None})) 
+                    emit(A.OPER {assem = "mulu.w `s0,`d0"; dst = [r]; src = [e1; r]; jump = None})) 
             | T.DIV ->
                 let e0 = munchDataExp e0 in
                 let e1 = munchDataExp e1 in
