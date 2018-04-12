@@ -79,7 +79,8 @@ let group_recursive_decs decs = List.fold decs ~init:[] ~f:(fun gs d ->
 %start <Absyn.exp> prog
 %%
 
-prog: e = exp EOF { e }
+prog: | e = exp EOF { e }
+      | EOF { A.NilExp }
 
 decs: ds = list(dec) { group_recursive_decs ds }
 
