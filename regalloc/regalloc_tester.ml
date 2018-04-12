@@ -50,5 +50,8 @@ let f frag =
 		Out_channel.print_endline ((Symbol.name lbl) ^ ": \"" ^ str ^ "\"");
 in
 
-let _ = fragments |> List.iter ~f:f in
+let _ = 
+Out_channel.print_endline "_tigermain:";
+Out_channel.print_endline "\tpublic _tigermain";
+fragments |> List.iter ~f:f in
 ()
