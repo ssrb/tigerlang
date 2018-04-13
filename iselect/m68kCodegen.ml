@@ -7,71 +7,6 @@ open Core
 
 module T = Tree
 
-type stm = 
-| LABEL of Tree.label
-| JUMP of schizoexp * Tree.label list
-| CJUMP of Tree.relop * schizoexp * schizoexp * Tree.label * Tree.label
-| MOVE of schizoexp * schizoexp
-| EXP of schizoexp [@@deriving sexp]
-
-and schizoexp = Addr of exp | Data of exp [@@deriving sexp]
-
-and exp = 
-| BINOP of Tree.binop * schizoexp * schizoexp
-| MEM of schizoexp
-| TEMP of Temp.temp
-| NAME of Tree.label
-| CONST of int
-| CALL of schizoexp * schizoexp list [@@deriving sexp]
-
-let rec schizoStm = function
-| T.LABEL l -> LABEL l
-| T.JUMP (e, ls) -> JUMP ((schizoExp e), ls)
-| T.CJUMP (relop, left, right, t, f) -> CJUMP (relop, (schizoExp left), (schizoExp right), t, f)
-| T.MOVE (dst, src) -> MOVE ((schizoExp dst), (schizoExp src))
-| T.EXP e -> EXP (schizoExp e)
-| _ -> assert(false)
-
-and schizoExp e =
-match e with
-| T.BINOP (binop, left, right) ->
-begin
-    let left = schizoExp left in
-    let right = schizoExp right in
-    match (left, right) with
-    | (Data _, Data _)  | (Addr _, Addr _) -> Data (BINOP (binop, left, right))
-    | _ -> Addr (BINOP (binop, left, right))
-end
-| T.MEM e ->
-    let e = addrExp e in
-    Data (MEM e)
-| T.TEMP t -> Data (TEMP t)
-| T.NAME l -> Data (NAME l)
-| T.CONST c -> Data (CONST c)
-| T.CALL (name, args) -> Data (CALL ((schizoExp name), List.map ~f:schizoExp args))
-| _ -> assert(false)
-
-and addrExp e =
-match e with
-| T.BINOP (binop, left, right) ->
-begin
-    let left = schizoExp left in
-    let right = schizoExp right in
-    match (left, right) with
-    | (Data _, Data _) -> Data (BINOP (binop, left, right))
-    | (Addr _, Addr _) -> Data (BINOP (binop, left, right))
-    | _ -> Addr (BINOP (binop, left, right))
-end
-| T.MEM e ->
-    let e = addrExp e in
-    Addr (MEM e)
-| T.TEMP t -> Addr (TEMP t)
-| T.NAME l -> Addr (NAME l)
-| T.CONST c -> Addr (CONST c)
-| T.CALL (name, args) -> Addr (CALL ((schizoExp name), List.map ~f:schizoExp args))
-| _ -> assert(false)
-
-
 let codegen frame stm =
     let module A = Assem in
     let ilist = ref [] in
@@ -212,6 +147,34 @@ let codegen frame stm =
             |> Sexp.output_hum Out_channel.stdout;
             assert(false)
 
+    and emitCall (l, args) r = 
+
+        let saverestore = Frame.callersaves |> List.map ~f:(fun reg ->
+            let memory = Frame.exp ((Frame.allocLocal frame false), (Tree.TEMP Frame.fp)) in
+                (Tree.MOVE (memory, (Tree.TEMP reg)) , Tree.MOVE ((Tree.TEMP reg), memory))
+            )
+        in
+
+        let nargs = List.length args in
+        
+        saverestore |> List.iter ~f:(fun (s, _) -> munchStm s);
+
+        (* We pass everything on the stack *)
+        if nargs > 0 then
+            emit(A.OPER {assem = "suba.l #" ^ (Int.to_string nargs) ^ ",sp"; dst = []; src = []; jump = None});
+
+        args |> List.iteri ~f:(fun i a -> 
+            emit(A.OPER {assem = "movea.l `s0,-" ^ (Int.to_string (nargs - 1 - i)) ^ "(sp)"; dst = []; src = [ munchDataExp a ]; jump = None})
+        );
+
+        emit(A.OPER {assem = "bsr `s0"; dst = []; src = [ munchAddrExp l ]; jump = None});
+
+        if nargs > 0 then
+            emit(A.OPER {assem = "adda.l #" ^ (Int.to_string nargs) ^ ",sp"; dst = []; src = []; jump = None});
+
+        saverestore |> List.iter ~f:(fun (_, r) -> munchStm r)
+    
+
     and munchDataExp = function
 
         | T.BINOP (op, e0, e1) -> 
@@ -303,35 +266,7 @@ let codegen frame stm =
         
         | T.CONST i -> data(fun r -> emit(A.OPER {assem = "move.l #$" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
  
-        | T.CALL (l, args) ->
-
-            data(fun r ->
-
-                let saverestore = Frame.callersaves |> List.map ~f:(fun reg ->
-                    let memory = Frame.exp ((Frame.allocLocal frame false), (Tree.TEMP Frame.fp)) in
-                        (Tree.MOVE (memory, (Tree.TEMP reg)) , Tree.MOVE ((Tree.TEMP reg), memory))
-                    )
-                in
-
-                let nargs = List.length args in
-                
-                saverestore |> List.iter ~f:(fun (s, _) -> munchStm s);
-
-                (* We pass everything on the stack *)
-                if nargs > 0 then
-                    emit(A.OPER {assem = "suba.l #" ^ (Int.to_string nargs) ^ ",sp"; dst = []; src = []; jump = None});
-
-                args |> List.iteri ~f:(fun i a -> 
-                    emit(A.OPER {assem = "movea.l `s0,-" ^ (Int.to_string (nargs - 1 - i)) ^ "(sp)"; dst = []; src = [ munchDataExp a ]; jump = None})
-                );
-
-                emit(A.OPER {assem = "bsr `s0"; dst = []; src = [ munchAddrExp l ]; jump = None});
-
-                if nargs > 0 then
-                    emit(A.OPER {assem = "adda.l #" ^ (Int.to_string nargs) ^ ",sp"; dst = []; src = []; jump = None});
-
-                saverestore |> List.iter ~f:(fun (_, r) -> munchStm r)
-            )
+        | T.CALL (l, args) -> data(emitCall (l, args))
             
         | exp -> 
             exp
@@ -384,9 +319,7 @@ let codegen frame stm =
         
         | T.CONST i -> address(fun r -> emit(A.OPER {assem = "lea.l $" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
  
-        | T.CALL (l, args) as call ->
-
-           munchDataExp call
+        | T.CALL (l, args) -> address(emitCall (l, args))
 
         | exp -> 
             exp
