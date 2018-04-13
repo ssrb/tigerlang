@@ -40,7 +40,7 @@ let f frag =
 
 			asm.body |> List.iter ~f:(fun instr -> 
 				instr
-				|> M68K.Assem.format_hum (fun tmp -> Option.value ~default:(Temp.makestring tmp) (TT.look (allocation, tmp)))
+				|> M68K.Assem.format_hum (fun tmp -> Option.value ~default:(Temp.makestring (fst tmp)) (TT.look (allocation, fst tmp)))
 				|> Out_channel.print_endline);
 
 			Out_channel.print_endline asm.epilog;

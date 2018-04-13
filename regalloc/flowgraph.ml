@@ -1,9 +1,9 @@
 module type T = sig
-module Temp : Temp.T
+module Assem : Assem.T
 type flowgraph = {
       control: Graph.node list; 
-      def: Temp.temp list Graph.Table.table;
-      use: Temp.temp list Graph.Table.table;
+      def: Assem.temp list Graph.Table.table;
+      use: Assem.temp list Graph.Table.table;
       ismove: bool Graph.Table.table
 }
 
@@ -11,15 +11,15 @@ val show : Core.Out_channel.t -> flowgraph -> (Graph.node -> string) -> unit
 
 end
 
-module F = functor(Temp : Temp.T) -> struct
-module Temp = Temp
+module F = functor(Assem : Assem.T) -> struct
+module Assem = Assem
 
 open Core
 
 type flowgraph = {
       control: Graph.node list;
-      def: Temp.temp list Graph.Table.table;
-      use: Temp.temp list Graph.Table.table;
+      def: Assem.temp list Graph.Table.table;
+      use: Assem.temp list Graph.Table.table;
       ismove: bool Graph.Table.table
 }
 

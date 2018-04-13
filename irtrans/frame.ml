@@ -7,16 +7,17 @@ module Assem : Assem.T with module Temp = Temp
 type frame [@@deriving sexp]
 type access  [@@deriving sexp]
 type frag = PROC of {body: Tree.stm; frame: frame} | STRING of Temp.label * string [@@deriving sexp]
-type register = string [@@deriving sexp]
 
-type targetmodel = { regs: register list; conflict: register -> register -> bool; classes: register list list }
+type register = string [@@deriving sexp]
+type regclass = string [@@deriving sexp]
+type targetmodel = { regs: register list; conflict: register -> register -> bool; classes: regclass -> register list }
 val targetmodel: targetmodel
 
 val fp: Temp.temp
 val rv: Temp.temp
 val wordSize: int
 val registers: register list
-val calleesaves: Temp.temp list
+val calleesaves: (Temp.temp * string) list
 val callersaves: Temp.temp list
 
 val externalCall: string * Tree.exp list -> Tree.exp

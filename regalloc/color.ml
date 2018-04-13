@@ -7,7 +7,7 @@ type color = {interference: Liveness.igraph; initial: allocation; spillCost: Gra
 val color :  color -> allocation * Temp.temp list
 end
 
-module F (Frame: Frame.T) (Liveness: Liveness.T with module Temp = Frame.Temp) = struct
+module F (Frame: Frame.T) (Liveness: Liveness.T with module Assem.Temp = Frame.Temp) = struct
 
 open Core
 open Liveness
@@ -103,12 +103,12 @@ let color color  =
     let build () =
 
         let addMove (n, m) = 
-            let tmp = gtemp n in
+            let tmp = fst (gtemp n) in
             moveList := TT.enter (!moveList, tmp, MS.add (TT.look_exn (!moveList, tmp)) m)
         in
 
         color.interference.graph |> List.iter ~f:(fun n -> 
-            let tmp = gtemp n in
+            let tmp = fst (gtemp n) in
 
             moveList := TT.enter (!moveList, tmp, MS.empty);
             adjList := NT.enter (!adjList, n, NS.empty);
@@ -158,7 +158,7 @@ let color color  =
     in
 
     let nodeMoves n =
-        MS.inter (TT.look_exn (!moveList, (gtemp n))) (MS.union !activeMoves !worklistMoves)
+        MS.inter (TT.look_exn (!moveList, fst (gtemp n))) (MS.union !activeMoves !worklistMoves)
     in
 
     let moveRelated n =
@@ -258,8 +258,8 @@ let color color  =
         alias := NT.enter (!alias, v, u);
 
         (* nodeMoves[u] <- nodeMoves[u] U nodeMoves[v] *)
-        let tu = gtemp u in
-        let tv = gtemp v in
+        let tu = fst (gtemp u) in
+        let tv = fst (gtemp v) in
         let mu = TT.look_exn (!moveList, tu) in
         let mv = TT.look_exn (!moveList, tv) in
         moveList := TT.enter (!moveList, tu, (MS.union mu mv));
@@ -407,12 +407,12 @@ let color color  =
             let okColors = ref color.registers in
             NS.iter ~f:(fun w -> 
                 let a = getAlias w in
-                match TT.look (!coloredNodes, (gtemp a)) with
+                match TT.look (!coloredNodes, fst (gtemp a)) with
                 | Some c -> okColors := remove !okColors c
                 | None -> ()
             ) (NT.look_exn (!adjList, n));
 
-            let t = gtemp n in
+            let t = fst (gtemp n) in
             match !okColors with
             | c::_ -> coloredNodes := TT.enter (!coloredNodes, t, c)
             | [] -> spilledNodes := t::!spilledNodes
@@ -421,8 +421,8 @@ let color color  =
 
         !coalescedNodes |> NS.iter ~f:(fun n ->
             let a = getAlias n in
-            let c = TT.look_exn (!coloredNodes, (gtemp a)) in
-            coloredNodes := TT.enter (!coloredNodes, (gtemp n), c)
+            let c = TT.look_exn (!coloredNodes, fst (gtemp a)) in
+            coloredNodes := TT.enter (!coloredNodes, fst (gtemp n), c)
         )
     in
 

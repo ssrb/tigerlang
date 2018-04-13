@@ -1,9 +1,9 @@
 module type T = sig
-module Temp : Temp.T
+module Assem : Assem.T
 type flowgraph = {
       control: Graph.node list; 
-      def: Temp.temp list Graph.Table.table;
-      use: Temp.temp list Graph.Table.table;
+      def: Assem.temp list Graph.Table.table;
+      use: Assem.temp list Graph.Table.table;
       ismove: bool Graph.Table.table
 }
 
@@ -11,7 +11,7 @@ val show : Core.Out_channel.t -> flowgraph -> (Graph.node -> string) -> unit
 
 end
 
-module F : functor(Temp : Temp.T) -> T with module Temp = Temp
+module F : functor(Assem : Assem.T) -> T with module Assem = Assem
   (* Note:  any "use" within the block is assumed to be BEFORE a "def" 
         of the same variable.  If there is a def(x) followed by use(x)
        in the same block, do not mention the use in this data structure,

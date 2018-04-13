@@ -34,7 +34,7 @@ let f frag =
 
 			asm.body |> List.iter ~f:(fun instr -> 
 				instr
-				|> M68K.Assem.format_hum M68kTemp.makestring
+				|> M68K.Assem.format_hum (fun (r, c) -> c ^ M68kTemp.makestring r)
 				|> Out_channel.print_endline
 			);
 

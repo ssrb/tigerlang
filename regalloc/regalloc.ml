@@ -29,9 +29,9 @@ let rec alloc (asm, frame) =
             let store t = Codegen.codegen frame (Tree.MOVE ((Tree.TEMP t), memory)) in
 
             let rewriteOperands fs ops  = 
-                if member ops spill then
+                if List.exists ~f:(fun (o, _) -> o = spill) ops then
                     let t = Temp.newtemp () in
-                    (fs t, List.map ~f:(fun o -> if o = spill then t else o) ops)
+                    (fs t, List.map ~f:(fun (o, c) -> if o = spill then (t, c) else (o, c)) ops)
                 else
                     ([], ops)
             in
@@ -118,7 +118,7 @@ let rec alloc (asm, frame) =
         let asm = List.filter ~f:(function
             | A.MOVE mv ->
             begin
-                match TT.look (colors, mv.dst), TT.look (colors, mv.src) with
+                match TT.look (colors, fst mv.dst), TT.look (colors, fst mv.src) with
                 | Some dst, Some src -> dst <> src
                 | _ -> true
             end

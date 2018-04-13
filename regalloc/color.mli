@@ -7,4 +7,4 @@ type color = {interference: Liveness.igraph; initial: allocation; spillCost: Gra
 val color :  color -> allocation * Temp.temp list
 end
 
-module F (Frame: Frame.T) (Liveness: Liveness.T with module Temp = Frame.Temp) : T with module Frame = Frame and module Liveness = Liveness and module Temp = Frame.Temp
+module F (Frame: Frame.T) (Liveness: Liveness.T with module Assem.Temp = Frame.Temp) : T with module Frame = Frame and module Liveness = Liveness and module Temp = Frame.Temp

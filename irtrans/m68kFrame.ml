@@ -12,9 +12,10 @@ type access = InFrame of int | InReg of Temp.temp  [@@deriving sexp]
 type frame = {name: Temp.label; formals: access list; offset: int ref}  [@@deriving sexp]
 type frag = PROC of {body: Tree.stm; frame: frame} | STRING of Temp.label * string [@@deriving sexp]
 type register = string [@@deriving sexp]
+type regclass = string [@@deriving sexp]
 
-type targetmodel = { regs: register list; conflict: register -> register -> bool; classes: register list list }
-let targetmodel = { regs = []; conflict = (fun _ _ -> false); classes = []}
+type targetmodel = { regs: register list; conflict: register -> register -> bool; classes: regclass -> register list }
+let targetmodel = { regs = []; conflict = (fun _ _ -> false); classes = (fun _ -> []) }
 (*
 Does anybody know a ABI reference for m68k ? Interested in the argument passing for a function call. 
 All C language arguments are passed via the stack (for non-LVO calls). 
@@ -52,7 +53,8 @@ let usp = SM.find_exn regMap "a7"
 
 let specialregs = []
 let argregs = []
-let calleesaves = [ "d2"; "d3"; "d4"; "d5"; "d6"; "d7"; "a2"; "a3"; "a4"; (* "a5" ;*) "a6"; "a7" ] |> List.map ~f:(SM.find_exn regMap)
+let calleesaves = ([ "d2"; "d3"; "d4"; "d5"; "d6"; "d7" ] |> List.map ~f:(fun r -> ((SM.find_exn regMap r), "d")))
+@ (["a2"; "a3"; "a4"; (* "a5" ;*) "a6"; "a7" ] |> List.map ~f:(fun r -> ((SM.find_exn regMap r), "a")))
 let callersaves = [ "d0"; "d1"; "a0"; "a1" ] |> List.map ~f:(SM.find_exn regMap)
 
 let externalCall (name, exps) = 
@@ -83,7 +85,7 @@ let exp (access, exp) =
 
 let procEntryExit1 (frame, body) = 
     
-    let saverestore = calleesaves |> List.map ~f:(fun reg ->
+    let saverestore = calleesaves |> List.map ~f:(fun (reg, _) ->
         let memory = exp ((allocLocal frame false), (Tree.TEMP fp)) in
         (Tree.MOVE (memory, (Tree.TEMP reg)) , Tree.MOVE ((Tree.TEMP reg), memory))
     )
@@ -100,7 +102,7 @@ let procEntryExit1 (frame, body) =
 
 let procEntryExit2 (frame, body) = 
     body @ 
-    [ Assem.OPER {assem = ""; src = [fp; rv] @ calleesaves; dst = []; jump = None} ]
+    [ Assem.OPER {assem = ""; src = [(fp, "fp"); (rv, "d") ] @ calleesaves; dst = []; jump = None} ]
 
 type procEntryExit3 = {prolog: string; body: Assem.instr list; epilog: string} [@@deriving sexp]
 let procEntryExit3 (frame, body) = 

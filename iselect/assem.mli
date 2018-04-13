@@ -5,7 +5,7 @@ module Temp : Temp.T
 exception Assem_error of string
 
 type reg = string [@@deriving sexp]
-type temp = Temp.temp [@@deriving sexp]
+type temp = Temp.temp * string [@@deriving sexp]
 type label = Temp.label [@@deriving sexp]
 
 type instr = 

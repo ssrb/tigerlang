@@ -1,6 +1,6 @@
 module F = functor(Assem : Assem.T) -> struct
 
-module Flow = Flowgraph.F(Assem.Temp)
+module Flow = Flowgraph.F(Assem)
 module GT = Graph.Table
 
 open Flow

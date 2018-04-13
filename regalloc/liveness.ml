@@ -1,12 +1,12 @@
 module type T = sig
 
 module Flow : Flowgraph.T
-module Temp : Temp.T
+module Assem : Assem.T
 
 type igraph = {
     graph: Graph.node list;
-    tnode: Temp.temp -> Graph.node;
-    gtemp: Graph.node -> Temp.temp;
+    tnode: Assem.temp -> Graph.node;
+    gtemp: Graph.node -> Assem.temp;
     moves: (Graph.node * Graph.node) list
 }
 
@@ -18,7 +18,8 @@ end
 module F = functor(Flow : Flowgraph.T) -> struct
 
 module Flow = Flow
-module Temp = Flow.Temp
+module Assem = Flow.Assem
+module Temp = Assem.Temp
 
 module TT = Temp.Table
 module TS = Temp.Set
@@ -29,8 +30,8 @@ open Flow
 
 type igraph = {
     graph: Graph.node list;
-    tnode: Temp.temp -> Graph.node;
-    gtemp: Graph.node -> Temp.temp;
+    tnode: Assem.temp -> Graph.node;
+    gtemp: Graph.node -> Assem.temp;
     moves: (Graph.node * Graph.node) list
 }
 
@@ -42,12 +43,12 @@ let liveness flowgraph : liveMap =
     let nodes = flowgraph.control |> List.rev in
 
     let defs = nodes |> List.fold ~init:GT.empty ~f:(fun t n ->
-        GT.enter (t, n, GT.look_exn (flowgraph.def, n) |> TS.of_list)
+        GT.enter (t, n, GT.look_exn (flowgraph.def, n) |> List.map ~f:fst |> TS.of_list)
     )
     in
 
     let uses = nodes |> List.fold ~init:GT.empty ~f:(fun t n ->
-        GT.enter (t, n, GT.look_exn (flowgraph.use, n) |> TS.of_list)
+        GT.enter (t, n, GT.look_exn (flowgraph.use, n) |> List.map ~f:fst |> TS.of_list)
     )
     in
 
@@ -110,7 +111,7 @@ let interferenceGraph flowgraph =
 
         assert((not ismove) || (List.length def = 1 && List.length use = 1));
 
-        let (tnode, gtemp, moves) = def |> List.fold ~init:(tnode, gtemp, moves) ~f:(fun (tnode, gtemp, moves) d ->
+        let (tnode, gtemp, moves) = def |> List.fold ~init:(tnode, gtemp, moves) ~f:(fun (tnode, gtemp, moves) (d, _) ->
 
             let (node, tnode, gtemp) = tempnode (d, tnode, gtemp) in
 
@@ -121,7 +122,7 @@ let interferenceGraph flowgraph =
                 if node <> node' then (
                     if not ismove then
                         Graph.(mk_edge {f = node; t = node'})
-                    else if List.hd_exn use <> out then
+                    else if fst (List.hd_exn use) <> out then
                         Graph.(mk_edge {f = node; t= node'})
                 );
 
@@ -130,7 +131,7 @@ let interferenceGraph flowgraph =
             in
 
             if ismove then
-                let (node', tnode, gtemp) = tempnode ((List.hd_exn use), tnode, gtemp) in
+                let (node', tnode, gtemp) = tempnode (fst (List.hd_exn use), tnode, gtemp) in
                 (tnode, gtemp, (node, node')::moves)
             else
                 (tnode, gtemp, moves)
@@ -148,28 +149,30 @@ let interferenceGraph flowgraph =
     
     {
         graph = Graph.nodes graph;
-        tnode = (fun t -> TT.look_exn (tnode, t));
-        gtemp = (fun n -> GT.look_exn (gtemp, n));
+        tnode = (fun t -> TT.look_exn (tnode, fst t));
+        gtemp = (fun n -> (GT.look_exn (gtemp, n), ""));
         moves = moves
     }
 
 let show outstream graph ?(color=(fun _ -> "black")) =
 
+    let makestring (r, c) = c ^ (Temp.makestring r) in 
+
     Out_channel.output_string outstream "graph G {";
     Out_channel.newline outstream;
     graph.graph |> List.iter ~f:(fun n ->
-        let ntmp = n |> graph.gtemp |> Temp.makestring in
+        let ntmp = n |> graph.gtemp |> makestring in
         Out_channel.output_string outstream (ntmp ^ "[color=" ^ (color n) ^ "]");
         Out_channel.newline outstream;
         Graph.succ n |> List.iter ~f:(fun m ->
-                let mtmp = m |> graph.gtemp |> Temp.makestring in
+                let mtmp = m |> graph.gtemp |> makestring in
                 Out_channel.output_string outstream (ntmp ^ "--" ^ mtmp);
                 Out_channel.newline outstream
         )
     );
     graph.moves |> List.iter ~f:(fun (n, m) ->
-        let n = n |> graph.gtemp |> Temp.makestring in
-        let m = m |> graph.gtemp |> Temp.makestring in
+        let n = n |> graph.gtemp |> makestring in
+        let m = m |> graph.gtemp |> makestring in
         Out_channel.output_string outstream (n ^ "--" ^ m ^ "[style=dashed]");
         Out_channel.newline outstream
         
