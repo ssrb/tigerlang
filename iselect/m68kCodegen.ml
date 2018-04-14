@@ -2,6 +2,7 @@ module Frame = M68kFrame
 module Tree = Frame.Tree
 module Temp = Frame.Temp
 module Assem = Assem.F(M68kTemp)
+module Var = Assem.Variable
 
 open Core
 
@@ -12,14 +13,14 @@ let codegen frame stm =
     let ilist = ref [] in
     let emit x = ilist := x::!ilist in
     let data gen = 
-        let t = (T.Temp.newtemp(), "d") in 
-        gen t; 
-        t
+        let v = Var.make (T.Temp.newtemp(), "d") in 
+        gen v; 
+        v
     in
     let address gen = 
-        let t = (T.Temp.newtemp(), "a") in 
-        gen t; 
-        t
+        let v = Var.make (T.Temp.newtemp(), "a") in 
+        gen v; 
+        v
     in
     let rec munchStm = function
     (* Data movememt *)
@@ -260,7 +261,7 @@ let codegen frame stm =
         | T.MEM(T.BINOP(T.MINUS, T.CONST i, e0)) -> data(fun r -> emit(A.OPER {assem = "move.l " ^ Int.to_string (-i / 4) ^ "(`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
         | T.MEM(T.CONST i) -> data(fun r -> emit(A.OPER {assem = "move.l $"^ Int.to_string i ^ ",`d0"; dst = [r]; src = []; jump = None}))
         | T.MEM(e0) -> data(fun r -> emit(A.OPER {assem = "move.l (`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
-        | T.TEMP t -> (t, "d")
+        | T.TEMP t -> Var.make (t, "d")
         
         | T.NAME l -> data(fun r -> emit(A.OPER {assem = "lea.l #" ^ (Symbol.name l) ^ ",`d0" ; dst = [r]; src = []; jump = None}))
         
@@ -313,7 +314,7 @@ let codegen frame stm =
         | T.MEM(T.BINOP(T.MINUS, T.CONST i, e0)) -> address(fun r -> emit(A.OPER {assem = "movea.l " ^ Int.to_string (-i / 4) ^ "(`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
         | T.MEM(T.CONST i) -> address(fun r -> emit(A.OPER {assem = "movea.l $"^ Int.to_string i ^ ",`d0"; dst = [r]; src = []; jump = None}))
         | T.MEM(e0) -> address(fun r -> emit(A.OPER {assem = "movea.l (`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
-        | T.TEMP t -> (t, "a")
+        | T.TEMP t -> Var.make (t, "a")
         
         | T.NAME l -> address(fun r -> emit(A.OPER {assem = "lea.l #" ^ (Symbol.name l) ^ ",`d0" ; dst = [r]; src = []; jump = None}))
         

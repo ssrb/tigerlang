@@ -2,7 +2,8 @@ open Core
 
 module Temp = M68kTemp
 module Tree = Tree.F(Temp)
-module Assem = Assem.F(Temp) 
+module Assem = Assem.F(Temp)
+module Var = Assem.Variable
 module TT = Temp.Table
 module SM = String.Map
 
@@ -53,8 +54,8 @@ let usp = SM.find_exn regMap "a7"
 
 let specialregs = []
 let argregs = []
-let calleesaves = ([ "d2"; "d3"; "d4"; "d5"; "d6"; "d7" ] |> List.map ~f:(fun r -> ((SM.find_exn regMap r), "d")))
-@ (["a2"; "a3"; "a4"; (* "a5" ;*) "a6"; "a7" ] |> List.map ~f:(fun r -> ((SM.find_exn regMap r), "a")))
+let calleesaves = Var.(([ "d2"; "d3"; "d4"; "d5"; "d6"; "d7" ] |> List.map ~f:(fun r -> make ((SM.find_exn regMap r), "d")))
+@ (["a2"; "a3"; "a4"; (* "a5" ;*) "a6"; "a7" ] |> List.map ~f:(fun r -> make ((SM.find_exn regMap r), "a"))))
 let callersaves = [ "d0"; "d1"; "a0"; "a1" ] |> List.map ~f:(SM.find_exn regMap)
 
 let externalCall (name, exps) = 
@@ -85,9 +86,9 @@ let exp (access, exp) =
 
 let procEntryExit1 (frame, body) = 
     
-    let saverestore = calleesaves |> List.map ~f:(fun (reg, _) ->
+    let saverestore = calleesaves |> List.map ~f:(fun (reg : Var.t) ->
         let memory = exp ((allocLocal frame false), (Tree.TEMP fp)) in
-        (Tree.MOVE (memory, (Tree.TEMP reg)) , Tree.MOVE ((Tree.TEMP reg), memory))
+        (Tree.MOVE (memory, (Tree.TEMP reg.temp)) , Tree.MOVE ((Tree.TEMP reg.temp), memory))
     )
     in
     
@@ -102,7 +103,7 @@ let procEntryExit1 (frame, body) =
 
 let procEntryExit2 (frame, body) = 
     body @ 
-    [ Assem.OPER {assem = ""; src = [(fp, "fp"); (rv, "d") ] @ calleesaves; dst = []; jump = None} ]
+    [ Assem.OPER {assem = ""; src = Var.([make (fp, "fp"); make (rv, "d") ]) @ calleesaves; dst = []; jump = None} ]
 
 type procEntryExit3 = {prolog: string; body: Assem.instr list; epilog: string} [@@deriving sexp]
 let procEntryExit3 (frame, body) = 

@@ -5,8 +5,8 @@ module Assem : Assem.T
 
 type igraph = {
     graph: Graph.node list;
-    tnode: Assem.temp -> Graph.node;
-    gtemp: Graph.node -> Assem.temp;
+    tnode: Assem.Variable.t -> Graph.node;
+    gtemp: Graph.node -> Assem.Variable.t;
     moves: (Graph.node * Graph.node) list
 }
 

@@ -2,8 +2,8 @@ module type T = sig
 module Assem : Assem.T
 type flowgraph = {
       control: Graph.node list; 
-      def: Assem.temp list Graph.Table.table;
-      use: Assem.temp list Graph.Table.table;
+      def: Assem.Variable.t list Graph.Table.table;
+      use: Assem.Variable.t list Graph.Table.table;
       ismove: bool Graph.Table.table
 }
 

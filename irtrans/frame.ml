@@ -17,7 +17,7 @@ val fp: Temp.temp
 val rv: Temp.temp
 val wordSize: int
 val registers: register list
-val calleesaves: (Temp.temp * string) list
+val calleesaves: Assem.Variable.t list
 val callersaves: Temp.temp list
 
 val externalCall: string * Tree.exp list -> Tree.exp
