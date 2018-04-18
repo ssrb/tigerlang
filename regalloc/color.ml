@@ -3,7 +3,7 @@ module Temp : Temp.T
 module Frame : Frame.T
 module Liveness : Liveness.T
 type allocation = Frame.register Temp.Table.table
-type color = {interference: Liveness.igraph; initial: allocation; spillCost: Graph.node -> float; registers: Frame.register list} 
+type color = {interference: Liveness.igraph; initial: allocation; spillCost: Graph.node -> float; targetmodel: Frame.targetmodel} 
 val color :  color -> allocation * Temp.temp list
 end
 
@@ -18,7 +18,7 @@ module Temp = Frame.Temp
 module TT = Temp.Table
 
 type allocation = Frame.register Temp.Table.table
-type color = {interference: Liveness.igraph; initial: allocation; spillCost: Graph.node -> float; registers: Frame.register list} 
+type color = {interference: Liveness.igraph; initial: allocation; spillCost: Graph.node -> float; targetmodel: Frame.targetmodel} 
 
 module Move = Comparable.Make (
     struct
@@ -36,7 +36,7 @@ let member = List.mem ~equal:(=)
 
 let color color  = 
 
-    let k = List.length color.registers in
+    let k = List.length color.targetmodel.regs in
 
     let gtemp = color.interference.gtemp in
 
@@ -404,7 +404,7 @@ let color color  =
         
         !selectStack |> List.iter ~f:(fun n ->
 
-            let okColors = ref color.registers in
+            let okColors = ref color.targetmodel.regs in
             NS.iter ~f:(fun w -> 
                 let a = getAlias w in
                 match TT.look (!coloredNodes, (gtemp a).temp) with

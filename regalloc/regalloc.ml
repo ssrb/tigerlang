@@ -74,7 +74,7 @@ let rec alloc (asm, frame) =
         (float_of_int usecnt) /. (float_of_int(List.length (Graph.adj n)))
     in
 
-	let colors, spills = Color.color {interference = igraph; initial = Frame.tempMap; spillCost; registers = Frame.registers} in
+	let colors, spills = Color.color Frame.({interference = igraph; initial = tempMap; spillCost; targetmodel = targetmodel}) in
     match spills with
     | [] ->
         

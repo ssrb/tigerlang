@@ -16,7 +16,6 @@ val targetmodel: targetmodel
 val fp: Temp.temp
 val rv: Temp.temp
 val wordSize: int
-val registers: register list
 val calleesaves: Assem.Variable.t list
 val callersaves: Temp.temp list
 

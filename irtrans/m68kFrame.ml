@@ -15,8 +15,14 @@ type frag = PROC of {body: Tree.stm; frame: frame} | STRING of Temp.label * stri
 type register = string [@@deriving sexp]
 type regclass = string [@@deriving sexp]
 
+let registers = 
+    (List.init 8 ~f:(fun i -> "d" ^ Int.to_string i)) @ 
+    (List.init 8 ~f:(fun i -> "a" ^ Int.to_string i)) @
+    [ (* "ssp" ;*) (* "pc" ;*) (*"ccr"*) ]
+
 type targetmodel = { regs: register list; conflict: register -> register -> bool; classes: regclass -> register list }
-let targetmodel = { regs = []; conflict = (fun _ _ -> false); classes = (fun _ -> []) }
+let targetmodel = { regs = registers; conflict = (fun _ _ -> false); classes = (fun _ -> []) }
+
 (*
 Does anybody know a ABI reference for m68k ? Interested in the argument passing for a function call. 
 All C language arguments are passed via the stack (for non-LVO calls). 
@@ -36,11 +42,6 @@ Standard calling convention: Just like LVO Calling convention except no library 
 *)
 
 (* Seb: LVO := Library Vector offset*)
-
-let registers = 
-    (List.init 8 ~f:(fun i -> "d" ^ Int.to_string i)) @ 
-    (List.init 8 ~f:(fun i -> "a" ^ Int.to_string i)) @
-    [ (* "ssp" ;*) (* "pc" ;*) (*"ccr"*) ]
 
 let regMap, tempMap = List.fold ~init:(SM.empty, TT.empty) ~f:(fun (rmap, tmap) reg ->
     let tmp = Temp.newtemp () in
