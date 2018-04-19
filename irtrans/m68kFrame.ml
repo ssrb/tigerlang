@@ -16,16 +16,16 @@ type register = string [@@deriving sexp]
 type regclass = string [@@deriving sexp]
 
 let datareg = (List.init 8 ~f:(fun i -> "d" ^ Int.to_string i))
-let addrreg = (List.init 8 ~f:(fun i -> "a" ^ Int.to_string i))
+let addrreg = (List.init 7 ~f:(fun i -> "a" ^ Int.to_string i))
 
-let registers = datareg @ addrreg @ [ (* "ssp" ;*) (* "pc" ;*) (*"ccr"*) ]
+let registers = datareg @ addrreg @ [ "sp" (* sp *) ; "pc" ; "ccr" ]
 
 
 let classes = 
     let c = String.Map.empty in
     let c = String.Map.set c "d" (String.Set.of_list datareg) in
     let c = String.Map.set c "a" (String.Set.of_list addrreg) in
-    let c = String.Map.set c "ssp" (String.Set.singleton "ssp") in
+    let c = String.Map.set c "sp" (String.Set.singleton "sp") in
     let c = String.Map.set c "pc" (String.Set.singleton "pc") in
     let c = String.Map.set c "ccr" (String.Set.singleton "ccr") in
     c
@@ -61,12 +61,12 @@ let regMap, tempMap = List.fold ~init:(SM.empty, TT.empty) ~f:(fun (rmap, tmap) 
 
 let fp = SM.find_exn regMap "a5"
 let rv = SM.find_exn regMap "d0"
-let usp = SM.find_exn regMap "a7"
+let sp = SM.find_exn regMap "sp"
 
 let specialregs = []
 let argregs = []
 let calleesaves = Var.(([ "d2"; "d3"; "d4"; "d5"; "d6"; "d7" ] |> List.map ~f:(fun r -> make ((SM.find_exn regMap r), "d")))
-@ (["a2"; "a3"; "a4"; (* "a5" ;*) "a6"; "a7" ] |> List.map ~f:(fun r -> make ((SM.find_exn regMap r), "a"))))
+@ (["a2"; "a3"; "a4"; (* "a5" ;*) "a6" ] |> List.map ~f:(fun r -> make ((SM.find_exn regMap r), "a"))))
 let callersaves = [ "d0"; "d1"; "a0"; "a1" ] |> List.map ~f:(SM.find_exn regMap)
 
 let externalCall (name, exps) = 

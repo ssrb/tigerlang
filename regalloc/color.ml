@@ -404,18 +404,18 @@ let color color  =
         
         !selectStack |> List.iter ~f:(fun n ->
 
-            let okColors = ref color.targetmodel.regs in
+            let okColors = ref (color.targetmodel.classes (gtemp n).regclass) in
             NS.iter ~f:(fun w -> 
                 let a = getAlias w in
                 match TT.look (!coloredNodes, (gtemp a).temp) with
-                | Some c -> okColors := remove !okColors c
+                | Some c -> okColors := String.Set.remove !okColors c
                 | None -> ()
             ) (NT.look_exn (!adjList, n));
 
             let t = (gtemp n).temp in
-            match !okColors with
-            | c::_ -> coloredNodes := TT.enter (!coloredNodes, t, c)
-            | [] -> spilledNodes := t::!spilledNodes
+            match String.Set.choose !okColors with
+            | Some c -> coloredNodes := TT.enter (!coloredNodes, t, c)
+            | None -> spilledNodes := t::!spilledNodes
                 
         );
 
