@@ -15,13 +15,23 @@ type frag = PROC of {body: Tree.stm; frame: frame} | STRING of Temp.label * stri
 type register = string [@@deriving sexp]
 type regclass = string [@@deriving sexp]
 
-let registers = 
-    (List.init 8 ~f:(fun i -> "d" ^ Int.to_string i)) @ 
-    (List.init 8 ~f:(fun i -> "a" ^ Int.to_string i)) @
-    [ (* "ssp" ;*) (* "pc" ;*) (*"ccr"*) ]
+let datareg = (List.init 8 ~f:(fun i -> "d" ^ Int.to_string i))
+let addrreg = (List.init 8 ~f:(fun i -> "a" ^ Int.to_string i))
 
-type targetmodel = { regs: register list; conflict: register -> register -> bool; classes: regclass -> register list }
-let targetmodel = { regs = registers; conflict = (fun _ _ -> false); classes = (fun _ -> []) }
+let registers = datareg @ addrreg @ [ (* "ssp" ;*) (* "pc" ;*) (*"ccr"*) ]
+
+
+let classes = 
+    let c = String.Map.empty in
+    let c = String.Map.set c "d" (String.Set.of_list datareg) in
+    let c = String.Map.set c "a" (String.Set.of_list addrreg) in
+    let c = String.Map.set c "ssp" (String.Set.singleton "ssp") in
+    let c = String.Map.set c "pc" (String.Set.singleton "pc") in
+    let c = String.Map.set c "ccr" (String.Set.singleton "ccr") in
+    c
+
+type targetmodel = { regs: register list; conflict: register -> register -> bool; classes: regclass -> String.Set.t }
+let targetmodel = { regs = registers; conflict = (fun _ _ -> false); classes = (fun c -> String.Map.find_exn  classes c)}
 
 (*
 Does anybody know a ABI reference for m68k ? Interested in the argument passing for a function call. 
