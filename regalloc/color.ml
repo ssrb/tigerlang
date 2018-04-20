@@ -408,7 +408,7 @@ let color color  =
             NS.iter ~f:(fun w -> 
                 let a = getAlias w in
                 match TT.look (!coloredNodes, (gtemp a).temp) with
-                | Some c -> okColors := String.Set.remove !okColors c
+                | Some c -> okColors := String.Set.partition_tf !okColors ~f:(color.targetmodel.conflict c) |> snd
                 | None -> ()
             ) (NT.look_exn (!adjList, n));
 
@@ -421,8 +421,9 @@ let color color  =
 
         !coalescedNodes |> NS.iter ~f:(fun n ->
             let a = getAlias n in
-            let c = TT.look_exn (!coloredNodes, (gtemp a).temp) in
-            coloredNodes := TT.enter (!coloredNodes, (gtemp n).temp, c)
+            match TT.look (!coloredNodes, (gtemp a).temp) with
+            | Some c -> coloredNodes := TT.enter (!coloredNodes, (gtemp n).temp, c)
+            | None -> ()
         )
     in
 
