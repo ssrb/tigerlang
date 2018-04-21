@@ -1,7 +1,7 @@
 module Frame = M68kFrame
 module Tree = Frame.Tree
+module Assem = Frame.Assem
 module Temp = Frame.Temp
-module Assem = Assem.F(M68kTemp)
 module Var = Assem.Variable
 
 open Core

@@ -30,8 +30,18 @@ let classes =
     let c = String.Map.set c "ccr" (String.Set.singleton "ccr") in
     c
 
-type targetmodel = { regs: register list; conflict: register -> register -> bool; classes: regclass -> String.Set.t }
-let targetmodel = { regs = registers; conflict = (fun l r -> l = r); classes = (fun c -> String.Map.find_exn  classes c)}
+type targetmodel = { 
+    regs: register list; 
+    conflict: register -> register -> bool; 
+    classes: regclass -> String.Set.t; 
+    colorable: Assem.Variable.t -> Assem.Variable.t list -> bool 
+}
+
+let targetmodel = 
+    let conflict l r = l = r in
+    let classes = String.Map.find_exn classes in
+    let colorable _ _ = true  in
+    { regs = registers; conflict; classes; colorable }
 
 (*
 Does anybody know a ABI reference for m68k ? Interested in the argument passing for a function call. 

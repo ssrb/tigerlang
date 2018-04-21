@@ -7,7 +7,7 @@ type color = {interference: Liveness.igraph; initial: allocation; spillCost: Gra
 val color :  color -> allocation * Temp.temp list
 end
 
-module F (Frame: Frame.T) (Liveness: Liveness.T with module Assem.Temp = Frame.Temp) = struct
+module F (Frame: Frame.T) (Liveness: Liveness.T with module Assem = Frame.Assem) = struct
 
 open Core
 open Liveness
@@ -34,7 +34,7 @@ let remove l e = List.filter ~f:((<>) e) l
 
 let member = List.mem ~equal:(=)
 
-let color color  = 
+let color color  =
 
     let k = List.length color.targetmodel.regs in
 
@@ -166,8 +166,11 @@ let color color  =
     in
 
     let makeWorkList () = List.iter ~f:(fun n ->
-        let d = NT.look_exn (!degree, n) in
-        if d >= k then
+        (*let d = NT.look_exn (!degree, n) in
+        if d >= k then *)
+        let foo : Assem.Variable.t = gtemp n in
+        let bar : Assem.Variable.t list =  (adjacent n) |> NS.to_list |> List.map ~f:gtemp in
+        if not (color.targetmodel.colorable foo bar) then
             spillWorklist := n::!spillWorklist
         else if moveRelated n then
             freezeWorklist := n::!freezeWorklist

@@ -10,7 +10,13 @@ type frag = PROC of {body: Tree.stm; frame: frame} | STRING of Temp.label * stri
 
 type register = string [@@deriving sexp]
 type regclass = string [@@deriving sexp]
-type targetmodel = { regs: register list; conflict: register -> register -> bool; classes: regclass -> Core.String.Set.t }
+type targetmodel = { 
+    regs: register list; 
+    conflict: register -> register -> bool; 
+    classes: regclass -> Core.String.Set.t; 
+    colorable: Assem.Variable.t -> Assem.Variable.t list -> bool 
+}
+
 val targetmodel: targetmodel
 
 val fp: Temp.temp

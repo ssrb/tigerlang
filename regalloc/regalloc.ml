@@ -1,7 +1,7 @@
 module F = functor(Codegen : Codegen.T) ->
 struct
 module Frame = Codegen.Frame
-module Assem = Codegen.Assem
+module Assem = Frame.Assem
 
 module Makegraph = Makegraph.F(Assem)
 module Flowgraph = Makegraph.Flow
