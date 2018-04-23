@@ -121,7 +121,8 @@ let color color  =
             match TT.look (color.initial, tmp) with
             | Some r ->
                 precolored := NS.add !precolored n;
-                coloredNodes := TT.enter(!coloredNodes, tmp, r)
+                coloredNodes := TT.enter(!coloredNodes, tmp, r);
+                colorable := NT.enter (!colorable, n, true)
             | None ->
                 initial := n::!initial
         );
