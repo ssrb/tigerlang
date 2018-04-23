@@ -168,7 +168,7 @@ let codegen frame stm =
             emit(A.OPER {assem = "movea.l `s0,-" ^ (Int.to_string (nargs - 1 - i)) ^ "(sp)"; dst = []; src = [ munchDataExp a ]; jump = None})
         );
 
-        emit(A.OPER {assem = "bsr `s0"; dst = []; src = [ munchAddrExp l ]; jump = None});
+        emit(A.OPER {assem = "jsr (`s0)"; dst = []; src = [ munchAddrExp l ]; jump = None});
 
         if nargs > 0 then
             emit(A.OPER {assem = "adda.l #" ^ (Int.to_string nargs) ^ ",sp"; dst = []; src = []; jump = None});
@@ -263,7 +263,7 @@ let codegen frame stm =
         | T.MEM(e0) -> data(fun r -> emit(A.OPER {assem = "move.l (`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
         | T.TEMP t -> Var.make (t, "d")
         
-        | T.NAME l -> data(fun r -> emit(A.OPER {assem = "lea.l #" ^ (Symbol.name l) ^ ",`d0" ; dst = [r]; src = []; jump = None}))
+        | T.NAME l -> data(fun r -> emit(A.OPER {assem = "lea.l " ^ (Symbol.name l) ^ ",`d0" ; dst = [r]; src = []; jump = None}))
         
         | T.CONST i -> data(fun r -> emit(A.OPER {assem = "move.l #$" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
  
@@ -316,7 +316,7 @@ let codegen frame stm =
         | T.MEM(e0) -> address(fun r -> emit(A.OPER {assem = "movea.l (`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
         | T.TEMP t -> Var.make (t, "a")
         
-        | T.NAME l -> address(fun r -> emit(A.OPER {assem = "lea.l #" ^ (Symbol.name l) ^ ",`d0" ; dst = [r]; src = []; jump = None}))
+        | T.NAME l -> address(fun r -> emit(A.OPER {assem = "lea.l " ^ (Symbol.name l) ^ ",`d0" ; dst = [r]; src = []; jump = None}))
         
         | T.CONST i -> address(fun r -> emit(A.OPER {assem = "lea.l $" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
  
