@@ -311,7 +311,7 @@ let color color  =
         let ok (t, s) = (iscolorable (gtemp t) (adjacent t |> NS.to_list |> List.map ~f:gtemp)) || NS.mem !precolored t || MS.mem !adjSet (t, s) in
         
         (* Briggs strategy *)
-        let conservative n ns = iscolorable (gtemp n) (ns |> NS.filter ~f:(fun n -> 
+        let conservative u ns = iscolorable (gtemp u) (ns |> NS.filter ~f:(fun n -> 
             not (iscolorable (gtemp n) (adjacent n |> NS.to_list |> List.map ~f:gtemp))
         ) |> NS.to_list |> List.map ~f:gtemp)
         in
