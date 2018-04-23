@@ -40,8 +40,12 @@ type targetmodel = {
 let targetmodel = 
     let conflict l r = l = r in
     let classes = String.Map.find_exn classes in
-    let colorable _ _ = true  in
+    let colorable (u : Assem.Variable.t) (vs : Assem.Variable.t list) = 
+        let open Assem.Variable in
+        Int.(<) (List.count ~f:(fun v -> String.equal v.regclass u.regclass) vs) (classes u.regclass |> String.Set.length)
+    in
     { regs = registers; conflict; classes; colorable }
+    
 
 (*
 Does anybody know a ABI reference for m68k ? Interested in the argument passing for a function call. 

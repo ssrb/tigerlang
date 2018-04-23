@@ -36,9 +36,13 @@ let member = List.mem ~equal:(=)
 
 let color color  =
 
-    let k = List.length color.targetmodel.regs in
+    (* let k = List.length color.targetmodel.regs in *)
 
     let gtemp = color.interference.gtemp in
+
+    let iscolorable = color.targetmodel.colorable in
+
+    let colorable = ref NT.empty in
 
     (* Machine registers, pre-assigned a color *)
     let precolored = ref NS.empty in
@@ -80,7 +84,7 @@ let color color  =
     let adjList = ref NT.empty in  
     
     (* An array containing the current degree of each node *)
-    let degree = ref NT.empty in
+    (* let degree = ref NT.empty in *)
     
     let addEdge (u, v) =
 
@@ -92,7 +96,7 @@ let color color  =
                 if not (NS.mem !precolored u) then
                 begin
                     adjList := NT.enter (!adjList, u, (NS.add (NT.look_exn (!adjList, u)) v));
-                    degree := NT.enter (!degree, u, 1 + NT.look_exn (!degree, u))
+                    (* degree := NT.enter (!degree, u, 1 + NT.look_exn (!degree, u)) *)
                 end
             end
         in 
@@ -112,7 +116,7 @@ let color color  =
 
             moveList := TT.enter (!moveList, tmp, MS.empty);
             adjList := NT.enter (!adjList, n, NS.empty);
-            degree := NT.enter (!degree, n, 0);
+            (* degree := NT.enter (!degree, n, 0); *)
             
             match TT.look (color.initial, tmp) with
             | Some r ->
@@ -166,23 +170,23 @@ let color color  =
     in
 
     let makeWorkList () = List.iter ~f:(fun n ->
-        (*let d = NT.look_exn (!degree, n) in
-        if d >= k then *)
-        let foo : Assem.Variable.t = gtemp n in
-        let bar : Assem.Variable.t list =  (adjacent n) |> NS.to_list |> List.map ~f:gtemp in
-        if not (color.targetmodel.colorable foo bar) then
-            spillWorklist := n::!spillWorklist
-        else if moveRelated n then
-            freezeWorklist := n::!freezeWorklist
-        else
+
+        let c = iscolorable (gtemp n) (adjacent n |> NS.to_list |> List.map ~f:gtemp) in
+        
+        colorable := NT.enter (!colorable, n, c);
+
+        if c then
             simplifyWorklist := n::!simplifyWorklist
+        else
+            spillWorklist := n::!spillWorklist
+            
     ) !initial
     in
 
     let addWorkList n = 
         if not (NS.mem !precolored n)
         && not (moveRelated n)
-        && NT.look_exn (!degree, n) < k then
+        && iscolorable (gtemp n) (adjacent n |> NS.to_list |> List.map ~f:gtemp) then
         begin
             freezeWorklist := remove !freezeWorklist n;
             simplifyWorklist := n::!simplifyWorklist
@@ -208,9 +212,13 @@ let color color  =
     *)
     let decrementDegree n =
         (* check initAlloc ? *)
-        let d = NT.look_exn (!degree, n) in
-        degree := NT.enter (!degree, n, d - 1);
-        if d = k then
+        (* let d = NT.look_exn (!degree, n) in
+        degree := NT.enter (!degree, n, d - 1); *)
+
+        let cold = NT.look_exn (!colorable, n) in
+        let c = iscolorable (gtemp n) (adjacent n |> NS.to_list |> List.map ~f:gtemp) in
+
+        if (not cold) && c then
         begin
             (* 
                 We enable move associated with
@@ -222,13 +230,14 @@ let color color  =
                 Enabling too many moves is "harmless" to the result as long as we always check that coalescing is conservative.
                 It will have a performance impact though.
             *)
+            colorable := NT.enter (!colorable, n, c); 
             enableMoves (NS.add (adjacent n) n);
             spillWorklist := remove !spillWorklist n;
             if moveRelated n then
                 freezeWorklist := n::!freezeWorklist
             else
                 simplifyWorklist := n::!simplifyWorklist
-        end
+        end;
     in
 
     let simplify () =
@@ -280,7 +289,8 @@ let color color  =
             We might only add neighbor of "v" into it but not "u".
             So that we only check if "u" is in "freezeWorklist"
          *)
-        if NT.look_exn (!degree, u) >= k && member !freezeWorklist u then
+        if not (iscolorable (gtemp u) (adjacent u |> NS.to_list |> List.map ~f:gtemp))
+            && member !freezeWorklist u then
         begin
             freezeWorklist := remove !freezeWorklist u;
             spillWorklist := u::!spillWorklist
@@ -297,15 +307,15 @@ let color color  =
     let coalesce () =
 
         (* George strategy for a precolored node: we check that colorability won't change *)
-        let ok (t, s) = NT.look_exn (!degree, t) < k || NS.mem !precolored t || MS.mem !adjSet (t, s) in
+        let ok (t, s) = (iscolorable (gtemp t) (adjacent t |> NS.to_list |> List.map ~f:gtemp)) || NS.mem !precolored t || MS.mem !adjSet (t, s) in
         
         (* Briggs strategy *)
         let conservative ns = NS.fold ~init:0 ~f:(fun cnt n -> 
-            if NT.look_exn (!degree, n) >= k then
+            if not (iscolorable (gtemp n) (adjacent n |> NS.to_list |> List.map ~f:gtemp)) then
                 cnt + 1
             else
                 cnt
-        ) ns < k 
+        ) ns < 132
         in
 
         match MS.choose !worklistMoves with
@@ -363,7 +373,8 @@ let color color  =
             let v = if (getAlias u) = (getAlias y) then x else y in
             activeMoves := MS.remove !activeMoves m;
             frozenMoves := MS.add !frozenMoves m;
-            if not (moveRelated v) && NT.look_exn (!degree, v) < k then
+            if not (moveRelated v) && 
+                iscolorable (gtemp v) (adjacent v |> NS.to_list |> List.map ~f:gtemp) then
             begin
                 freezeWorklist := remove !freezeWorklist v;
                 simplifyWorklist := v::!simplifyWorklist
