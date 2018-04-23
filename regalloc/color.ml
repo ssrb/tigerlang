@@ -36,8 +36,6 @@ let member = List.mem ~equal:(=)
 
 let color color  =
 
-    (* let k = List.length color.targetmodel.regs in *)
-
     let gtemp = color.interference.gtemp in
 
     let iscolorable = color.targetmodel.colorable in
@@ -83,9 +81,6 @@ let color color  =
     (* Adjacency list representation of the graph. For each non-precolored temporary u, adjList[u] is the set of nodes that interfere with u *)
     let adjList = ref NT.empty in  
     
-    (* An array containing the current degree of each node *)
-    (* let degree = ref NT.empty in *)
-    
     let addEdge (u, v) =
 
         let add (u, v) = 
@@ -96,7 +91,6 @@ let color color  =
                 if not (NS.mem !precolored u) then
                 begin
                     adjList := NT.enter (!adjList, u, (NS.add (NT.look_exn (!adjList, u)) v));
-                    (* degree := NT.enter (!degree, u, 1 + NT.look_exn (!degree, u)) *)
                 end
             end
         in 
@@ -116,7 +110,6 @@ let color color  =
 
             moveList := TT.enter (!moveList, tmp, MS.empty);
             adjList := NT.enter (!adjList, n, NS.empty);
-            (* degree := NT.enter (!degree, n, 0); *)
             
             match TT.look (color.initial, tmp) with
             | Some r ->
@@ -213,9 +206,6 @@ let color color  =
     *)
     let decrementDegree n =
         (* check initAlloc ? *)
-        (* let d = NT.look_exn (!degree, n) in
-        degree := NT.enter (!degree, n, d - 1); *)
-
         let cold = NT.look_exn (!colorable, n) in
         let c = iscolorable (gtemp n) (adjacent n |> NS.to_list |> List.map ~f:gtemp) in
 
@@ -310,7 +300,13 @@ let color color  =
         (* George strategy for a precolored node: we check that colorability won't change *)
         let ok (t, s) = (iscolorable (gtemp t) (adjacent t |> NS.to_list |> List.map ~f:gtemp)) || NS.mem !precolored t || MS.mem !adjSet (t, s) in
         
-        (* Briggs strategy *)
+        (* Briggs strategy : 
+            if a node "w" interferes with both "u" and "v",
+                if it's colorable before coalescing it will still be after
+                if it's not, it could be that the "w" becomes colorable and we will miss that,
+                emitting unnecessary MOVE ...
+            So the "generalized" Briggs looks like conservative
+        *)
         let conservative u ns = iscolorable (gtemp u) (ns |> NS.filter ~f:(fun n -> 
             not (iscolorable (gtemp n) (adjacent n |> NS.to_list |> List.map ~f:gtemp))
         ) |> NS.to_list |> List.map ~f:gtemp)
