@@ -416,7 +416,7 @@ let color color  =
             NS.iter ~f:(fun w -> 
                 let a = getAlias w in
                 match TT.look (!coloredNodes, (gtemp a).temp) with
-                | Some c -> okColors := String.Set.partition_tf !okColors ~f:(color.targetmodel.conflict c) |> snd
+                | Some c -> okColors := String.Set.filter !okColors ~f:(fun c' -> not (color.targetmodel.conflict c c'))
                 | None -> ()
             ) (NT.look_exn (!adjList, n));
 
