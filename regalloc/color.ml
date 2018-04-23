@@ -311,12 +311,9 @@ let color color  =
         let ok (t, s) = (iscolorable (gtemp t) (adjacent t |> NS.to_list |> List.map ~f:gtemp)) || NS.mem !precolored t || MS.mem !adjSet (t, s) in
         
         (* Briggs strategy *)
-        let conservative ns = NS.fold ~init:0 ~f:(fun cnt n -> 
-            if not (iscolorable (gtemp n) (adjacent n |> NS.to_list |> List.map ~f:gtemp)) then
-                cnt + 1
-            else
-                cnt
-        ) ns < 132
+        let conservative n ns = iscolorable (gtemp n) (ns |> NS.filter ~f:(fun n -> 
+            not (iscolorable (gtemp n) (adjacent n |> NS.to_list |> List.map ~f:gtemp))
+        ) |> NS.to_list |> List.map ~f:gtemp)
         in
 
         match MS.choose !worklistMoves with
@@ -350,7 +347,7 @@ let color color  =
             
             (* George is expensive: we do it only for precolored nodes. Otherwise we do Brigggs *)
             else if (NS.mem !precolored u && NS.for_all ~f:(fun t -> ok(t, u)) (adjacent v))
-                || (not (NS.mem !precolored u) && conservative (NS.union (adjacent u) (adjacent v))) then (
+                || (not (NS.mem !precolored u) && conservative u (NS.union (adjacent u) (adjacent v))) then (
                 coalescedMoves := MS.add !coalescedMoves m;
                 combine (u, v);
                 addWorkList u
