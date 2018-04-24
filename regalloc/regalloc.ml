@@ -24,9 +24,9 @@ let rec alloc (asm, frame) =
 
         let rewriteProgram' asm (spill : Temp.temp) = 
 
-            let memory = Frame.exp ((Frame.allocLocal frame true), (Tree.TEMP Frame.fp)) in
-            let fetch t = Codegen.codegen frame (Tree.MOVE (memory, (Tree.TEMP t))) in
-            let store t = Codegen.codegen frame (Tree.MOVE ((Tree.TEMP t), memory)) in
+            let memory = Frame.exp ((Frame.allocLocal frame true), (Tree.TEMP { temp = Frame.fp })) in
+            let fetch t = Codegen.codegen frame (Tree.MOVE (memory, (Tree.TEMP { temp = t }))) in
+            let store t = Codegen.codegen frame (Tree.MOVE ((Tree.TEMP { temp = t }), memory)) in
 
             let rewriteOperands fs ops  = 
                 if List.exists ~f:(fun (o : Assem.Variable.t) -> o.temp = spill) ops then

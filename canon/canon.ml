@@ -26,7 +26,7 @@ let linearize stm0 =
   let rec reorder = function
     | (T.CALL _ as e)::rest ->
       let t = Temp.newtemp() in 
-      reorder (T.ESEQ(T.MOVE(T.TEMP t, e), T.TEMP t)::rest)
+      reorder (T.ESEQ(T.MOVE(T.TEMP { temp = t }, e), T.TEMP { temp = t })::rest)
     | a::rest ->
       let (stms, e) = do_exp a in
       let (stms', el) = reorder rest in
@@ -34,7 +34,7 @@ let linearize stm0 =
         (stms % stms',e::el)
       else 
         let t = Temp.newtemp() in 
-        (stms % T.MOVE(T.TEMP t, e) % stms', T.TEMP t :: el)
+        (stms % T.MOVE(T.TEMP { temp = t } , e) % stms', T.TEMP { temp = t } :: el)
     | [] -> (nop, [])
 
   and reorder_exp (el, build) = 

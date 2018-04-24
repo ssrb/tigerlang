@@ -145,8 +145,8 @@ let codegen frame stm =
     and emitCall (l, args) r = 
 
         let saverestore = Frame.callersaves |> List.map ~f:(fun reg ->
-            let memory = Frame.exp ((Frame.allocLocal frame false), (Tree.TEMP Frame.fp)) in
-                (Tree.MOVE (memory, (Tree.TEMP reg)) , Tree.MOVE ((Tree.TEMP reg), memory))
+            let memory = Frame.exp ((Frame.allocLocal frame false), (Tree.TEMP { temp = Frame.fp })) in
+                (Tree.MOVE (memory, (Tree.TEMP { temp = reg })) , Tree.MOVE ((Tree.TEMP { temp = reg }), memory))
             )
         in
 
@@ -255,7 +255,7 @@ let codegen frame stm =
         | T.MEM(T.BINOP(T.MINUS, T.CONST i, e0)) -> data(fun r -> emit(A.OPER {assem = "move.l " ^ Int.to_string (-i / 4) ^ "(`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
         | T.MEM(T.CONST i) -> data(fun r -> emit(A.OPER {assem = "move.l $"^ Int.to_string i ^ ",`d0"; dst = [r]; src = []; jump = None}))
         | T.MEM(e0) -> data(fun r -> emit(A.OPER {assem = "move.l (`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
-        | T.TEMP t -> Var.make (t, "d")
+        | T.TEMP { temp = t } -> Var.make (t, "d")
         
         | T.NAME l -> address(fun r -> emit(A.OPER {assem = "lea.l " ^ (Symbol.name l) ^ ",`d0" ; dst = [r]; src = []; jump = None}))
         
@@ -308,7 +308,7 @@ let codegen frame stm =
         | T.MEM(T.BINOP(T.MINUS, T.CONST i, e0)) -> address(fun r -> emit(A.OPER {assem = "movea.l " ^ Int.to_string (-i / 4) ^ "(`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
         | T.MEM(T.CONST i) -> address(fun r -> emit(A.OPER {assem = "movea.l $"^ Int.to_string i ^ ",`d0"; dst = [r]; src = []; jump = None}))
         | T.MEM(e0) -> address(fun r -> emit(A.OPER {assem = "movea.l (`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
-        | T.TEMP t -> Var.make (t, "a")
+        | T.TEMP { temp = t } -> Var.make (t, "a")
         
         | T.NAME l -> address(fun r -> emit(A.OPER {assem = "lea.l " ^ (Symbol.name l) ^ ",`d0" ; dst = [r]; src = []; jump = None}))
         

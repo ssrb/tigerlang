@@ -14,7 +14,7 @@ type stm =
 and exp = 
 | BINOP of binop * exp * exp
 | MEM of exp
-| TEMP of Temp.temp
+| TEMP of { temp : Temp.temp }
 | ESEQ of stm * exp
 | NAME of label
 | CONST of int
