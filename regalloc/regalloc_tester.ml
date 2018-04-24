@@ -47,7 +47,7 @@ let f frag =
 		)
 	
 	| Translate.Frame.STRING (lbl, str) -> 
-		Out_channel.print_endline ((Symbol.name lbl) ^ ": \"" ^ str ^ "\"");
+		Out_channel.print_endline ((Symbol.name lbl) ^ ": dc.b \"" ^ (String.escaped str) ^ "\"");
 in
 
 let _ = 
