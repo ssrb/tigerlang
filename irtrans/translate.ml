@@ -322,11 +322,9 @@ let transLet (inits, body) =
     | _ -> Ex (T.ESEQ (inits |> List.map ~f:unNx |> T.seq, unEx body))
 
 let transArray (size, init) =
-    let r = Temp.newtemp () in
-    let size = (unEx size) in
-    let alloc = T.MOVE ((T.TEMP { temp = r; ptr = true }), Frame.externalCall ("malloc", [ T.BINOP (T.MUL, size, (T.CONST Frame.wordSize)) ])) in
-    let init = T.EXP (Frame.externalCall ("initArray", [ (T.TEMP { temp = r; ptr = true }); size; (unEx init) ])) in
-    Ex (T.ESEQ (T.seq [alloc; init], T.TEMP { temp = r; ptr = true }))
+    let tmp = T.TEMP { temp = Temp.newtemp (); ptr = true } in
+    let init = T.MOVE (tmp, Frame.externalCall ("initArray", [ T.BINOP (T.MUL, (unEx size), (T.CONST Frame.wordSize)); (unEx init) ])) in
+    Ex (T.ESEQ (init, tmp))
 
 let transField (var, fidx) =
     Ex (T.MEM (T.BINOP (T.PLUS, (unEx var), (T.BINOP (T.MUL, (T.CONST fidx), (T.CONST Frame.wordSize))))))

@@ -173,7 +173,7 @@ let codegen frame stm =
             emit(A.OPER {assem = "suba.l #" ^ (Int.to_string nargs) ^ ",sp"; dst = []; src = []; jump = None});
 
         args |> List.iteri ~f:(fun i a -> 
-            emit(A.OPER {assem = "movea.l `s0,-" ^ (Int.to_string (nargs - 1 - i)) ^ "(sp)"; dst = []; src = [ munchDataExp a ]; jump = None})
+            emit(A.OPER {assem = "move.l `s0,+" ^ (Int.to_string (nargs - 1 - i)) ^ "(sp)"; dst = []; src = [ munchDataExp a ]; jump = None})
         );
 
         match l with

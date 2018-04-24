@@ -84,7 +84,7 @@ let calleesaves = Var.(([ "d2"; "d3"; "d4"; "d5"; "d6"; "d7" ] |> List.map ~f:(f
 let callersaves = [ "d0"; "d1"; "a0"; "a1" ] |> List.map ~f:(SM.find_exn regMap)
 
 let externalCall (name, exps) = 
-    Tree.CALL (Tree.NAME (Temp.namedlabel ("_" ^ name)), exps)
+    Tree.CALL (Tree.NAME (Temp.namedlabel ("_tiger_" ^ name)), exps)
 
 let (--) r inc = let x = !r in r := x - inc; x
 
