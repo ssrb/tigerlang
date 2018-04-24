@@ -107,19 +107,19 @@ let exp (access, exp) =
     let module T = Tree in
     match access with
     | InFrame off -> T.MEM (T.BINOP (T.PLUS, exp, (T.CONST off)))
-    | InReg temp -> T.TEMP { temp = temp }
+    | InReg temp -> T.TEMP { temp = temp; ptr = false }
 
 let procEntryExit1 (frame, body) = 
     
     let saverestore = calleesaves |> List.map ~f:(fun (reg : Var.t) ->
-        let memory = exp ((allocLocal frame false), (Tree.TEMP { temp = fp })) in
-        (Tree.MOVE (memory, (Tree.TEMP { temp = reg.temp })) , Tree.MOVE ((Tree.TEMP { temp = reg.temp }), memory))
+        let memory = exp ((allocLocal frame false), (Tree.TEMP { temp = fp; ptr = true })) in
+        (Tree.MOVE (memory, (Tree.TEMP { temp = reg.temp; ptr = false })) , Tree.MOVE ((Tree.TEMP { temp = reg.temp; ptr = false }), memory))
     )
     in
     
     let params = frame.formals |> List.mapi ~f:(fun i f -> 
-        let frame = exp (InFrame ((i + 2)* wordSize), (Tree.TEMP { temp = fp })) in
-        let reg = exp (f, (Tree.TEMP { temp = fp })) in
+        let frame = exp (InFrame ((i + 2)* wordSize), (Tree.TEMP { temp = fp; ptr = true })) in
+        let reg = exp (f, (Tree.TEMP { temp = fp; ptr = true })) in
         Tree.MOVE (reg, frame)
     ) 
     in
