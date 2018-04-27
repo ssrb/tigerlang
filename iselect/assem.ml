@@ -75,9 +75,13 @@ let format saytemp =
 		| MOVE mv -> speak(mv.assem, [mv.dst], [mv.src], []))
 
 let format_hum saytemp x =
-		(match x with
-	 	| LABEL lbl -> ""
-	 	| _ -> "\t") ^
-		(format saytemp x)
+		let str = (format saytemp x) in
+		if String.is_empty str then
+			str
+		else
+			(match x with
+			| LABEL lbl -> ""
+			| _ -> "\t") ^ str
+		
 
 end

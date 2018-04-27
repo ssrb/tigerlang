@@ -39,11 +39,18 @@ let f frag =
 		M68kFrame.(
 			Out_channel.output_string outchannel asm.prolog;
 
-			asm.body |> List.iter ~f:(fun instr -> 
-				instr
-				|> M68K.Assem.format_hum (fun tmp -> Option.value ~default:(Temp.makestring tmp.temp) (TT.look (allocation, tmp.temp)))
-				|> Out_channel.output_string outchannel;
-				Out_channel.newline outchannel
+			asm.body |> List.iter ~f:(fun instr ->
+			
+				let asm = instr |> M68K.Assem.format_hum (fun tmp ->
+					Option.value ~default:(Temp.makestring tmp.temp) (TT.look (allocation, tmp.temp))
+				) 
+				in
+
+				if not (String.is_empty asm) then
+				begin 
+					Out_channel.output_string outchannel asm;
+					Out_channel.newline outchannel
+				end
 			);
 			Out_channel.output_string outchannel asm.epilog;
 		)

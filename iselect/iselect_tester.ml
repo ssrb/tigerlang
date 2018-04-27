@@ -33,10 +33,12 @@ let f frag =
 			Out_channel.output_string outchannel asm.prolog;
 
 			asm.body |> List.iter ~f:(fun instr -> 
-				instr
-				|> M68K.Assem.format_hum (fun v -> M68kTemp.makestring v.temp)
-				|> Out_channel.output_string outchannel;
-				Out_channel.newline outchannel;
+				let asm = instr |> M68K.Assem.format_hum (fun v -> M68kTemp.makestring v.temp) in
+				if not (String.is_empty asm) then
+				begin 
+					Out_channel.output_string outchannel asm;
+					Out_channel.newline outchannel
+				end
 			);
 
 			Out_channel.output_string outchannel asm.epilog
