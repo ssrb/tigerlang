@@ -384,7 +384,7 @@ let color color  =
         match !freezeWorklist with
         | n::ns ->
             freezeWorklist := ns;
-            simplifyWorklist := n::!freezeWorklist;
+            simplifyWorklist := n::!simplifyWorklist;
             freezeMoves n
         | [] -> ()
     in
