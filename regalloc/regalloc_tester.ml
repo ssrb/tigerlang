@@ -34,16 +34,18 @@ let f frag =
 		let asm, allocation = Regalloc.alloc (M68kFrame.procEntryExit2 (proc.frame, asm), proc.frame) in
 
 		let asm = M68kFrame.procEntryExit3 (proc.frame, asm) in
-
+		let outchannel = Out_channel.stdout in
+		Out_channel.print_endline ((Symbol.name (M68kFrame.name proc.frame)) ^ ":");
 		M68kFrame.(
-			Out_channel.print_endline asm.prolog;
+			Out_channel.output_string outchannel asm.prolog;
 
 			asm.body |> List.iter ~f:(fun instr -> 
 				instr
 				|> M68K.Assem.format_hum (fun tmp -> Option.value ~default:(Temp.makestring tmp.temp) (TT.look (allocation, tmp.temp)))
-				|> Out_channel.print_endline);
-
-			Out_channel.print_endline asm.epilog;
+				|> Out_channel.output_string outchannel;
+				Out_channel.newline outchannel
+			);
+			Out_channel.output_string outchannel asm.epilog;
 		)
 	
 	| Translate.Frame.STRING (lbl, str) -> 

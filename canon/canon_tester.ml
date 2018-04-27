@@ -18,7 +18,9 @@ let f frag =
 	match frag with
 	| Translate.Frame.PROC proc -> 
 		let ts = proc.body |> Canon.linearize |> Canon.basicBlocks |> Canon.traceSchedule in
-		List.iter ts ~f:(fun t -> 
+		List.iter ts ~f:(fun t ->
+			Out_channel.print_endline (Symbol.name (M68kFrame.name proc.frame));
+			Tree.LABEL (M68kFrame.name proc.frame) |> Tree.sexp_of_stm |> Sexp.output_hum Out_channel.stdout;
 			Tree.sexp_of_stm t |> Sexp.output_hum Out_channel.stdout;
 			Out_channel.newline Out_channel.stdout)
 	| Translate.Frame.STRING (lab, str) -> 

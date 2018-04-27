@@ -28,17 +28,18 @@ let f frag =
 		in
 		let asm = M68kFrame.procEntryExit2 (proc.frame, asm) in
 		let asm = M68kFrame.procEntryExit3 (proc.frame, asm) in
-
+		let outchannel = Out_channel.stdout in
 		M68kFrame.(
-			Out_channel.print_endline asm.prolog;
+			Out_channel.output_string outchannel asm.prolog;
 
 			asm.body |> List.iter ~f:(fun instr -> 
 				instr
 				|> M68K.Assem.format_hum (fun v -> M68kTemp.makestring v.temp)
-				|> Out_channel.print_endline
+				|> Out_channel.output_string outchannel;
+				Out_channel.newline outchannel;
 			);
 
-			Out_channel.print_endline asm.epilog
+			Out_channel.output_string outchannel asm.epilog
 		)
 
 	| Translate.Frame.STRING (lbl, str) -> 
