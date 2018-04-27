@@ -42,5 +42,7 @@ script:
 - export PATH=${VBCC}/bin:${PATH}
 - pushd main
 - ../regalloc/regalloc_tester < empty.tig  > empty.S
-- vc +kick13 runtime.c empty.S
+- vc +kick13 runtime.c empty.S -o empty.exe
+- ../regalloc/regalloc_tester < ../testcases/queens.tig  > queens.S
+- vc +kick13 runtime.c queens.S -o queens.exe
 - popd
