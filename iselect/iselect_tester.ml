@@ -33,7 +33,9 @@ let f frag =
 			Out_channel.output_string outchannel asm.prolog;
 
 			asm.body |> List.iter ~f:(fun instr -> 
-				let asm = instr |> M68K.Assem.format_hum (fun v -> M68kTemp.makestring v.temp) in
+				let asm = instr |> M68K.Assem.format_hum (fun tmp ->
+					Option.value ~default:(Temp.makestring tmp.temp) (Temp.Table.look (M68kFrame.tempMap, tmp.temp))
+				) in
 				if not (String.is_empty asm) then
 				begin 
 					Out_channel.output_string outchannel asm;
