@@ -104,7 +104,7 @@ let unCx exp =
     | Nx nx -> assert(false)
     | Cx cx -> cx
 
-let transNop () = Nx (T.EXP (T.CONST 0))
+let transNop () = Nx T.NOP
 
 let transNil () = Ex (T.CONST 0)
 
@@ -336,7 +336,11 @@ let procEntryExit ~level ~body =
     match level with
     | Level (level, _) -> 
     begin
-      fragments := (Frame.PROC {body = Frame.procEntryExit1 (level.frame, T.MOVE(T.TEMP { temp = Frame.rv; ptr = false }, (unEx body))); frame = level.frame})::!fragments
+        let body = match body with
+        | Nx nx -> nx
+        | _ -> T.MOVE(T.TEMP { temp = Frame.rv; ptr = false }, (unEx body))
+        in
+        fragments := (Frame.PROC {body = body (*Frame.procEntryExit1 (level.frame, body)*); frame = level.frame})::!fragments
     end
     | Outermost -> assert(false)
     

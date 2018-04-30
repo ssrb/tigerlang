@@ -11,7 +11,8 @@ type stm =
 | JUMP of exp * label list
 | CJUMP of relop * exp * exp * label * label
 | MOVE of exp * exp
-| EXP of exp [@@deriving sexp]
+| EXP of exp 
+| NOP [@@deriving sexp]
 
 and exp = 
 | BINOP of binop * exp * exp

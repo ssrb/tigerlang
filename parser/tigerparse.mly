@@ -80,7 +80,7 @@ let group_recursive_decs decs = List.fold decs ~init:[] ~f:(fun gs d ->
 %%
 
 prog: | e = exp EOF { e }
-      | EOF { A.NilExp }
+      | EOF { A.SeqExp [] }
 
 decs: ds = list(dec) { group_recursive_decs ds }
 

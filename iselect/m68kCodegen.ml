@@ -23,8 +23,8 @@ let codegen frame stm =
         v
     in
     let rec munchStm = function
+        | T.NOP -> ()
     (* Data movememt *)
-        
         | T.MOVE (T.MEM (T.BINOP (T.PLUS, e0, (T.CONST i))), e1)
         | T.MOVE (T.MEM (T.BINOP (T.PLUS, (T.CONST i), e0)), e1) ->
         begin
