@@ -18,7 +18,7 @@ type regclass = string [@@deriving sexp]
 let datareg = (List.init 8 ~f:(fun i -> "d" ^ Int.to_string i))
 let addrreg = (List.init 7 ~f:(fun i -> "a" ^ Int.to_string i))
 
-let registers = datareg @ addrreg @ [ "sp" (* sp *) ; "pc" ; "ccr" ]
+let registers = datareg @ addrreg @ [ "sp"; "pc"; "ccr" ]
 
 
 let classes = 
@@ -74,19 +74,20 @@ let regMap, tempMap = List.fold ~init:(SM.empty, TT.empty) ~f:(fun (rmap, tmap) 
 ) registers
 
 let fp = SM.find_exn regMap "a5"
+let lb = SM.find_exn regMap "a6"
 let rv = SM.find_exn regMap "d0"
 let sp = SM.find_exn regMap "sp"
 
 let specialregs = []
 let argregs = []
 let calleesaves = Var.(([ "d2"; "d3"; "d4"; "d5"; "d6"; "d7" ] |> List.map ~f:(fun r -> make ((SM.find_exn regMap r), "d")))
-@ (["a2"; "a3"; "a4"; (* "a5" ;*) "a6" ] |> List.map ~f:(fun r -> make ((SM.find_exn regMap r), "a"))))
+@ (["a2"; "a3"; "a4"; "a5"; "a6" ] |> List.map ~f:(fun r -> make ((SM.find_exn regMap r), "a"))))
 let callersaves = [ "d0"; "d1"; "a0"; "a1" ] |> List.map ~f:(SM.find_exn regMap)
 
 let externalCall (name, exps) = 
     Tree.CALL (Tree.NAME (Temp.namedlabel ("_tiger_" ^ name)), exps)
 
-let (--) r inc = let x = !r in r := x - inc; x
+let (--) r inc = r := !r - inc; !r
 
 let allocLocal f escape = 
     if escape then
@@ -112,8 +113,8 @@ let exp (access, exp) =
 let procEntryExit1 (frame, body) = 
     
     let saverestore = calleesaves |> List.map ~f:(fun (reg : Var.t) ->
-        let memory = exp ((allocLocal frame false), (Tree.TEMP { temp = fp; ptr = true })) in
-        (Tree.MOVE (memory, (Tree.TEMP { temp = reg.temp; ptr = false })) , Tree.MOVE ((Tree.TEMP { temp = reg.temp; ptr = false }), memory))
+        let memory = exp ((allocLocal frame true), (Tree.TEMP { temp = fp; ptr = true })) in
+        (Tree.MOVE (memory, (Tree.TEMP { temp = reg.temp; ptr = false })) , Tree.MOVE ((Tree.TEMP { temp = reg.temp; ptr = reg.regclass = "a" }), memory))
     )
     in
     
@@ -121,19 +122,19 @@ let procEntryExit1 (frame, body) =
         let frame = exp (InFrame ((i + 2)* wordSize), (Tree.TEMP { temp = fp; ptr = true })) in
         let reg = exp (f, (Tree.TEMP { temp = fp; ptr = true })) in
         Tree.MOVE (reg, frame)
-    ) 
+    )
     in
     
     Tree.seq ((saverestore |> List.map ~f:fst) @ params @ [ body ] @ (saverestore |> List.map ~f:snd))
 
 let procEntryExit2 (frame, body) = 
     body @ 
-    [ Assem.OPER {assem = ""; src = Var.([make (fp, "fp"); make (rv, "d") ]) @ calleesaves; dst = []; jump = None} ]
+    [ Assem.OPER {assem = ""; src = Var.([make (rv, "d") ]) @ calleesaves; dst = []; jump = None} ]
 
 type procEntryExit3 = {prolog: string; body: Assem.instr list; epilog: string} [@@deriving sexp]
 let procEntryExit3 (frame, body) = 
     let format asm = asm |> List.map ~f:(fun i -> "\t" ^ i ^ "\n") |> String.concat in
-    let prolog = format [ "move fp,-(sp)"; "move sp,fp"; "suba.l #" ^ (Int.to_string !(frame.offset)) ^ ",sp" ] in
-    let epilog = format [ "move fp,sp"; "move (sp)+,fp"; "rts" ] in
+    let prolog = format [ "move.l fp,-(sp)"; "movea.l sp,fp"; "suba.l #" ^ (Int.to_string !(frame.offset)) ^ ",sp" ] in
+    let epilog = format [ "movea.l fp,sp"; "movea.l (sp)+,fp"; "rts" ] in
     { prolog; body; epilog}
 

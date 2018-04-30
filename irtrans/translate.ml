@@ -340,7 +340,7 @@ let procEntryExit ~level ~body =
         | Nx nx -> nx
         | _ -> T.MOVE(T.TEMP { temp = Frame.rv; ptr = false }, (unEx body))
         in
-        fragments := (Frame.PROC {body = body (*Frame.procEntryExit1 (level.frame, body)*); frame = level.frame})::!fragments
+        fragments := (Frame.PROC {body = Frame.procEntryExit1 (level.frame, body); frame = level.frame})::!fragments
     end
     | Outermost -> assert(false)
     
