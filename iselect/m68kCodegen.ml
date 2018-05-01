@@ -211,12 +211,12 @@ let codegen frame stm =
             emit(A.OPER {assem = "move.l `s0,+" ^ (Int.to_string (4 * (nargs - 1 - i))) ^ "(sp)"; dst = []; src = [ munchDataExp a ]; jump = None})
         );
 
-        match l with
+        (match l with
         | T.NAME l -> emit(A.OPER {assem = "jsr " ^ (Symbol.name l); dst = []; src = []; jump = None})
-        | _ -> emit(A.OPER {assem = "jsr (`s0)"; dst = []; src = [ munchAddrExp l ]; jump = None});
+        | _ -> emit(A.OPER {assem = "jsr (`s0)"; dst = []; src = [ munchAddrExp l ]; jump = None}));
 
         if nargs > 0 then
-            emit(A.OPER {assem = "adda.l #" ^ (Int.to_string nargs) ^ ",sp"; dst = []; src = []; jump = None});
+            emit(A.OPER {assem = "adda.l #" ^ (Int.to_string (4 * nargs)) ^ ",sp"; dst = []; src = []; jump = None});
 
         saverestore |> List.iter ~f:(fun (_, r) -> munchStm r)
     

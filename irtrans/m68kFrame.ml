@@ -18,14 +18,14 @@ type regclass = string [@@deriving sexp]
 let datareg = (List.init 8 ~f:(fun i -> "d" ^ Int.to_string i))
 let addrreg = (List.init 7 ~f:(fun i -> "a" ^ Int.to_string i))
 
-let registers = datareg @ addrreg @ [ "sp"; "pc"; "ccr" ]
+let registers = datareg @ addrreg @ [ "a7"; "pc"; "ccr" ]
 
 
 let classes = 
     let c = String.Map.empty in
     let c = String.Map.set c "d" (String.Set.of_list datareg) in
     let c = String.Map.set c "a" (String.Set.of_list addrreg) in
-    let c = String.Map.set c "sp" (String.Set.singleton "sp") in
+    let c = String.Map.set c "sp" (String.Set.singleton "a7") in
     let c = String.Map.set c "pc" (String.Set.singleton "pc") in
     let c = String.Map.set c "ccr" (String.Set.singleton "ccr") in
     c
@@ -76,7 +76,7 @@ let regMap, tempMap = List.fold ~init:(SM.empty, TT.empty) ~f:(fun (rmap, tmap) 
 let fp = SM.find_exn regMap "a5"
 let lb = SM.find_exn regMap "a6"
 let rv = SM.find_exn regMap "d0"
-let sp = SM.find_exn regMap "sp"
+let sp = SM.find_exn regMap "a7"
 
 let specialregs = []
 let argregs = []
@@ -134,7 +134,7 @@ let procEntryExit2 (frame, body) =
 type procEntryExit3 = {prolog: string; body: Assem.instr list; epilog: string} [@@deriving sexp]
 let procEntryExit3 (frame, body) = 
     let format asm = asm |> List.map ~f:(fun i -> "\t" ^ i ^ "\n") |> String.concat in
-    let prolog = format [ "move.l fp,-(sp)"; "movea.l sp,fp"; "suba.l #" ^ (Int.to_string ~- !(frame.offset)) ^ ",sp" ] in
-    let epilog = format [ "movea.l fp,sp"; "movea.l (sp)+,fp"; "rts" ] in
+    let prolog = format [ "move.l a5,-(a7)"; "movea.l a7,a5"; "suba.l #" ^ (Int.to_string ~- !(frame.offset)) ^ ",a7" ] in
+    let epilog = format [ "movea.l a5,a7"; "movea.l (a7)+,a5"; "rts" ] in
     { prolog; body; epilog}
 
