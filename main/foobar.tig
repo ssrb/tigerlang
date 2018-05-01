@@ -1,0 +1,10 @@
+let
+    function foo() =
+		  print("Foo\n")
+
+    function bar() =
+		  print("Bar\n")
+in
+foo();
+bar()
+end
