@@ -134,7 +134,7 @@ let procEntryExit2 (frame, body) =
 type procEntryExit3 = {prolog: string; body: Assem.instr list; epilog: string} [@@deriving sexp]
 let procEntryExit3 (frame, body) = 
     let format asm = asm |> List.map ~f:(fun i -> "\t" ^ i ^ "\n") |> String.concat in
-    let prolog = format [ "move.l fp,-(sp)"; "movea.l sp,fp"; "suba.l #" ^ (Int.to_string !(frame.offset)) ^ ",sp" ] in
+    let prolog = format [ "move.l fp,-(sp)"; "movea.l sp,fp"; "suba.l #" ^ (Int.to_string ~- !(frame.offset)) ^ ",sp" ] in
     let epilog = format [ "movea.l fp,sp"; "movea.l (sp)+,fp"; "rts" ] in
     { prolog; body; epilog}
 
