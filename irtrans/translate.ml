@@ -308,7 +308,7 @@ let transFor (var, lo, hi, body, finish) =
         T.MOVE ((T.TEMP { temp = r; ptr = false }), (unEx body));
         T.CJUMP (T.LT, var, (unEx hi), increment, finish);
         T.LABEL increment;
-        T.MOVE (var, (T.BINOP (T.PLUS, (T.TEMP { temp = r; ptr = false }), (T.CONST 1))));
+        T.MOVE (var, (T.BINOP (T.PLUS, var, (T.CONST 1))));
         T.JUMP ((T.NAME work), [work]);
         T.LABEL finish ],
         T.TEMP { temp = r; ptr = false }))
