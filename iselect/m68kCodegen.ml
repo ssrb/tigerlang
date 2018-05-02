@@ -160,11 +160,11 @@ let codegen frame stm =
 
         | T.CJUMP (relop, e0, e1, t, f) ->
         begin
-            match (e0, e1) with
+            (match (e0, e1) with
             | (T.CONST i, e0) | (e0, T.CONST i) ->
-                emit(A.OPER {assem = "cmpi.l #$" ^ Int.to_string i ^ ",`s0"; dst = []; src = [munchDataExp e0]; jump = None});
+                emit(A.OPER {assem = "cmpi.l #$" ^ Int.to_string i ^ ",`s0"; dst = []; src = [munchDataExp e0]; jump = None})
             | _ ->
-                emit(A.OPER {assem = "cmp.l `s0,`s1"; dst = []; src = [munchDataExp e0; munchDataExp e1]; jump = None});
+                emit(A.OPER {assem = "cmp.l `s0,`s1"; dst = []; src = [munchDataExp e0; munchDataExp e1]; jump = None}));
 
             (* How about cmpa !*)
 
