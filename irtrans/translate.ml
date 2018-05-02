@@ -302,7 +302,7 @@ let transFor (var, lo, hi, body, finish) =
     let work = Temp.newlabel () in
     let increment = Temp.newlabel () in
     Ex (T.ESEQ (T.seq [
-        unNx lo;
+        T.MOVE (var, (unEx lo));
         T.CJUMP (T.GT, var, (unEx hi), finish, work);
         T.LABEL work;
         T.MOVE ((T.TEMP { temp = r; ptr = false }), (unEx body));
