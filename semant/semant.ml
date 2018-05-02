@@ -360,8 +360,10 @@ and transDec (venv, tenv, lvl, dec, break) =
           raise (Semantic_error "A variable declaration initialized with nil must be constrained to be a structure");
         init.ty
     in
+    let venv = S.enter (venv, v.name, VarEntry {access = T.allocLocal lvl !(v.escape); ty}) in
+    let var = transVar (venv, tenv, lvl, SimpleVar (v.name, v.pos), break) in
 
-    (S.enter (venv, v.name, VarEntry {access = T.allocLocal lvl !(v.escape); ty}), tenv, [ init.exp ])
+    (venv, tenv, [ T.transAssign (var.exp, init.exp) ])
 
   | TypeDec ts ->
   begin 
