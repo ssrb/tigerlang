@@ -38,13 +38,13 @@ let codegen frame stm =
                 emit(A.OPER {assem = "move.l " ^ (Int.to_string ~-j) ^ "(`s1)," ^ (Int.to_string i) ^ "(`s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
 
             | T.MEM (T.CONST i) ->
-                emit(A.OPER {assem = "move.l $" ^ (Int.to_string i) ^ ",(`s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
+                emit(A.OPER {assem = "move.l " ^ (Int.to_string i) ^ ",(`s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
 
             | T.MEM e1 ->
                 emit(A.OPER {assem = "move.l (`s1)," ^ (Int.to_string i) ^ "(`s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
 
             | T.CONST i ->
-                emit(A.OPER {assem = "move.l #$" ^ (Int.to_string i) ^ ",(`s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
+                emit(A.OPER {assem = "move.l #" ^ (Int.to_string i) ^ ",(`s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
 
             | T.NAME l ->
                 emit(A.OPER {assem = "move.l " ^ (Symbol.name l) ^ ",(`s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
@@ -66,13 +66,13 @@ let codegen frame stm =
                 emit(A.OPER {assem = "move.l " ^ (Int.to_string ~-j) ^ "(`s1)," ^ (Int.to_string ~-i) ^ "(`s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
 
             | T.MEM (T.CONST i) ->
-                emit(A.OPER {assem = "move.l $" ^ (Int.to_string i) ^ ",(`s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
+                emit(A.OPER {assem = "move.l " ^ (Int.to_string i) ^ ",(`s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
 
             | T.MEM e1 ->
                 emit(A.OPER {assem = "move.l (`s1)," ^ (Int.to_string ~-i) ^ "(`s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
 
             | T.CONST i ->
-                emit(A.OPER {assem = "move.l #$" ^ (Int.to_string i) ^ ",(`s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
+                emit(A.OPER {assem = "move.l #" ^ (Int.to_string i) ^ ",(`s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
 
             | T.NAME l ->
                 emit(A.OPER {assem = "move.l " ^ (Symbol.name l) ^ ",(`s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
@@ -93,14 +93,14 @@ let codegen frame stm =
                 emit(A.OPER {assem = "move.l " ^ (Int.to_string ~-j) ^ "(`s1),(`s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None})
 
             | T.MEM (T.CONST i) ->
-                emit(A.OPER {assem = "move.l $" ^ (Int.to_string i) ^ ",(`s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
+                emit(A.OPER {assem = "move.l " ^ (Int.to_string i) ^ ",(`s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
 
             | T.MEM e1 ->
                 if e0 <> e1 then
                     emit(A.OPER {assem = "move.l (`s1),(`s0)"; dst = []; src = [munchAddrExp e0; munchAddrExp e1]; jump = None});
 
             | T.CONST i ->
-                emit(A.OPER {assem = "move.l #$" ^ (Int.to_string i) ^ ",(`s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
+                emit(A.OPER {assem = "move.l #" ^ (Int.to_string i) ^ ",(`s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
 
             | T.NAME l ->
                 emit(A.OPER {assem = "move.l " ^ (Symbol.name l) ^ ",(`s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
@@ -127,9 +127,9 @@ let codegen frame stm =
                 emit(A.OPER {assem = "movea.l " ^ (Int.to_string ~-j) ^ "(`s0),`d0"; dst = [ dst ]; src = [munchAddrExp e1]; jump = None})
             | T.MEM (T.CONST i) ->
                 if dst.regclass = "d" then
-                emit(A.OPER {assem = "move.l $" ^ (Int.to_string i) ^ ",`d0"; dst = [ dst ]; src = []; jump = None})
+                emit(A.OPER {assem = "move.l " ^ (Int.to_string i) ^ ",`d0"; dst = [ dst ]; src = []; jump = None})
                 else
-                emit(A.OPER {assem = "movea.l $" ^ (Int.to_string i) ^ ",`d0"; dst = [ dst ]; src = []; jump = None})
+                emit(A.OPER {assem = "movea.l " ^ (Int.to_string i) ^ ",`d0"; dst = [ dst ]; src = []; jump = None})
             | T.MEM e1 ->
                 if e0 <> e1 then
                 begin
@@ -140,9 +140,9 @@ let codegen frame stm =
                 end
             | T.CONST i ->
                 if dst.regclass = "d" then
-                emit(A.OPER {assem = "move.l #$" ^ (Int.to_string i) ^ ",`d0"; dst = [ dst ]; src = []; jump = None})
+                emit(A.OPER {assem = "move.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [ dst ]; src = []; jump = None})
                 else
-                emit(A.OPER {assem = "movea.l #$" ^ (Int.to_string i) ^ ",`d0"; dst = [ dst ]; src = []; jump = None})
+                emit(A.OPER {assem = "movea.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [ dst ]; src = []; jump = None})
             | T.NAME l ->
                 emit(A.OPER {assem = "lea.l " ^ (Symbol.name l) ^ ",`d0"; dst = [ dst ]; src = []; jump = None})
             | _ -> 
@@ -162,7 +162,7 @@ let codegen frame stm =
         begin
             (match (e0, e1) with
             | (T.CONST i, e0) | (e0, T.CONST i) ->
-                emit(A.OPER {assem = "cmpi.l #$" ^ Int.to_string i ^ ",`s0"; dst = []; src = [munchDataExp e0]; jump = None})
+                emit(A.OPER {assem = "cmpi.l #" ^ Int.to_string i ^ ",`s0"; dst = []; src = [munchDataExp e0]; jump = None})
             | _ ->
                 emit(A.OPER {assem = "cmp.l `s0,`s1"; dst = []; src = [munchDataExp e0; munchDataExp e1]; jump = None}));
 
@@ -233,7 +233,7 @@ let codegen frame stm =
                         let e0 = munchDataExp e0 in
                         data(fun r -> 
                             emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = e0});
-                            emit(A.OPER {assem = "add.l #$" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = [r]; jump = None}))
+                            emit(A.OPER {assem = "add.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = [r]; jump = None}))
                     | (T.MEM e0, e1) | (e1, T.MEM e0) ->
                         let e0 = munchAddrExp e0 in
                         let e1 = munchDataExp e1 in
@@ -304,13 +304,13 @@ let codegen frame stm =
         end
         | T.MEM(T.BINOP(T.PLUS, T.CONST i, e0)) -> data(fun r -> emit(A.OPER {assem = "move.l " ^ (Int.to_string i) ^ "(`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
         | T.MEM(T.BINOP(T.MINUS, T.CONST i, e0)) -> data(fun r -> emit(A.OPER {assem = "move.l " ^ (Int.to_string ~-i) ^ "(`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
-        | T.MEM(T.CONST i) -> data(fun r -> emit(A.OPER {assem = "move.l $"^ Int.to_string i ^ ",`d0"; dst = [r]; src = []; jump = None}))
+        | T.MEM(T.CONST i) -> data(fun r -> emit(A.OPER {assem = "move.l "^ Int.to_string i ^ ",`d0"; dst = [r]; src = []; jump = None}))
         | T.MEM(e0) -> data(fun r -> emit(A.OPER {assem = "move.l (`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
         | T.TEMP { temp; ptr } -> Var.make (temp, if ptr then "a" else "d")
         
         | T.NAME l -> address(fun r -> emit(A.OPER {assem = "lea.l " ^ (Symbol.name l) ^ ",`d0" ; dst = [r]; src = []; jump = None}))
         
-        | T.CONST i -> data(fun r -> emit(A.OPER {assem = "move.l #$" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
+        | T.CONST i -> data(fun r -> emit(A.OPER {assem = "move.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
  
         | T.CALL (l, args) -> data(emitCall (l, args))
             
@@ -332,7 +332,7 @@ let codegen frame stm =
                         let e0 = munchDataExp e0 in
                         address(fun r -> 
                             emit(A.OPER {assem = "movea.l `s0,`d0"; dst = [r]; src = [e0]; jump = None});
-                            emit(A.OPER {assem = "adda.l #$" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = [r]; jump = None}))
+                            emit(A.OPER {assem = "adda.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = [r]; jump = None}))
                     | (T.MEM e0, e1) | (e1, T.MEM e0) ->
                         let e0 = munchAddrExp e0 in
                         let e1 = munchDataExp e1 in
@@ -357,13 +357,13 @@ let codegen frame stm =
         end
         | T.MEM(T.BINOP(T.PLUS, T.CONST i, e0)) -> address(fun r -> emit(A.OPER {assem = "movea.l " ^ (Int.to_string i) ^ "(`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
         | T.MEM(T.BINOP(T.MINUS, T.CONST i, e0)) -> address(fun r -> emit(A.OPER {assem = "movea.l " ^ (Int.to_string ~-i) ^ "(`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
-        | T.MEM(T.CONST i) -> address(fun r -> emit(A.OPER {assem = "movea.l $"^ Int.to_string i ^ ",`d0"; dst = [r]; src = []; jump = None}))
+        | T.MEM(T.CONST i) -> address(fun r -> emit(A.OPER {assem = "movea.l "^ Int.to_string i ^ ",`d0"; dst = [r]; src = []; jump = None}))
         | T.MEM(e0) -> address(fun r -> emit(A.OPER {assem = "movea.l (`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
         | T.TEMP { temp; ptr } -> Var.make (temp, if ptr then "a" else "d")
         
         | T.NAME l -> address(fun r -> emit(A.OPER {assem = "lea.l " ^ (Symbol.name l) ^ ",`d0" ; dst = [r]; src = []; jump = None}))
         
-        | T.CONST i -> address(fun r -> emit(A.OPER {assem = "lea.l $" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
+        | T.CONST i -> address(fun r -> emit(A.OPER {assem = "lea.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
  
         | T.CALL (l, args) -> address(emitCall (l, args))
 
