@@ -1,0 +1,14 @@
+for i := 1 to 100 do
+    let
+        var mod3 := i = 3 * (i / 3)
+        var mod5 := i = 5 * (i / 5)
+    in
+        if mod3 & mod5 then
+            print("FizzBuzz\n")
+        else if mod3 then
+            print("Fizz\n")
+        else if mod5 then
+            print("Buzz\n")
+        else
+            print(".\n")
+    end
