@@ -81,7 +81,17 @@ let notRel = function
 | UGT -> ULE
 | UGE -> ULT
 
-let commute relop = relop
+let commute = function
+| EQ -> EQ
+| NE -> NE
+| LT -> GT
+| GT -> LT
+| LE -> GE
+| GE -> LE 
+| ULT -> UGT
+| ULE -> UGE
+| UGT -> ULT
+| UGE -> ULE
 
 let seq stms =
     let rec aux stms res =
