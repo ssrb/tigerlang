@@ -160,14 +160,26 @@ let codegen frame stm =
 
         | T.CJUMP (relop, e0, e1, t, f) ->
         begin
-            (match (e0, e1) with
-            | (T.CONST i, e0) | (e0, T.CONST i) ->
-                emit(A.OPER {assem = "cmpi.l #" ^ Int.to_string i ^ ",`s0"; dst = []; src = [munchDataExp e0]; jump = None})
-            | _ ->
-                emit(A.OPER {assem = "cmp.l `s0,`s1"; dst = []; src = [munchDataExp e0; munchDataExp e1]; jump = None}));
+            let relop = 
+                match (e0, e1) with
+                | (T.CONST i, e0) ->
+                    if i <> 0 then
+                        emit(A.OPER {assem = "cmpi.l #" ^ Int.to_string i ^ ",`s0"; dst = []; src = [munchDataExp e0]; jump = None})
+                    else
+                        emit(A.OPER {assem = "tst.l `s0"; dst = []; src = [munchDataExp e0]; jump = None});
+                    relop
+                | (e0, T.CONST i) ->
+                    if i <> 0 then
+                        emit(A.OPER {assem = "cmpi.l #" ^ Int.to_string i ^ ",`s0"; dst = []; src = [munchDataExp e0]; jump = None})
+                    else
+                        emit(A.OPER {assem = "tst.l `s0"; dst = []; src = [munchDataExp e0]; jump = None});
+                    Tree.commute relop
+                | _ ->
+                    emit(A.OPER {assem = "cmp.l `s1,`s0"; dst = []; src = [munchDataExp e0; munchDataExp e1]; jump = None});
+                    relop
+            in
 
             (* How about cmpa !*)
-
             match relop with 
             | T.EQ -> 
                 emit(A.OPER {assem = "beq " ^ (Symbol.name t); dst = []; src = []; jump = Some [t; f]})
