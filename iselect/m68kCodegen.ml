@@ -230,6 +230,8 @@ let codegen frame stm =
         if nargs > 0 then
             emit(A.OPER {assem = "adda.l #" ^ (Int.to_string (4 * nargs)) ^ ",sp"; dst = []; src = []; jump = None});
 
+        emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = Var.make (Frame.rv, "d") });
+
         saverestore |> List.iter ~f:(fun (_, r) -> munchStm r)
     
 
