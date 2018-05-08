@@ -118,8 +118,10 @@ let procEntryExit1 (frame, body) =
     )
     in
     
+    let nargs = List.length frame.formals in
+
     let params = frame.formals |> List.mapi ~f:(fun i f -> 
-        let frame = exp (InFrame ((i + 2)* wordSize), (Tree.TEMP { temp = fp; ptr = true })) in
+        let frame = exp (InFrame ((nargs - 1 - i + 2) * wordSize), (Tree.TEMP { temp = fp; ptr = true })) in
         let reg = exp (f, (Tree.TEMP { temp = fp; ptr = true })) in
         Tree.MOVE (reg, frame)
     )
