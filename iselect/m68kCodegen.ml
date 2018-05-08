@@ -25,8 +25,8 @@ let codegen frame stm =
     let rec munchStm = function
         | T.NOP -> ()
     (* Data movememt *)
-        | T.MOVE (T.MEM (T.BINOP (T.PLUS, e0, (T.CONST i))), e1)
-        | T.MOVE (T.MEM (T.BINOP (T.PLUS, (T.CONST i), e0)), e1) ->
+        | T.MOVE ((T.MEM (T.BINOP (T.PLUS, e0, (T.CONST i))) as dst), e1)
+        | T.MOVE ((T.MEM (T.BINOP (T.PLUS, (T.CONST i), e0)) as dst), e1) ->
         begin
             match e1 with
             | T.MEM (T.BINOP (T.PLUS, e1, (T.CONST j)))
@@ -49,12 +49,15 @@ let codegen frame stm =
             | T.NAME l ->
                 emit(A.OPER {assem = "move.l " ^ (Symbol.name l) ^ "," ^ (Int.to_string i) ^ "(`s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
 
+            | T.CALL (l, args) ->
+                emitCall (l, args) dst
+
             | e1 ->
                 emit(A.OPER {assem = "move.l `s1," ^ (Int.to_string i) ^ "(`s0)"; dst = []; src = [munchAddrExp e0; munchDataExp e1]; jump = None})
         end 
 
-        | T.MOVE (T.MEM (T.BINOP (T.MINUS, e0, (T.CONST i))), e1)
-        | T.MOVE (T.MEM (T.BINOP (T.MINUS, (T.CONST i), e0)), e1) ->
+        | T.MOVE ((T.MEM (T.BINOP (T.MINUS, e0, (T.CONST i))) as dst), e1)
+        | T.MOVE ((T.MEM (T.BINOP (T.MINUS, (T.CONST i), e0)) as dst), e1) ->
         begin
             match e1 with
             | T.MEM (T.BINOP (T.PLUS, e1, (T.CONST j)))
@@ -77,11 +80,14 @@ let codegen frame stm =
             | T.NAME l ->
                 emit(A.OPER {assem = "move.l " ^ (Symbol.name l) ^ "," ^ (Int.to_string ~-i) ^ "(`s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
 
+            | T.CALL (l, args) ->
+                emitCall (l, args) dst
+
             | e1 ->
                 emit(A.OPER {assem = "move.l `s1," ^ (Int.to_string ~-i) ^ "(`s0)"; dst = []; src = [munchAddrExp e0; munchDataExp e1]; jump = None})
         end
 
-        | T.MOVE (T.MEM e0, e1) ->
+        | T.MOVE ((T.MEM e0) as dst, e1) ->
         begin
             match e1 with
             | T.MEM (T.BINOP (T.PLUS, e1, (T.CONST j)))
@@ -104,6 +110,9 @@ let codegen frame stm =
 
             | T.NAME l ->
                 emit(A.OPER {assem = "move.l " ^ (Symbol.name l) ^ ",(`s0)"; dst = []; src = [munchAddrExp e0]; jump = None})
+
+            | T.CALL (l, args) ->
+                emitCall (l, args) dst
 
             | e1 ->
                 emit(A.OPER {assem = "move.l `s1,(`s0)"; dst = []; src = [munchAddrExp e0; munchDataExp e1]; jump = None})
@@ -145,6 +154,8 @@ let codegen frame stm =
                 emit(A.OPER {assem = "movea.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [ dst ]; src = []; jump = None})
             | T.NAME l ->
                 emit(A.OPER {assem = "lea.l " ^ (Symbol.name l) ^ ",`d0"; dst = [ dst ]; src = []; jump = None})
+             | T.CALL (l, args) ->
+                emitCall (l, args) e0
             | _ -> 
                 if dst.regclass = "d" then
                 emit(A.MOVE {assem = "move.l `s0,`d0"; dst = dst; src = munchDataExp e1})
@@ -230,7 +241,7 @@ let codegen frame stm =
         if nargs > 0 then
             emit(A.OPER {assem = "adda.l #" ^ (Int.to_string (4 * nargs)) ^ ",sp"; dst = []; src = []; jump = None});
 
-        emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = Var.make (Frame.rv, "d") });
+        munchStm (T.MOVE (r , T.TEMP { temp = Frame.rv; ptr = false}));
 
         saverestore |> List.iter ~f:(fun (_, r) -> munchStm r)
     
@@ -326,7 +337,7 @@ let codegen frame stm =
         
         | T.CONST i -> data(fun r -> emit(A.OPER {assem = "move.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
  
-        | T.CALL (l, args) -> data(emitCall (l, args))
+        | T.CALL (l, args) -> data(fun r -> emitCall (l, args) (T.TEMP {temp = r.temp; ptr = false}))
             
         | exp -> 
             exp
@@ -358,7 +369,7 @@ let codegen frame stm =
                         let e1 = munchDataExp e1 in
                         address(fun r -> 
                             emit(A.OPER {assem = "movea.l `s0,`d0"; dst = [r]; src = [e0]; jump = None});
-                            emit(A.OPER {assem = "adda.l `s0,`d0"; dst = [r]; src = [e1; r]; jump = None}))                
+                            emit(A.OPER {assem = "adda.l `s0,`d0"; dst = [r]; src = [e1; r]; jump = None}))
                 end
             | T.MINUS ->
                 let e0 = munchDataExp e0 in
@@ -379,7 +390,7 @@ let codegen frame stm =
         
         | T.CONST i -> address(fun r -> emit(A.OPER {assem = "lea.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
  
-        | T.CALL (l, args) -> address(emitCall (l, args))
+        | T.CALL (l, args) -> address(fun r -> emitCall (l, args) (T.TEMP { temp = r.temp; ptr = true }))
 
         | exp -> 
             exp
