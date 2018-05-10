@@ -439,15 +439,15 @@ let color color  =
 
         if not (List.is_empty !simplifyWorklist) then
             simplify ()
-        (* else if not (MS.is_empty !worklistMoves) then
-            coalesce () *)
+        else if not (MS.is_empty !worklistMoves) then
+            coalesce ()
         else if not (List.is_empty !freezeWorklist) then
             freeze ()
         else if not (List.is_empty !spillWorklist) then
             selectSpill ();
     
         if not (List.is_empty !simplifyWorklist)
-        (*|| not (MS.is_empty !worklistMoves)*)
+        || not (MS.is_empty !worklistMoves)
         || not (List.is_empty !freezeWorklist)
         || not (List.is_empty !spillWorklist)
         then 
