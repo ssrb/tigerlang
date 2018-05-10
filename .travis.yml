@@ -49,6 +49,6 @@ script:
 - vc +kick13 runtime.c foobar.S -o foobar.exe
 - ../regalloc/regalloc_tester < loop.tig  > loop.S
 - vc +kick13 runtime.c loop.S -o loop.exe
-- ../regalloc/regalloc_tester < ../testcases/queens.tig  > queens.S
+- ../regalloc/regalloc_tester < queens.tig  > queens.S
 - vc +kick13 runtime.c queens.S -o queens.exe
 - popd
