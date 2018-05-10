@@ -178,13 +178,13 @@ let codegen frame stm =
                         emit(A.OPER {assem = "cmpi.l #" ^ Int.to_string i ^ ",`s0"; dst = []; src = [munchDataExp e0]; jump = None})
                     else
                         emit(A.OPER {assem = "tst.l `s0"; dst = []; src = [munchDataExp e0]; jump = None});
-                    relop
+                    Tree.commute relop
                 | (e0, T.CONST i) ->
                     if i <> 0 then
                         emit(A.OPER {assem = "cmpi.l #" ^ Int.to_string i ^ ",`s0"; dst = []; src = [munchDataExp e0]; jump = None})
                     else
                         emit(A.OPER {assem = "tst.l `s0"; dst = []; src = [munchDataExp e0]; jump = None});
-                    Tree.commute relop
+                    relop
                 | _ ->
                     emit(A.OPER {assem = "cmp.l `s1,`s0"; dst = []; src = [munchDataExp e0; munchDataExp e1]; jump = None});
                     relop
