@@ -368,6 +368,7 @@ let color color  =
             activeMoves := MS.remove !activeMoves m;
             frozenMoves := MS.add !frozenMoves m;
             if not (moveRelated v) && 
+                not (NS.mem !precolored v) &&
                 iscolorable (gtemp v) (adjacent v |> NS.to_list |> List.map ~f:gtemp) then
             begin
                 freezeWorklist := remove !freezeWorklist v;
