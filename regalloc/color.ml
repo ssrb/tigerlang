@@ -4,7 +4,7 @@ module Frame : Frame.T
 module Liveness : Liveness.T
 type allocation = Frame.register Temp.Table.table
 type color = {interference: Liveness.igraph; initial: allocation; spillCost: Graph.node -> float; targetmodel: Frame.targetmodel} 
-val color :  color -> allocation * Temp.temp list
+val color :  color -> allocation * Liveness.Assem.Variable.t list
 end
 
 module F (Frame: Frame.T) (Liveness: Liveness.T with module Assem = Frame.Assem) = struct
@@ -424,7 +424,7 @@ let color color  =
             let t = (gtemp n).temp in
             match String.Set.choose !okColors with
             | Some c -> coloredNodes := TT.enter (!coloredNodes, t, c)
-            | None -> spilledNodes := t::!spilledNodes
+            | None -> spilledNodes := (gtemp n)::!spilledNodes
                 
         );
 

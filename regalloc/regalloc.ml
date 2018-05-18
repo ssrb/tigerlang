@@ -22,16 +22,17 @@ let rec alloc (asm, frame) =
 
     let rewriteProgram (asm, frame, spills) = 
 
-        let rewriteProgram' asm (spill : Temp.temp) = 
+        let rewriteProgram' asm (spill : Liveness.Assem.Variable.t) = 
 
             let memory = Frame.exp ((Frame.allocLocal frame true), (Tree.TEMP { temp = Frame.fp; ptr = true })) in
-            let fetch t = Codegen.codegen frame (Tree.MOVE ((Tree.TEMP { temp = t; ptr = false }), memory)) in
-            let store t = Codegen.codegen frame (Tree.MOVE (memory, (Tree.TEMP { temp = t; ptr = false }))) in
+            let fetch t = Codegen.codegen frame (Tree.MOVE (t, memory)) in
+            let store t = Codegen.codegen frame (Tree.MOVE (memory, t)) in
 
             let rewriteOperands fs ops  = 
-                if List.exists ~f:(fun (o : Assem.Variable.t) -> o.temp = spill) ops then
+                if List.exists ~f:(fun (o : Assem.Variable.t) -> o.temp = spill.temp) ops then
                     let t = Temp.newtemp () in
-                    (fs t, List.map ~f:(fun  (o : Assem.Variable.t) -> if o.temp = spill then {o with temp = t} else o) ops)
+                    let ttmp = (Tree.TEMP { temp = t; ptr = spill.regclass = "a" }) in
+                    (fs ttmp, List.map ~f:(fun  (o : Assem.Variable.t) -> if o.temp = spill.temp then {o with temp = t} else o) ops)
                 else
                     ([], ops)
             in
@@ -42,9 +43,13 @@ let rec alloc (asm, frame) =
                     let (store, dst') = rewriteOperands store op.dst in
                     fetch @ A.OPER {op with dst = dst'; src = src'}::store
                 | A.MOVE mv ->
-                    let (fetch, [ src' ]) = rewriteOperands fetch [ mv.src ] in
-                    let (store, [ dst' ]) = rewriteOperands store [ mv.dst ] in
-                    fetch @ A.MOVE {mv with dst = dst'; src = src'}::store
+                begin
+                    match (mv.src.temp = spill.temp, mv.dst.temp = spill.temp) with
+                    | (true, true) -> []
+                    | (true, _) -> Codegen.codegen frame (Tree.MOVE ((Tree.TEMP { temp = mv.dst.temp; ptr = mv.dst.regclass = "a" }), memory))
+                    | (_, true) -> Codegen.codegen frame (Tree.MOVE (memory, (Tree.TEMP { temp = mv.src.temp; ptr = mv.src.regclass = "a" })))
+                    | _ -> [ A.MOVE mv ]
+                end
                 | instr -> [ instr ]
             in
 
