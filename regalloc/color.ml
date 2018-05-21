@@ -363,8 +363,9 @@ let color color  =
     in
     
     let freezeMoves u = 
+        let ua = getAlias u in
          u |> nodeMoves |> MS.iter ~f:(fun ((x, y) as m) -> 
-            let v = if (getAlias u) = (getAlias y) then x else y in
+            let v = if ua = (getAlias y) then x else y in
             activeMoves := MS.remove !activeMoves m;
             frozenMoves := MS.add !frozenMoves m;
             addWorkList v
