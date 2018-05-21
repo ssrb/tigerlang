@@ -367,14 +367,8 @@ let color color  =
             let v = if (getAlias u) = (getAlias y) then x else y in
             activeMoves := MS.remove !activeMoves m;
             frozenMoves := MS.add !frozenMoves m;
-            if not (moveRelated v) && 
-                not (NS.mem !precolored v) &&
-                iscolorable (gtemp v) (adjacent v |> NS.to_list |> List.map ~f:gtemp) then
-            begin
-                freezeWorklist := remove !freezeWorklist v;
-                simplifyWorklist := v::!simplifyWorklist
-            end
-        )
+            addWorkList v
+         )
     in
     
     let freeze () =
