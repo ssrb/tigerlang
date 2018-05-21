@@ -38,8 +38,6 @@ let color color  =
 
     let gtemp = color.interference.gtemp in
 
-    let iscolorable = color.targetmodel.colorable in
-
     let colorable = ref NT.empty in
 
     (* Machine registers, pre-assigned a color *)
@@ -163,9 +161,11 @@ let color color  =
         not (MS.is_empty (nodeMoves n))
     in
 
+    let iscolorable t = color.targetmodel.colorable (gtemp t) (adjacent t |> NS.to_list |> List.map ~f:gtemp)  in
+
     let makeWorkList () = List.iter ~f:(fun n ->
 
-        let c = iscolorable (gtemp n) (adjacent n |> NS.to_list |> List.map ~f:gtemp) in
+        let c = iscolorable n in
         
         colorable := NT.enter (!colorable, n, c);
 
@@ -180,7 +180,7 @@ let color color  =
     let addWorkList n = 
         if not (NS.mem !precolored n)
         && not (moveRelated n)
-        && iscolorable (gtemp n) (adjacent n |> NS.to_list |> List.map ~f:gtemp) then
+        && iscolorable n then
         begin
             freezeWorklist := remove !freezeWorklist n;
             simplifyWorklist := n::!simplifyWorklist
@@ -206,10 +206,10 @@ let color color  =
     *)
     let decrementDegree n =
         (* check initAlloc ? *)
-        let cold = NT.look_exn (!colorable, n) in
-        let c = iscolorable (gtemp n) (adjacent n |> NS.to_list |> List.map ~f:gtemp) in
+        let oldc = NT.look_exn (!colorable, n) in
+        let c = iscolorable n in
 
-        if (not cold) && c then
+        if (not oldc) && c then
         begin
             (* 
                 We enable move associated with
@@ -280,8 +280,7 @@ let color color  =
             We might only add neighbor of "v" into it but not "u".
             So that we only check if "u" is in "freezeWorklist"
          *)
-        if not (iscolorable (gtemp u) (adjacent u |> NS.to_list |> List.map ~f:gtemp))
-            && member !freezeWorklist u then
+        if not (iscolorable u) && member !freezeWorklist u then
         begin
             freezeWorklist := remove !freezeWorklist u;
             spillWorklist := u::!spillWorklist
@@ -298,7 +297,7 @@ let color color  =
     let coalesce () =
 
         (* George strategy for a precolored node: we check that colorability won't change *)
-        let ok (t, s) = (iscolorable (gtemp t) (adjacent t |> NS.to_list |> List.map ~f:gtemp)) || NS.mem !precolored t || MS.mem !adjSet (t, s) in
+        let ok (t, s) = iscolorable t || NS.mem !precolored t || MS.mem !adjSet (t, s) in
         
         (* Briggs strategy : 
             if a node "w" interferes with both "u" and "v",
@@ -307,9 +306,12 @@ let color color  =
                 emitting unnecessary MOVE ...
             So the "generalized" Briggs looks like conservative
         *)
-        let conservative u ns = iscolorable (gtemp u) (ns |> NS.filter ~f:(fun n -> 
-            not (iscolorable (gtemp n) (adjacent n |> NS.to_list |> List.map ~f:gtemp))
-        ) |> NS.to_list |> List.map ~f:gtemp)
+        let conservative u ns = color.targetmodel.colorable (gtemp u) (
+            ns
+            |> NS.filter ~f:(fun n -> not (iscolorable n))
+            |> NS.to_list 
+            |> List.map ~f:gtemp
+        )
         in
 
         match MS.choose !worklistMoves with
