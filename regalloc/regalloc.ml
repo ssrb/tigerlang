@@ -43,7 +43,7 @@ let rec alloc (asm, frame) =
                     let (store, dst') = rewriteOperands store op.dst in
                     fetch @ A.OPER {op with dst = dst'; src = src'}::store
                  | A.MOVE mv ->
-                    (*
+                    (* Make it easier for the coloring algorithm by coalescing "by hand" *)
                     begin
                         match (mv.src.temp = spill.temp, mv.dst.temp = spill.temp) with
                         | (true, true) -> []
@@ -51,10 +51,9 @@ let rec alloc (asm, frame) =
                         | (_, true) -> Codegen.codegen frame (Tree.MOVE (memory, (Tree.TEMP { temp = mv.src.temp; ptr = mv.src.regclass = "a" })))
                         | _ -> [ A.MOVE mv ]
                     end
-                    *)
-                    let (fetch, [ src' ]) = rewriteOperands fetch [ mv.src ] in
+                    (*let (fetch, [ src' ]) = rewriteOperands fetch [ mv.src ] in
                     let (store, [ dst' ]) = rewriteOperands store [ mv.dst ] in
-                    fetch @ A.MOVE {mv with dst = dst'; src = src'}::store
+                    fetch @ A.MOVE {mv with dst = dst'; src = src'}::store*)
                 | instr -> [ instr ]
             in
 
