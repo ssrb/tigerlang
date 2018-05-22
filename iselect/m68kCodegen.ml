@@ -329,7 +329,7 @@ let codegen frame stm =
         end
         | T.MEM(T.BINOP(T.PLUS, T.CONST i, e0)) -> data(fun r -> emit(A.OPER {assem = "move.l " ^ (Int.to_string i) ^ "(`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
         | T.MEM(T.BINOP(T.MINUS, T.CONST i, e0)) -> data(fun r -> emit(A.OPER {assem = "move.l " ^ (Int.to_string ~-i) ^ "(`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
-        | T.MEM(T.CONST i) -> data(fun r -> emit(A.OPER {assem = "move.l "^ Int.to_string i ^ ",`d0"; dst = [r]; src = []; jump = None}))
+        | T.MEM(T.CONST i) -> data(fun r -> emit(A.OPER {assem = "move.l " ^ Int.to_string i ^ ",`d0"; dst = [r]; src = []; jump = None}))
         | T.MEM(e0) -> data(fun r -> emit(A.OPER {assem = "move.l (`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
         | T.TEMP { temp; ptr } -> Var.make (temp, if ptr then "a" else "d")
         

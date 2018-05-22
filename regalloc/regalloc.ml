@@ -42,14 +42,19 @@ let rec alloc (asm, frame) =
                     let (fetch, src') = rewriteOperands fetch op.src in
                     let (store, dst') = rewriteOperands store op.dst in
                     fetch @ A.OPER {op with dst = dst'; src = src'}::store
-                | A.MOVE mv ->
-                begin
-                    match (mv.src.temp = spill.temp, mv.dst.temp = spill.temp) with
-                    | (true, true) -> []
-                    | (true, _) -> Codegen.codegen frame (Tree.MOVE ((Tree.TEMP { temp = mv.dst.temp; ptr = mv.dst.regclass = "a" }), memory))
-                    | (_, true) -> Codegen.codegen frame (Tree.MOVE (memory, (Tree.TEMP { temp = mv.src.temp; ptr = mv.src.regclass = "a" })))
-                    | _ -> [ A.MOVE mv ]
-                end
+                 | A.MOVE mv ->
+                    (*
+                    begin
+                        match (mv.src.temp = spill.temp, mv.dst.temp = spill.temp) with
+                        | (true, true) -> []
+                        | (true, _) -> Codegen.codegen frame (Tree.MOVE ((Tree.TEMP { temp = mv.dst.temp; ptr = mv.dst.regclass = "a" }), memory))
+                        | (_, true) -> Codegen.codegen frame (Tree.MOVE (memory, (Tree.TEMP { temp = mv.src.temp; ptr = mv.src.regclass = "a" })))
+                        | _ -> [ A.MOVE mv ]
+                    end
+                    *)
+                    let (fetch, [ src' ]) = rewriteOperands fetch [ mv.src ] in
+                    let (store, [ dst' ]) = rewriteOperands store [ mv.dst ] in
+                    fetch @ A.MOVE {mv with dst = dst'; src = src'}::store
                 | instr -> [ instr ]
             in
 
@@ -61,7 +66,7 @@ let rec alloc (asm, frame) =
 
     let fgraph, ginstr = Makegraph.instrs2graph asm in
 
-    (* Flowgraph.show Out_channel.stdout fgraph (fun n -> n |> ginstr |> Assem.format Temp.makestring); *)
+    (*Flowgraph.show Out_channel.stdout fgraph (fun n -> n |> ginstr |> Assem.format (fun t -> Temp.makestring t.temp));*)
 
     let igraph = Liveness.interferenceGraph fgraph in
 

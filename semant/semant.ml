@@ -179,7 +179,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
       raise (Semantic_error "While test must have integer type");
     if not (type_equal body.ty Types.UNIT) then
       raise (Semantic_error "While body must have unit type");
-    {exp = T.transWhile (test.exp, body.exp, finish); ty = body.ty}
+    {exp = T.transWhile (test.exp, body.exp, finish); ty = Types.UNIT}
       
   | ForExp f ->
     begin
@@ -193,7 +193,7 @@ let rec transExp (venv, tenv, lvl, exp, break) =
           raise (Semantic_error "For loop upper bound must have int type");
         let finish = Temp.newlabel() in
         let body = transExp (venv', tenv', lvl, f.body, Some finish) in
-        {exp = T.transFor (var.access, List.hd_exn inits, hi.exp, body.exp, finish); ty = body.ty}
+        {exp = T.transFor (var.access, List.hd_exn inits, hi.exp, body.exp, finish); ty = Types.UNIT}
       | _ -> assert(false)
     end
 

@@ -281,34 +281,30 @@ let transIf (test, then', else', ptr) =
     end
 
 let transWhile (test, body, finish) =
-    let r = Temp.newtemp () in
     let start = Temp.newlabel () in
     let work = Temp.newlabel () in
-    Ex (T.ESEQ (T.seq [
+    Nx (T.seq [
         T.LABEL start;
         (unCx test) (work, finish);
         T.LABEL work;
-        T.MOVE ((T.TEMP { temp = r; ptr = false }), (unEx body));
+        (unNx body);
         T.JUMP ((T.NAME start), [start]);
-        T.LABEL finish ],
-        T.TEMP { temp = r; ptr = false }))
+        T.LABEL finish ])
  
 let transFor (var, lo, hi, body, finish) =
     let var = Frame.exp (snd var, (T.TEMP { temp = Frame.fp; ptr = true })) in
-    let r = Temp.newtemp () in
     let work = Temp.newlabel () in
     let increment = Temp.newlabel () in
-    Ex (T.ESEQ (T.seq [
+    Nx (T.seq [
         (unNx lo);
         T.CJUMP (T.GT, var, (unEx hi), finish, work);
         T.LABEL work;
-        T.MOVE ((T.TEMP { temp = r; ptr = false }), (unEx body));
+        (unNx body);
         T.CJUMP (T.LT, var, (unEx hi), increment, finish);
         T.LABEL increment;
         T.MOVE (var, (T.BINOP (T.PLUS, var, (T.CONST 1))));
         T.JUMP ((T.NAME work), [work]);
-        T.LABEL finish ],
-        T.TEMP { temp = r; ptr = false }))
+        T.LABEL finish ])
 
 let transBreak label =
     Nx (T.JUMP (T.NAME label, [label]))
