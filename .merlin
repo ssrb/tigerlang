@@ -16,4 +16,5 @@ B iselect
 B regalloc
 PKG core
 PKG ppx_sexp_conv
+PKG glpk
 
