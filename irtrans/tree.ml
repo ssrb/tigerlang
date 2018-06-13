@@ -4,8 +4,6 @@ module Temp: Temp.T
 
 type label = Temp.label [@@deriving sexp]
 
-type temp = { temp : Temp.temp; ptr: bool } [@@deriving sexp]
-
 type stm = 
 | SEQ of stm * stm
 | LABEL of label
@@ -18,7 +16,7 @@ type stm =
 and texp = 
 | BINOP of binop * exp * exp
 | MEM of exp
-| TEMP of temp
+| TEMP of Temp.temp
 | ESEQ of stm * exp
 | NAME of label
 | CONST of int
@@ -45,8 +43,6 @@ module Temp  = Temp
 
 type label = Temp.label [@@deriving sexp]
 
-type temp = { temp : Temp.temp; ptr: bool } [@@deriving sexp]
-
 type stm = 
 | SEQ of stm * stm
 | LABEL of label
@@ -59,7 +55,7 @@ type stm =
 and texp = 
 | BINOP of binop * exp * exp
 | MEM of exp
-| TEMP of temp
+| TEMP of Temp.temp
 | ESEQ of stm * exp
 | NAME of label
 | CONST of int

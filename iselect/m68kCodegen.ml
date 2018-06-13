@@ -216,8 +216,8 @@ let codegen frame stm =
     and emitCall (l, args) r = 
 
         let saverestore = Frame.callersaves |> List.map ~f:(fun reg ->
-            let memory = Frame.exp ((Frame.allocLocal frame false), { t = TEMP { temp = Frame.fp; ptr = true }; addr = true } ) in
-                (MOVE (memory, { t = TEMP { temp = reg; ptr = false }; addr = false (* <= TODO *) } ) , MOVE ({ t = TEMP { temp = reg; ptr = false }; addr = false (* <= TODO *) }, memory))
+            let memory = Frame.exp ((Frame.allocLocal frame false), { t = TEMP Frame.fp; addr = true } ) in
+                (MOVE (memory, { t = TEMP reg; addr = false (* <= TODO *) } ) , MOVE ({ t = TEMP reg; addr = false (* <= TODO *) }, memory))
             )
         in
 
@@ -240,7 +240,7 @@ let codegen frame stm =
         if nargs > 0 then
             emit(A.OPER {assem = "adda.l #" ^ (Int.to_string (4 * nargs)) ^ ",sp"; dst = []; src = []; jump = None});
 
-        munchStm (MOVE (r , { t = TEMP { temp = Frame.rv; ptr = false }; addr = false } ) );
+        munchStm (MOVE (r , { t = TEMP Frame.rv; addr = false } ) );
 
         saverestore |> List.iter ~f:(fun (_, r) -> munchStm r)
     
@@ -330,13 +330,13 @@ let codegen frame stm =
         | { t = MEM { t = BINOP(MINUS, { t = CONST i }, e0) } } -> data(fun r -> emit(A.OPER {assem = "move.l " ^ (Int.to_string ~-i) ^ "(`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
         | { t = MEM { t = CONST i } } -> data(fun r -> emit(A.OPER {assem = "move.l " ^ Int.to_string i ^ ",`d0"; dst = [r]; src = []; jump = None}))
         | { t = MEM e0 } -> data(fun r -> emit(A.OPER {assem = "move.l (`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
-        | { t = TEMP { temp; ptr } } -> Var.make (temp, if ptr then "a" else "d")
+        | { t = TEMP temp; addr } -> Var.make (temp, if addr then "a" else "d")
         
         | { t = NAME l } -> address(fun r -> emit(A.OPER {assem = "lea.l " ^ (Symbol.name l) ^ ",`d0" ; dst = [r]; src = []; jump = None}))
         
         | { t = CONST i } -> data(fun r -> emit(A.OPER {assem = "move.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
  
-        | { t = CALL (l, args) } -> data(fun r -> emitCall (l, args) { t = TEMP {temp = r.temp; ptr = false}; addr = false })
+        | { t = CALL (l, args) } -> data(fun r -> emitCall (l, args) { t = TEMP r.temp; addr = false })
             
         | exp -> 
             exp
@@ -383,13 +383,13 @@ let codegen frame stm =
         | { t = MEM { t = BINOP(MINUS, { t = CONST i }, e0) } } -> address(fun r -> emit(A.OPER {assem = "movea.l " ^ (Int.to_string ~-i) ^ "(`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
         | { t = MEM { t = CONST i } } -> address(fun r -> emit(A.OPER {assem = "movea.l "^ Int.to_string i ^ ",`d0"; dst = [r]; src = []; jump = None}))
         | { t = MEM e0 } -> address(fun r -> emit(A.OPER {assem = "movea.l (`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
-        | { t = TEMP { temp; ptr } } -> Var.make (temp, if ptr then "a" else "d")
+        | { t = TEMP temp; addr } -> Var.make (temp, if addr then "a" else "d")
         
         | { t = NAME l } -> address(fun r -> emit(A.OPER {assem = "lea.l " ^ (Symbol.name l) ^ ",`d0" ; dst = [r]; src = []; jump = None}))
         
         | { t = CONST i } -> address(fun r -> emit(A.OPER {assem = "lea.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
  
-        | { t = CALL (l, args) } -> address(fun r -> emitCall (l, args) { t = TEMP { temp = r.temp; ptr = true }; addr = true })
+        | { t = CALL (l, args) } -> address(fun r -> emitCall (l, args) { t = TEMP r.temp; addr = true })
 
         | exp -> 
             exp

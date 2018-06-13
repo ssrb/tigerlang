@@ -33,7 +33,7 @@ let linearize stm0 =
       if commute(stms',e) then 
         (stms % stms',e::el)
       else 
-        let t = { t = TEMP { temp = Temp.newtemp(); ptr = e.addr }; addr = e.addr }  in 
+        let t = { t = TEMP (Temp.newtemp()); addr = e.addr }  in 
         (stms % MOVE(t, e) % stms', t::el)
     | [] -> (nop, [])
 

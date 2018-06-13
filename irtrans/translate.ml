@@ -78,12 +78,12 @@ let unEx exp =
         let t = Temp.newlabel () in
         let f = Temp.newlabel () in
         { t = ESEQ(seq [
-            MOVE({ t = TEMP { temp = r; ptr = false }; addr = false }, { t = CONST 1; addr = false }); 
+            MOVE({ t = TEMP r; addr = false }, { t = CONST 1; addr = false }); 
             cx (t, f); 
             LABEL f; 
-            MOVE({ t = TEMP { temp = r; ptr = false }; addr = false }, { t = CONST 0; addr = false }); 
+            MOVE({ t = TEMP r; addr = false }, { t = CONST 0; addr = false }); 
             LABEL t], 
-            { t = TEMP { temp = r; ptr = false }; addr = false }); addr = false}
+            { t = TEMP r; addr = false }); addr = false}
 
 let unNx exp =
     match exp with 
@@ -183,7 +183,7 @@ let follow_static_link declvl uselvl =
                 aux parent.level (Frame.exp (sl, fp))
             end
     in
-    aux uselvl { t = TEMP { temp = Frame.fp; ptr = true }; addr = true }
+    aux uselvl { t = TEMP Frame.fp; addr = true }
 
 let transCall (declvl, uselvl, lbl, args, rtype) = 
     let args = List.map args ~f:unEx in
@@ -197,7 +197,7 @@ let transCall (declvl, uselvl, lbl, args, rtype) =
     | _ -> Ex call
 
 let transRecord fldxp =
-    let r = { t = TEMP { temp = Temp.newtemp (); ptr = true }; addr = true } in
+    let r = { t = TEMP (Temp.newtemp ()); addr = true } in
     let init woffset xp =
         let xp = match xp with Some xp -> unEx xp | None -> { t = CONST 0; addr = false (* <= TODO *) } in
         MOVE ({ t = MEM ( { t = BINOP (PLUS, r, { t = CONST (woffset * Frame.wordSize); addr = false }); addr = true }); 
@@ -213,7 +213,7 @@ let transAssign (left, right) =
 let transVar ((declvl ,  access), uselvl) =
     Ex (Frame.exp (access, (follow_static_link declvl uselvl)))
 
-let transIf (test, then', else', ptr) =
+let transIf (test, then', else', addr) =
     let t = Temp.newlabel () in
     let j = Temp.newlabel () in
     match else' with 
@@ -241,32 +241,32 @@ let transIf (test, then', else', ptr) =
                 | Cx exp -> [ exp(t1, j) ]
                 | _ -> 
                     let exp = unEx exp in
-                    [ MOVE ({ t = TEMP { temp = r; ptr = exp.addr }; addr = exp.addr }, exp); JUMP ({ t = NAME j; addr = true }, [j])]
+                    [ MOVE ({ t = TEMP r; addr = exp.addr }, exp); JUMP ({ t = NAME j; addr = true }, [j])]
             in
             Ex { t = (ESEQ (seq ([
-                MOVE ({ t = TEMP { temp = r; ptr = false }; addr = false }, { t = CONST 0; addr = false });
+                MOVE ({ t = TEMP r; addr = false }, { t = CONST 0; addr = false });
                 (unCx test) (t, f);
                 LABEL t] 
                 @ (optimizeCx then')
                 @ [ LABEL f ] 
                 @ (optimizeCx else')
                 @ [LABEL t1;
-                MOVE ({ t = TEMP { temp = r; ptr = false }; addr = false }, { t = CONST 1; addr = false });
+                MOVE ({ t = TEMP r; addr = false }, { t = CONST 1; addr = false });
                 LABEL j]),
-                { t = TEMP { temp = r; ptr = false }; addr = false })); addr = false }
+                { t = TEMP r; addr = false })); addr = false }
         end
         | _ ->
             let r = Temp.newtemp () in
             Ex { t = (ESEQ (seq [
                 (unCx test) (t, f);
                 LABEL t;
-                MOVE ({ t = TEMP { temp = r; ptr }; addr = ptr }, (unEx then'));
+                MOVE ({ t = TEMP r; addr }, (unEx then'));
                 JUMP ({ t = NAME j; addr = true }, [j]);
                 LABEL f;
-                MOVE ({ t = TEMP { temp = r; ptr }; addr = ptr }, (unEx else'));
+                MOVE ({ t = TEMP r; addr }, (unEx else'));
                 JUMP ({ t = NAME j; addr = true }, [j]);
                 LABEL j ],
-                { t = TEMP { temp = r; ptr }; addr = ptr })); addr = ptr }
+                { t = TEMP r; addr })); addr }
 
     end
     | None ->
@@ -300,7 +300,7 @@ let transWhile (test, body, finish) =
         LABEL finish ])
  
 let transFor (var, lo, hi, body, finish) =
-    let var = Frame.exp (snd var, ({ t = TEMP { temp = Frame.fp; ptr = true }; addr = true })) in
+    let var = Frame.exp (snd var, ({ t = TEMP Frame.fp; addr = true })) in
     let work = Temp.newlabel () in
     let increment = Temp.newlabel () in
     Nx (seq [
@@ -356,7 +356,7 @@ let procEntryExit ~level ~body =
     begin
         let body = match body with
         | Nx nx -> nx
-        | _ -> MOVE({ t = TEMP { temp = Frame.rv; ptr = false }; addr = false (* <= TODO *) }, (unEx body))
+        | _ -> MOVE({ t = TEMP Frame.rv; addr = false (* <= TODO *) }, (unEx body))
         in
         fragments := (Frame.PROC {body = Frame.procEntryExit1 (level.frame, body); frame = level.frame})::!fragments
     end
