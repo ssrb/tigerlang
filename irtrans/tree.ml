@@ -24,7 +24,7 @@ and texp =
 | CONST of int
 | CALL of exp * exp list [@@deriving sexp]
 
-and exp = { t: texp } [@@deriving sexp]
+and exp = { t: texp; addr: bool } [@@deriving sexp]
 
 and binop = PLUS | MINUS | MUL | DIV 
 | AND | OR | LSHIFT | RSHIFT | ARSHIFT | XOR [@@deriving sexp]
@@ -65,7 +65,7 @@ and texp =
 | CONST of int
 | CALL of exp * exp list [@@deriving sexp]
 
-and exp = { t: texp } [@@deriving sexp]
+and exp = { t: texp; addr: bool } [@@deriving sexp]
 
 and binop = PLUS | MINUS | MUL | DIV 
 | AND | OR | LSHIFT | RSHIFT | ARSHIFT | XOR [@@deriving sexp]

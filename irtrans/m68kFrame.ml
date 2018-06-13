@@ -87,7 +87,7 @@ let calleesaves = Var.(([ "d2"; "d3"; "d4"; "d5"; "d6"; "d7" ] |> List.map ~f:(f
 let callersaves = [ "d0"; "d1"; "a0"; "a1" ] |> List.map ~f:(SM.find_exn regMap)
 
 let externalCall (name, exps) = 
-    { t = CALL ({ t = NAME (Temp.namedlabel ("_tiger_" ^ name))}, exps) }
+    { t = CALL ({ t = NAME (Temp.namedlabel ("_tiger_" ^ name)); addr = true}, exps); addr = false (* <= TODO *) }
 
 let (--) r inc = r := !r - inc; !r
 
@@ -109,22 +109,22 @@ let formals {formals; _} = formals
 let exp (access, exp) =
     let module T = Tree in
     match access with
-    | InFrame off -> { t = T.MEM ({ t = T.BINOP (T.PLUS, exp, { t = (T.CONST off) }) } ) }
-    | InReg temp -> { t = T.TEMP { temp = temp; ptr = false } }
+    | InFrame off -> { t = T.MEM ({ t = T.BINOP (T.PLUS, exp, { t = T.CONST off; addr = false }); addr = true } ); addr = false (* <= TODO *) }
+    | InReg temp -> { t = T.TEMP { temp = temp; ptr = false }; addr = false }
 
 let procEntryExit1 (frame, body) = 
     
     let saverestore = calleesaves |> List.map ~f:(fun (reg : Var.t) ->
-        let memory = exp ((allocLocal frame false), { t = TEMP { temp = fp; ptr = true } }) in
-        (MOVE (memory, { t = TEMP { temp = reg.temp; ptr = false } }), MOVE ({ t = TEMP { temp = reg.temp; ptr = reg.regclass = "a" } }, memory))
+        let memory = exp ((allocLocal frame false), { t = TEMP { temp = fp; ptr = true }; addr = true }) in
+        (MOVE (memory, { t = TEMP { temp = reg.temp; ptr = false (* <= TODO ? *)}; addr = false }), MOVE ({ t = TEMP { temp = reg.temp; ptr = reg.regclass = "a" }; addr = reg.regclass = "a" }, memory))
     )
     in
     
     let nargs = List.length frame.formals in
 
     let params = frame.formals |> List.mapi ~f:(fun i f -> 
-        let frame = exp (InFrame ((i + 2) * wordSize), { t = TEMP { temp = fp; ptr = true } }) in
-        let reg = exp (f, { t = TEMP { temp = fp; ptr = true } }) in
+        let frame = exp (InFrame ((i + 2) * wordSize), { t = TEMP { temp = fp; ptr = true }; addr = true }) in
+        let reg = exp (f, { t = TEMP { temp = fp; ptr = true }; addr = true }) in
         MOVE (reg, frame)
     )
     in

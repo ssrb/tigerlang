@@ -25,14 +25,14 @@ let rec alloc (asm, frame) =
 
         let rewriteProgram' asm (spill : Liveness.Assem.Variable.t) = 
 
-            let memory = Frame.exp ((Frame.allocLocal frame true), { t = TEMP { temp = Frame.fp; ptr = true } }) in
+            let memory = Frame.exp ((Frame.allocLocal frame true), { t = TEMP { temp = Frame.fp; ptr = true }; addr = true }) in
             let fetch t = Codegen.codegen frame (MOVE (t, memory)) in
             let store t = Codegen.codegen frame (MOVE (memory, t)) in
 
             let rewriteOperands fs ops  = 
                 if List.exists ~f:(fun (o : Assem.Variable.t) -> o.temp = spill.temp) ops then
                     let t = Temp.newtemp () in
-                    let ttmp = { t = TEMP { temp = t; ptr = spill.regclass = "a" } } in
+                    let ttmp = { t = TEMP { temp = t; ptr = spill.regclass = "a" }; addr = spill.regclass = "a" } in
                     (fs ttmp, List.map ~f:(fun  (o : Assem.Variable.t) -> if o.temp = spill.temp then {o with temp = t} else o) ops)
                 else
                     ([], ops)
@@ -48,8 +48,8 @@ let rec alloc (asm, frame) =
                     begin
                         match (mv.src.temp = spill.temp, mv.dst.temp = spill.temp) with
                         | (true, true) -> []
-                        | (true, _) -> Codegen.codegen frame (MOVE ({ t = TEMP { temp = mv.dst.temp; ptr = mv.dst.regclass = "a" } }, memory))
-                        | (_, true) -> Codegen.codegen frame (MOVE (memory, { t = TEMP { temp = mv.src.temp; ptr = mv.src.regclass = "a" } }))
+                        | (true, _) -> Codegen.codegen frame (MOVE ({ t = TEMP { temp = mv.dst.temp; ptr = mv.dst.regclass = "a" }; addr = mv.dst.regclass = "a" }, memory))
+                        | (_, true) -> Codegen.codegen frame (MOVE (memory, { t = TEMP { temp = mv.src.temp; ptr = mv.src.regclass = "a" }; addr = mv.src.regclass = "a" }))
                         | _ -> [ A.MOVE mv ]
                     end
                     (*let (fetch, [ src' ]) = rewriteOperands fetch [ mv.src ] in

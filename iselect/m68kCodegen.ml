@@ -216,8 +216,8 @@ let codegen frame stm =
     and emitCall (l, args) r = 
 
         let saverestore = Frame.callersaves |> List.map ~f:(fun reg ->
-            let memory = Frame.exp ((Frame.allocLocal frame false), { t = TEMP { temp = Frame.fp; ptr = true } } ) in
-                (MOVE (memory, { t = TEMP { temp = reg; ptr = false } } ) , MOVE ({ t = TEMP { temp = reg; ptr = false } }, memory))
+            let memory = Frame.exp ((Frame.allocLocal frame false), { t = TEMP { temp = Frame.fp; ptr = true }; addr = true } ) in
+                (MOVE (memory, { t = TEMP { temp = reg; ptr = false }; addr = false (* <= TODO *) } ) , MOVE ({ t = TEMP { temp = reg; ptr = false }; addr = false (* <= TODO *) }, memory))
             )
         in
 
@@ -240,7 +240,7 @@ let codegen frame stm =
         if nargs > 0 then
             emit(A.OPER {assem = "adda.l #" ^ (Int.to_string (4 * nargs)) ^ ",sp"; dst = []; src = []; jump = None});
 
-        munchStm (MOVE (r , { t = TEMP { temp = Frame.rv; ptr = false} } ) );
+        munchStm (MOVE (r , { t = TEMP { temp = Frame.rv; ptr = false }; addr = false } ) );
 
         saverestore |> List.iter ~f:(fun (_, r) -> munchStm r)
     
@@ -336,7 +336,7 @@ let codegen frame stm =
         
         | { t = CONST i } -> data(fun r -> emit(A.OPER {assem = "move.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
  
-        | { t = CALL (l, args) } -> data(fun r -> emitCall (l, args) { t = TEMP {temp = r.temp; ptr = false} })
+        | { t = CALL (l, args) } -> data(fun r -> emitCall (l, args) { t = TEMP {temp = r.temp; ptr = false}; addr = false })
             
         | exp -> 
             exp
@@ -389,7 +389,7 @@ let codegen frame stm =
         
         | { t = CONST i } -> address(fun r -> emit(A.OPER {assem = "lea.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
  
-        | { t = CALL (l, args) } -> address(fun r -> emitCall (l, args) { t = TEMP { temp = r.temp; ptr = true } })
+        | { t = CALL (l, args) } -> address(fun r -> emitCall (l, args) { t = TEMP { temp = r.temp; ptr = true }; addr = true })
 
         | exp -> 
             exp
