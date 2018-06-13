@@ -14,7 +14,7 @@ type stm =
 | EXP of exp 
 | NOP [@@deriving sexp]
 
-and exp = 
+and texp = 
 | BINOP of binop * exp * exp
 | MEM of exp
 | TEMP of temp
@@ -22,6 +22,8 @@ and exp =
 | NAME of label
 | CONST of int
 | CALL of exp * exp list [@@deriving sexp]
+
+and exp = { t: texp } [@@deriving sexp]
 
 and binop = PLUS | MINUS | MUL | DIV 
 | AND | OR | LSHIFT | RSHIFT | ARSHIFT | XOR [@@deriving sexp]

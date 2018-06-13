@@ -7,11 +7,13 @@ module Var = Assem.Variable
 module TT = Temp.Table
 module SM = String.Map
 
+open Tree
+
 let wordSize = 4
 
 type access = InFrame of int | InReg of Temp.temp  [@@deriving sexp]
 type frame = {name: Temp.label; formals: access list; offset: int ref}  [@@deriving sexp]
-type frag = PROC of {body: Tree.stm; frame: frame} | STRING of Temp.label * string [@@deriving sexp]
+type frag = PROC of {body: stm; frame: frame} | STRING of Temp.label * string [@@deriving sexp]
 type register = string [@@deriving sexp]
 type regclass = string [@@deriving sexp]
 
@@ -85,7 +87,7 @@ let calleesaves = Var.(([ "d2"; "d3"; "d4"; "d5"; "d6"; "d7" ] |> List.map ~f:(f
 let callersaves = [ "d0"; "d1"; "a0"; "a1" ] |> List.map ~f:(SM.find_exn regMap)
 
 let externalCall (name, exps) = 
-    Tree.CALL (Tree.NAME (Temp.namedlabel ("_tiger_" ^ name)), exps)
+    { t = CALL ({ t = NAME (Temp.namedlabel ("_tiger_" ^ name))}, exps) }
 
 let (--) r inc = r := !r - inc; !r
 
@@ -107,27 +109,27 @@ let formals {formals; _} = formals
 let exp (access, exp) =
     let module T = Tree in
     match access with
-    | InFrame off -> T.MEM (T.BINOP (T.PLUS, exp, (T.CONST off)))
-    | InReg temp -> T.TEMP { temp = temp; ptr = false }
+    | InFrame off -> { t = T.MEM ({ t = T.BINOP (T.PLUS, exp, { t = (T.CONST off) }) } ) }
+    | InReg temp -> { t = T.TEMP { temp = temp; ptr = false } }
 
 let procEntryExit1 (frame, body) = 
     
     let saverestore = calleesaves |> List.map ~f:(fun (reg : Var.t) ->
-        let memory = exp ((allocLocal frame false), (Tree.TEMP { temp = fp; ptr = true })) in
-        (Tree.MOVE (memory, (Tree.TEMP { temp = reg.temp; ptr = false })) , Tree.MOVE ((Tree.TEMP { temp = reg.temp; ptr = reg.regclass = "a" }), memory))
+        let memory = exp ((allocLocal frame false), { t = TEMP { temp = fp; ptr = true } }) in
+        (MOVE (memory, { t = TEMP { temp = reg.temp; ptr = false } }), MOVE ({ t = TEMP { temp = reg.temp; ptr = reg.regclass = "a" } }, memory))
     )
     in
     
     let nargs = List.length frame.formals in
 
     let params = frame.formals |> List.mapi ~f:(fun i f -> 
-        let frame = exp (InFrame ((i + 2) * wordSize), (Tree.TEMP { temp = fp; ptr = true })) in
-        let reg = exp (f, (Tree.TEMP { temp = fp; ptr = true })) in
-        Tree.MOVE (reg, frame)
+        let frame = exp (InFrame ((i + 2) * wordSize), { t = TEMP { temp = fp; ptr = true } }) in
+        let reg = exp (f, { t = TEMP { temp = fp; ptr = true } }) in
+        MOVE (reg, frame)
     )
     in
     
-    Tree.seq ((saverestore |> List.map ~f:fst) @ params @ [ body ] @ (saverestore |> List.map ~f:snd))
+    seq ((saverestore |> List.map ~f:fst) @ params @ [ body ] @ (saverestore |> List.map ~f:snd))
 
 let procEntryExit2 (frame, body) = 
     body @ 

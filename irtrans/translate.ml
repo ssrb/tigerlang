@@ -40,11 +40,12 @@ struct
 
 module Frame = Frame
 module Temp = Frame.Temp
-module T = Frame.Tree
+module Tree = Frame.Tree
 
+open Tree
 open Core
 
-type exp = Ex of T.exp | Nx of T.stm | Cx of (T.label * T.label -> T.stm)
+type exp = Ex of Tree.exp | Nx of Tree.stm | Cx of (label * label -> Tree.stm)
 type _level = {level: level; frame: Frame.frame}
 and level = Outermost | Level of _level * unit ref [@@deriving sexp]
 type access = level * Frame.access
@@ -71,93 +72,94 @@ let getResult () = !fragments
 let unEx exp = 
     match exp with 
     | Ex ex -> ex
-    | Nx nx -> T.ESEQ(nx, T.CONST 0)
+    | Nx nx -> { t = ESEQ(nx, { t = CONST 0 }) }
     | Cx cx -> 
         let r = Temp.newtemp () in
         let t = Temp.newlabel () in
         let f = Temp.newlabel () in
-        T.ESEQ(T.seq [
-            T.MOVE(T.TEMP { temp = r; ptr = false }, T.CONST 1); 
+        { t = ESEQ(seq [
+            MOVE({ t = TEMP { temp = r; ptr = false } }, { t = CONST 1 } ); 
             cx (t, f); 
-            T.LABEL f; 
-            T.MOVE(T.TEMP { temp = r; ptr = false }, T.CONST 0); 
-            T.LABEL t], 
-            T.TEMP { temp = r; ptr = false })
+            LABEL f; 
+            MOVE({ t = TEMP { temp = r; ptr = false } }, { t = CONST 0 }); 
+            LABEL t], 
+            { t = TEMP { temp = r; ptr = false } })}
 
 let unNx exp =
     match exp with 
-    | Ex ex -> T.EXP ex
+    | Ex ex -> EXP ex
     | Nx nx -> nx
     | Cx cx -> 
         let l = Temp.newlabel() in
-        T.seq [cx(l, l); T.LABEL l]
+        seq [cx(l, l); LABEL l]
 
-let unCx exp = 
+let unCx exp =  
     match exp with 
     | Ex ex ->
     begin
-        match ex with
-        | T.CONST 0 -> (fun (t, f) -> T.JUMP ((T.NAME f), [f]))
-        | T.CONST _ -> (fun (t, f) -> T.JUMP ((T.NAME t), [t]))
-        | ex -> (fun (t, f) -> T.CJUMP (T.EQ, (T.CONST 0), ex, f, t))
+        match ex.t with
+        | CONST 0 -> (fun (t, f) -> JUMP ({ t = (NAME f) }, [f]))
+        | CONST _ -> (fun (t, f) -> JUMP ({ t = (NAME t) }, [t]))
+        | _ -> (fun (t, f) -> CJUMP (EQ, { t = CONST 0 }, ex, f, t))
     end
     | Nx nx -> assert(false)
     | Cx cx -> cx
 
-let transNop () = Nx T.NOP
+let transNop () = Nx NOP
 
-let transNil () = Ex (T.CONST 0)
+let transNil () = Ex { t = CONST 0 }
 
-let transInt i = Ex (T.CONST i)
+let transInt i = Ex { t = CONST i }
 
 let transOp (op, left, right, ty) =
     let module A = Absyn in
     let left = unEx left in
     let right = unEx right in
+    let zero = { t = CONST 0 } in
     if ty = Types.STRING then
         match op with
         | A.EqOp -> Cx (fun (t, f) ->
-            T.CJUMP (T.EQ, Frame.externalCall ("stringCompare", [left; right]), (T.CONST 0), t, f))
+            CJUMP (EQ, Frame.externalCall ("stringCompare", [left; right]), zero, t, f))
         | A.NeqOp -> Cx (fun (t, f) ->
-            T.CJUMP (T.NE, Frame.externalCall ("stringCompare", [left; right]), (T.CONST 0), t, f))
+            CJUMP (NE, Frame.externalCall ("stringCompare", [left; right]), zero, t, f))
         | A.LtOp -> Cx (fun (t, f) ->
-            T.CJUMP (T.LT, Frame.externalCall ("stringCompare", [left; right]), (T.CONST 0), t, f))
+            CJUMP (LT, Frame.externalCall ("stringCompare", [left; right]), zero, t, f))
         | A.LeOp -> Cx (fun (t, f) ->
-            T.CJUMP (T.LE, Frame.externalCall ("stringCompare", [left; right]), (T.CONST 0), t, f))
+            CJUMP (LE, Frame.externalCall ("stringCompare", [left; right]), zero, t, f))
         | A.GtOp -> Cx (fun (t, f) ->
-            T.CJUMP (T.LT, Frame.externalCall ("stringCompare", [right; left]), (T.CONST 0), t, f))
+            CJUMP (LT, Frame.externalCall ("stringCompare", [right; left]), zero, t, f))
         | A.GeOp -> Cx (fun (t, f) ->
-            T.CJUMP (T.LE, Frame.externalCall ("stringCompare", [right; left]), (T.CONST 0), t, f))
+            CJUMP (LE, Frame.externalCall ("stringCompare", [right; left]), zero, t, f))
         | _ -> assert(false)
     else
         match op with 
-        | A.PlusOp -> Ex (T.BINOP (T.PLUS, left, right))
-        | A.MinusOp -> Ex (T.BINOP (T.MINUS, left, right))
-        | A.MulOp -> Ex (T.BINOP (T.MUL, left, right))
-        | A.DivOp -> Ex (T.BINOP (T.DIV, left, right))
-        | A.EqOp -> Cx (fun (t, f) -> (T.CJUMP (T.EQ, left, right, t, f)))
-        | A.NeqOp -> Cx (fun (t, f) -> (T.CJUMP (T.NE, left, right, t, f)))
-        | A.LtOp -> Cx (fun (t, f) -> (T.CJUMP (T.LT, left, right, t, f)))
-        | A.LeOp -> Cx (fun (t, f) -> (T.CJUMP (T.LE, left, right, t, f)))
-        | A.GtOp -> Cx (fun (t, f) -> (T.CJUMP (T.LT, right, left, t, f)))
-        | A.GeOp -> Cx (fun (t, f) -> (T.CJUMP (T.LE, right, left, t, f)))
+        | A.PlusOp -> Ex { t = (BINOP (PLUS, left, right))}
+        | A.MinusOp -> Ex { t = (BINOP (MINUS, left, right)) }
+        | A.MulOp -> Ex { t = (BINOP (MUL, left, right)) }
+        | A.DivOp -> Ex { t = (BINOP (DIV, left, right)) }
+        | A.EqOp -> Cx (fun (t, f) -> (CJUMP (EQ, left, right, t, f)))
+        | A.NeqOp -> Cx (fun (t, f) -> (CJUMP (NE, left, right, t, f)))
+        | A.LtOp -> Cx (fun (t, f) -> (CJUMP (LT, left, right, t, f)))
+        | A.LeOp -> Cx (fun (t, f) -> (CJUMP (LE, left, right, t, f)))
+        | A.GtOp -> Cx (fun (t, f) -> (CJUMP (LT, right, left, t, f)))
+        | A.GeOp -> Cx (fun (t, f) -> (CJUMP (LE, right, left, t, f)))
 
 let transSeq exps =
     let rec aux exps res =
         match exps with
         | [] -> assert(false)
-        | [ exp ] -> T.ESEQ (res, unEx exp)
-        | exp::exps' -> aux exps' (T.SEQ (res,unNx exp))
+        | [ exp ] -> ESEQ (res, unEx exp)
+        | exp::exps' -> aux exps' (SEQ (res,unNx exp))
     in
     match exps with 
     | [] -> assert(false)
     | [ exp ] -> exp
-    | exp::exps' -> Ex (aux exps' (unNx exp))
+    | exp::exps' -> Ex { t = (aux exps' (unNx exp)) }
 
 let transString lit =
     let lab = Temp.newlabel () in
     fragments := (Frame.STRING (lab, lit))::!fragments;
-    Ex (T.NAME (lab))
+    Ex { t = NAME lab }
 
 let level_equal left right =
     match (left, right) with 
@@ -178,31 +180,34 @@ let follow_static_link declvl uselvl =
                 aux parent.level (Frame.exp (sl, fp))
             end
     in
-    aux uselvl (T.TEMP { temp = Frame.fp; ptr = true })
+    aux uselvl { t = (TEMP { temp = Frame.fp; ptr = true }) }
 
 let transCall (declvl, uselvl, lbl, args, rtype) = 
     let args = List.map args ~f:unEx in
     let call = 
         match declvl with
         | Outermost -> Frame.externalCall (Symbol.name lbl, args)
-        | _ -> T.CALL ((T.NAME lbl), (follow_static_link declvl uselvl)::args)
+        | _ -> { t = CALL ({ t = NAME lbl}, (follow_static_link declvl uselvl)::args) }
     in 
     match rtype with
-    | Types.UNIT -> Nx (T.EXP call)
+    | Types.UNIT -> Nx (EXP call)
     | _ -> Ex call
 
 let transRecord fldxp =
     let r = Temp.newtemp () in
     let init woffset xp =
-        let xp = match xp with Some xp -> unEx xp | None -> T.CONST 0 in
-        T.MOVE (T.MEM (T.BINOP (T.PLUS, (T.TEMP { temp = r; ptr = false }), (T.CONST (woffset * Frame.wordSize)))), xp)
+        let xp = match xp with Some xp -> unEx xp | None -> { t = CONST 0 } in
+        MOVE ({ t = MEM (
+            { t = BINOP (PLUS, 
+                { t = (TEMP { temp = r; ptr = false }) }, 
+                { t = (CONST (woffset * Frame.wordSize)) }) }) }, xp)
     in
-    let alloc = T.MOVE ((T.TEMP { temp = r; ptr = false }), Frame.externalCall ("malloc", [ T.CONST ((List.length fldxp) * Frame.wordSize) ])) in        
+    let alloc = MOVE (({ t = TEMP { temp = r; ptr = false } }), Frame.externalCall ("malloc", [ { t = CONST ((List.length fldxp) * Frame.wordSize) } ])) in        
     let inits = List.mapi fldxp ~f:init in    
-    Ex (T.ESEQ (T.seq (alloc::inits), T.TEMP { temp = r; ptr = false }))
+    Ex { t = (ESEQ (seq (alloc::inits), { t = TEMP { temp = r; ptr = false } })) }
 
 let transAssign (left, right) =
-    Nx (T.MOVE ((unEx left), (unEx right)))
+    Nx (MOVE ((unEx left), (unEx right)))
 
 let transVar ((declvl ,  access), uselvl) =
     Ex (Frame.exp (access, (follow_static_link declvl uselvl)))
@@ -216,15 +221,15 @@ let transIf (test, then', else', ptr) =
         let f = Temp.newlabel () in
         match (then', else') with
         | (Nx then' , Nx else') ->
-            Nx (T.seq [
+            Nx (seq [
                 (unCx test) (t, f);
-                T.LABEL t;
+                LABEL t;
                 then';
-                T.JUMP ((T.NAME j), [j]);
-                T.LABEL f;
+                JUMP ({ t = (NAME j) }, [j]);
+                LABEL f;
                 else';
-                T.JUMP ((T.NAME j), [j]);
-                T.LABEL j ])
+                JUMP ({ t = (NAME j) }, [j]);
+                LABEL j ])
 
         | (Cx _ , _) | (_ , Cx _) ->
         begin
@@ -233,95 +238,112 @@ let transIf (test, then', else', ptr) =
             let optimizeCx exp = 
                 match exp with
                 | Cx exp -> [ exp(t1, j) ]
-                | _ -> [ T.MOVE ((T.TEMP { temp = r; ptr = false }), (unEx exp)); T.JUMP ((T.NAME j), [j])]
+                | _ -> [ MOVE ({ t = (TEMP { temp = r; ptr = false }) }, (unEx exp)); JUMP ({ t = (NAME j) }, [j])]
             in
-            Ex (T.ESEQ (T.seq ([
-                T.MOVE ((T.TEMP { temp = r; ptr = false }), (T.CONST 0));
+            Ex { t = (ESEQ (seq ([
+                MOVE ({ t = (TEMP { temp = r; ptr = false }) }, { t = (CONST 0) });
                 (unCx test) (t, f);
-                T.LABEL t] 
+                LABEL t] 
                 @ (optimizeCx then')
-                @ [ T.LABEL f ] 
+                @ [ LABEL f ] 
                 @ (optimizeCx else')
-                @ [T.LABEL t1;
-                T.MOVE ((T.TEMP { temp = r; ptr = false }), (T.CONST 1));
-                T.LABEL j]),
-                T.TEMP { temp = r; ptr = false }))
+                @ [LABEL t1;
+                MOVE ({ t = (TEMP { temp = r; ptr = false }) }, { t = (CONST 1) });
+                LABEL j]),
+                { t = TEMP { temp = r; ptr = false } })) }
         end
         | _ ->
             let r = Temp.newtemp () in
-            Ex (T.ESEQ (T.seq [
+            Ex { t = (ESEQ (seq [
                 (unCx test) (t, f);
-                T.LABEL t;
-                T.MOVE ((T.TEMP { temp = r; ptr }), (unEx then'));
-                T.JUMP ((T.NAME j), [j]);
-                T.LABEL f;
-                T.MOVE ((T.TEMP { temp = r; ptr }), (unEx else'));
-                T.JUMP ((T.NAME j), [j]);
-                T.LABEL j ],
-                T.TEMP { temp = r; ptr }))
+                LABEL t;
+                MOVE ({ t = (TEMP { temp = r; ptr }) }, (unEx then'));
+                JUMP ({ t = (NAME j) }, [j]);
+                LABEL f;
+                MOVE ({ t = (TEMP { temp = r; ptr }) }, (unEx else'));
+                JUMP ({ t = (NAME j) }, [j]);
+                LABEL j ],
+                { t = TEMP { temp = r; ptr } })) }
 
     end
     | None ->
     begin
         match then' with 
         | Cx then' ->
-            Nx (T.seq [
+            Nx (seq [
             (unCx test) (t, j);
-            T.LABEL t;
+            LABEL t;
             then' (j, j);
-            T.LABEL j ])
+            LABEL j ])
 
         | _ ->
-            Nx (T.seq [
+            Nx (seq [
                 (unCx test) (t, j);
-                T.LABEL t;
+                LABEL t;
                 unNx then';
-                T.JUMP ((T.NAME j), [j]);
-                T.LABEL j ])
+                JUMP ({ t = (NAME j) }, [j]);
+                LABEL j ])
     end
 
 let transWhile (test, body, finish) =
     let start = Temp.newlabel () in
     let work = Temp.newlabel () in
-    Nx (T.seq [
-        T.LABEL start;
+    Nx (seq [
+        LABEL start;
         (unCx test) (work, finish);
-        T.LABEL work;
+        LABEL work;
         (unNx body);
-        T.JUMP ((T.NAME start), [start]);
-        T.LABEL finish ])
+        JUMP ({ t = (NAME start) }, [start]);
+        LABEL finish ])
  
 let transFor (var, lo, hi, body, finish) =
-    let var = Frame.exp (snd var, (T.TEMP { temp = Frame.fp; ptr = true })) in
+    let var = Frame.exp (snd var, ({ t = TEMP { temp = Frame.fp; ptr = true } })) in
     let work = Temp.newlabel () in
     let increment = Temp.newlabel () in
-    Nx (T.seq [
+    Nx (seq [
         (unNx lo);
-        T.CJUMP (T.GT, var, (unEx hi), finish, work);
-        T.LABEL work;
+        CJUMP (GT, var, (unEx hi), finish, work);
+        LABEL work;
         (unNx body);
-        T.CJUMP (T.LT, var, (unEx hi), increment, finish);
-        T.LABEL increment;
-        T.MOVE (var, (T.BINOP (T.PLUS, var, (T.CONST 1))));
-        T.JUMP ((T.NAME work), [work]);
-        T.LABEL finish ])
+        CJUMP (LT, var, (unEx hi), increment, finish);
+        LABEL increment;
+        MOVE (var, { t = (BINOP (PLUS, var, { t = (CONST 1) })) });
+        JUMP ({ t = (NAME work) }, [work]);
+        LABEL finish ])
 
 let transBreak label =
-    Nx (T.JUMP (T.NAME label, [label]))
+    Nx (JUMP ({ t = NAME label }, [label]))
 
 let transLet (inits, body) =
     match inits with
     | [] -> body
-    | _ -> Ex (T.ESEQ (inits |> List.map ~f:unNx |> T.seq, unEx body))
+    | _ -> Ex { t = (ESEQ (inits |> List.map ~f:unNx |> seq, unEx body)) }
 
 let transArray (size, init) =
     Ex (Frame.externalCall ("initArray", [ (unEx size); (unEx init) ]))
 
 let transField (var, fidx) =
-    Ex (T.MEM (T.BINOP (T.PLUS, (unEx var), (T.BINOP (T.MUL, (T.CONST fidx), (T.CONST Frame.wordSize))))))
+    Ex { t = (MEM { t = BINOP (
+        PLUS, 
+        (unEx var), 
+        { t = BINOP (
+            MUL, 
+            { t = (CONST fidx) }, 
+            { t = (CONST Frame.wordSize) }
+        )} 
+    )})}
 
 let transSubscript (var, sub) = 
-    Ex (T.MEM (T.BINOP (T.PLUS, (unEx var), (T.BINOP (T.MUL, (unEx sub), (T.CONST Frame.wordSize))))))
+    Ex { t = (MEM { t = BINOP (
+        PLUS, 
+        (unEx var), 
+        { t = BINOP (
+            MUL, 
+            (unEx sub), 
+            { t = (CONST Frame.wordSize) }
+        )}
+    )})}
+    
 
 let procEntryExit ~level ~body =
     match level with
@@ -329,7 +351,7 @@ let procEntryExit ~level ~body =
     begin
         let body = match body with
         | Nx nx -> nx
-        | _ -> T.MOVE(T.TEMP { temp = Frame.rv; ptr = false }, (unEx body))
+        | _ -> MOVE({ t = TEMP { temp = Frame.rv; ptr = false } }, (unEx body))
         in
         fragments := (Frame.PROC {body = Frame.procEntryExit1 (level.frame, body); frame = level.frame})::!fragments
     end
