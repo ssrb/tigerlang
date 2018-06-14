@@ -28,9 +28,9 @@ val transFor: access * exp * exp * exp * Temp.label -> exp
 val transBreak: Temp.label -> exp
 val transLet: exp list * exp -> exp
 val transArray: exp * exp -> exp
-val transVar: access * level -> exp
-val transField: exp * int -> exp
-val transSubscript: exp * exp -> exp
+val transVar: access * level * Types.ty -> exp
+val transField: exp * int * Types.ty -> exp
+val transSubscript: exp * exp * Types.ty -> exp
 val procEntryExit: level:level -> body:exp -> unit
 
 end
@@ -187,10 +187,11 @@ let follow_static_link declvl uselvl =
 
 let transCall (declvl, uselvl, lbl, args, rtype) = 
     let args = List.map args ~f:unEx in
+    let addr = Types.is_addr rtype in
     let call = 
         match declvl with
-        | Outermost -> Frame.externalCall (Symbol.name lbl, args)
-        | _ -> { t = CALL ({ t = NAME lbl; addr = true }, (follow_static_link declvl uselvl)::args); addr = Types.is_addr rtype }
+        | Outermost -> { (Frame.externalCall (Symbol.name lbl, args)) with addr }
+        | _ -> { t = CALL ({ t = NAME lbl; addr = true }, (follow_static_link declvl uselvl)::args); addr }
     in 
     match rtype with
     | Types.UNIT -> Nx (EXP call)
@@ -203,15 +204,15 @@ let transRecord fldxp =
         MOVE ({ t = MEM ( { t = BINOP (PLUS, r, { t = CONST (woffset * Frame.wordSize); addr = false }); addr = true }); 
                 addr = false (** <= TODO *)}, xp)
     in
-    let alloc = MOVE (r, Frame.externalCall ("malloc", [ { t = CONST ((List.length fldxp) * Frame.wordSize); addr = false } ])) in        
+    let alloc = MOVE (r, { (Frame.externalCall ("malloc", [ { t = CONST ((List.length fldxp) * Frame.wordSize); addr = false } ])) with addr = true }) in        
     let inits = List.mapi fldxp ~f:init in    
     Ex { t = ESEQ (seq (alloc::inits), r); addr = true }
 
 let transAssign (left, right) =
     Nx (MOVE ((unEx left), (unEx right)))
 
-let transVar ((declvl ,  access), uselvl) =
-    Ex (Frame.exp (access, (follow_static_link declvl uselvl)))
+let transVar ((declvl ,  access), uselvl, ty) =
+    Ex  { (Frame.exp (access, (follow_static_link declvl uselvl))) with addr = Types.is_addr ty }
 
 let transIf (test, then', else') =
     let t = Temp.newlabel () in
@@ -329,10 +330,10 @@ let transLet (inits, body) =
         Ex { t = ESEQ (inits |> List.map ~f:unNx |> seq, body); addr = body.addr }
 
 let transArray (size, init) =
-    Ex (Frame.externalCall ("initArray", [ (unEx size); (unEx init) ]))
+    Ex { (Frame.externalCall ("initArray", [ (unEx size); (unEx init) ])) with addr = true }
 
-let transField (var, fidx) =
-    Ex { t = (MEM { t = BINOP (
+let transField (var, fidx, ty) =
+    Ex { t = MEM { t = BINOP (
         PLUS, 
         (unEx var), 
         { t = BINOP (
@@ -340,9 +341,9 @@ let transField (var, fidx) =
             { t = CONST fidx; addr = false }, 
             { t = CONST Frame.wordSize; addr = false }
         ); addr = false } 
-    ); addr = true }); addr = false (* <= TODO *)}
+    ); addr = true }; addr = Types.is_addr ty}
 
-let transSubscript (var, sub) = 
+let transSubscript (var, sub, ty) = 
     Ex { t = (MEM { t = BINOP (
         PLUS, 
         (unEx var), 
@@ -351,7 +352,7 @@ let transSubscript (var, sub) =
             (unEx sub), 
             { t = CONST Frame.wordSize; addr = false }
         ); addr = false}
-    ); addr = true}); addr = false (* <= TODO *)}
+    ); addr = true}); addr = Types.is_addr ty}
     
 let procEntryExit ~level ~body =
     match level with

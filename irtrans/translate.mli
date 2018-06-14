@@ -29,9 +29,9 @@ val transFor: access * exp * exp * exp * Temp.label -> exp
 val transBreak: Temp.label -> exp
 val transLet: exp list * exp -> exp
 val transArray: exp * exp -> exp
-val transVar: access * level -> exp
-val transField: exp * int -> exp
-val transSubscript: exp * exp -> exp
+val transVar: access * level * Types.ty -> exp
+val transField: exp * int * Types.ty -> exp
+val transSubscript: exp * exp * Types.ty -> exp
 val procEntryExit: level:level -> body:exp -> unit
 
 end

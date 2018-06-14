@@ -383,7 +383,7 @@ and transVar (venv, tenv, lvl, var, break) =
       | Some(entry) -> 
         begin
         match entry with
-          | VarEntry {access; ty} ->  {exp = T.transVar (access , lvl); ty = actual_ty ty}
+          | VarEntry {access; ty} ->  {exp = T.transVar (access , lvl, ty); ty = actual_ty ty}
           | FunEntry {formals; result} -> raise (Semantic_error "function is not value")
         end
       | None -> raise (Semantic_error "unknown variable name")
@@ -396,7 +396,7 @@ and transVar (venv, tenv, lvl, var, break) =
       | RECORD (fields, _) ->
         begin
           match List.findi fields (fun _ (sym', _) -> sym = sym')  with
-          | Some (i, (_, ty)) -> { exp = T.transField (var.exp, i); ty = actual_ty ty }
+          | Some (i, (_, ty)) -> { exp = T.transField (var.exp, i, ty); ty = actual_ty ty }
           | None -> raise (Semantic_error "unknown field for record")
         end
       | _ -> raise (Semantic_error "var isn't a record")
@@ -410,7 +410,7 @@ and transVar (venv, tenv, lvl, var, break) =
         let sub = transExp (venv, tenv, lvl, sub, break) in
         if not (type_equal sub.ty INT) then 
           raise (Semantic_error "subscript must have int type");
-        { exp = T.transSubscript (var.exp, sub.exp); ty = actual_ty ty }
+        { exp = T.transSubscript (var.exp, sub.exp, ty); ty = actual_ty ty }
       | _ -> raise (Semantic_error "subscripted is not an array")
     end
 
