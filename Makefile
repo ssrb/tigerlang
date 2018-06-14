@@ -137,6 +137,13 @@ define PROJ_regalloc_tester
 endef
 export PROJ_regalloc_tester
 
+
+define PROJ_burg
+	RESULT = ml-burg/burg
+	SOURCES = ml-burg/burg-lex.mll
+endef
+export PROJ_burg
+
 ifndef SUBPROJS
   export SUBPROJS = lexer_tester parser_tester absyn_tester semant_tester canon_tester iselect_tester regalloc_tester
 endif
