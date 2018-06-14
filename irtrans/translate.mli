@@ -23,7 +23,7 @@ val transString: string -> exp
 val transCall: level * level * Temp.label * exp list * Types.ty -> exp
 val transRecord: exp option list -> exp
 val transAssign: exp * exp -> exp
-val transIf: exp * exp * exp option * bool -> exp
+val transIf: exp * exp * exp option -> exp
 val transWhile: exp * exp * Temp.label -> exp
 val transFor: access * exp * exp * exp * Temp.label -> exp
 val transBreak: Temp.label -> exp

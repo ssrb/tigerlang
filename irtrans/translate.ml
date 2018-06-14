@@ -22,7 +22,7 @@ val transString: string -> exp
 val transCall: level * level * Temp.label * exp list * Types.ty -> exp
 val transRecord: exp option list -> exp
 val transAssign: exp * exp -> exp
-val transIf: exp * exp * exp option * bool -> exp
+val transIf: exp * exp * exp option -> exp
 val transWhile: exp * exp * Temp.label -> exp
 val transFor: access * exp * exp * exp * Temp.label -> exp
 val transBreak: Temp.label -> exp
@@ -213,7 +213,7 @@ let transAssign (left, right) =
 let transVar ((declvl ,  access), uselvl) =
     Ex (Frame.exp (access, (follow_static_link declvl uselvl)))
 
-let transIf (test, then', else', addr) =
+let transIf (test, then', else') =
     let t = Temp.newlabel () in
     let j = Temp.newlabel () in
     match else' with 
@@ -257,13 +257,17 @@ let transIf (test, then', else', addr) =
         end
         | _ ->
             let r = Temp.newtemp () in
+            let then' = unEx then' in
+            let else' = unEx else' in
+            assert (then'.addr = else'.addr);
+            let addr = then'.addr in
             Ex { t = (ESEQ (seq [
                 (unCx test) (t, f);
                 LABEL t;
-                MOVE ({ t = TEMP r; addr }, (unEx then'));
+                MOVE ({ t = TEMP r; addr }, then');
                 JUMP ({ t = NAME j; addr = true }, [j]);
                 LABEL f;
-                MOVE ({ t = TEMP r; addr }, (unEx else'));
+                MOVE ({ t = TEMP r; addr }, else');
                 JUMP ({ t = NAME j; addr = true }, [j]);
                 LABEL j ],
                 { t = TEMP r; addr })); addr }

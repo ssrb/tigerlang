@@ -164,11 +164,11 @@ let rec transExp (venv, tenv, lvl, exp, break) =
         let else' = trexp else' in
         if not (type_equal then'.ty else'.ty) then
           raise (Semantic_error "If-then-else type is inconsistent");
-        {exp = T.transIf (test.exp, then'.exp, Some else'.exp,  then'.ty = Types.STRING); ty = then'.ty}
+        {exp = T.transIf (test.exp, then'.exp, Some else'.exp); ty = then'.ty}
       | None -> 
         if not (type_equal then'.ty Types.UNIT) then
           raise (Semantic_error "If-then statement must have unit type");
-        {exp = T.transIf (test.exp, then'.exp, None, false); ty = Types.UNIT}
+        {exp = T.transIf (test.exp, then'.exp, None); ty = Types.UNIT}
     end
 
   | WhileExp w ->
