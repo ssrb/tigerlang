@@ -17,24 +17,6 @@ type expty = {exp: Translate.exp; ty: Types.ty}
 
 exception Semantic_error of string
 
-let type_equal left right =
-  match (left, right) with
-  | (NIL, RECORD _) | (RECORD _, NIL) -> true
-  | (NIL, _) | (_, NIL)-> false
-  | (RECORD (_, left), RECORD (_, right))
-  | (ARRAY (_, left), ARRAY (_, right))-> phys_equal left right
-  | _ -> left = right
-
-let rec actual_ty ty =
-  match ty with
-  | NAME (sym, actual) ->
-    begin
-      match !actual with
-      | Some ty' -> actual_ty ty'
-      | None -> assert(false)
-    end
-  | _ -> ty
-
 let rec transExp (venv, tenv, lvl, exp, break) =
 
   let trexp (e) = transExp (venv, tenv, lvl, e, break) in

@@ -190,7 +190,7 @@ let transCall (declvl, uselvl, lbl, args, rtype) =
     let call = 
         match declvl with
         | Outermost -> Frame.externalCall (Symbol.name lbl, args)
-        | _ -> { t = CALL ({ t = NAME lbl; addr = true }, (follow_static_link declvl uselvl)::args); addr = false (* <= TODO *) }
+        | _ -> { t = CALL ({ t = NAME lbl; addr = true }, (follow_static_link declvl uselvl)::args); addr = Types.is_addr rtype }
     in 
     match rtype with
     | Types.UNIT -> Nx (EXP call)
@@ -353,7 +353,6 @@ let transSubscript (var, sub) =
         ); addr = false}
     ); addr = true}); addr = false (* <= TODO *)}
     
-
 let procEntryExit ~level ~body =
     match level with
     | Level (level, _) -> 
