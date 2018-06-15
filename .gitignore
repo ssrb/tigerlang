@@ -20,4 +20,6 @@ main/*.S
 main/*.out
 main/*.i64
 ml-burg/burglex.ml
+ml-burg/burgparse.ml
+ml-burg/burgparse.mli
 ml-burg/burg
