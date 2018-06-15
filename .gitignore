@@ -19,3 +19,5 @@ regalloc/regalloc_tester
 main/*.S
 main/*.out
 main/*.i64
+ml-burg/burglex.ml
+ml-burg/burg
