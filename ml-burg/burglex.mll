@@ -115,7 +115,7 @@ rule read =
 	| "%ruleprefix"	{ (T.K_RULEPREFIX(!lineNum,!lineNum)) }
 	| "%sig" { (T.K_SIG(!lineNum,!lineNum)) }
 	| "(*" { ( (*YYBEGIN COMMENT;*) comLevel:=1; read lexbuf) }
-	| num	{ (T.INT( (*valOf*) (Int.of_string (Lexing.lexeme lexbuf)), !lineNum,!lineNum)) }
+	| num { (T.INT( (*valOf*) (Int.of_string (Lexing.lexeme lexbuf)), !lineNum,!lineNum)) }
 	| id { (T.ID((Lexing.lexeme lexbuf),!lineNum,!lineNum)) }
 
 and read_comment =
