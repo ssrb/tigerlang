@@ -140,7 +140,9 @@ export PROJ_regalloc_tester
 
 define PROJ_burg
 	RESULT = ml-burg/burg
-	SOURCES = ml-burg/burglex.mll
+	SOURCES = ml-burg/burgAST.ml \
+	ml-burg/burgparse.mly \
+	ml-burg/burglex.mll
 endef
 export PROJ_burg
 

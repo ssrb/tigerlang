@@ -2,30 +2,35 @@
 **
 ** ML-Yacc grammar for BURG.
 *)
+%{
 
-structure A = BurgAST;
-fun outputRaw s = print (s:string)
+module A = BurgAST
 
-%%
+open Core
 
-%term K_EOF
-    | K_TERM
-    | K_START
-    | K_TERMPREFIX
-    | K_RULEPREFIX
-    | K_SIG
-    | K_COLON
-    | K_SEMICOLON
-    | K_COMMA
-    | K_LPAREN | K_RPAREN
-    | K_EQUAL
-    | K_PIPE
-    | PPERCENT of string list
-    | INT of int
-    | ID  of string
-    | RAW of string list
+let outputRaw s = Out_channel.print_endline (s:string)
 
-%nonterm full 		of A.spec_ast
+%}
+
+%token K_EOF
+%token K_TERM
+%token K_START
+%token K_TERMPREFIX
+%token K_RULEPREFIX
+%token K_SIG
+%token K_COLON
+%token K_SEMICOLON
+%token K_COMMA
+%token K_LPAREN 
+%token K_RPAREN
+%token K_EQUAL
+%token K_PIPE
+%token <string list> PPERCENT
+%token <int> INT
+%token <string> ID 
+%token <string list> RAW
+
+(* %nonterm full 		of A.spec_ast
        | spec 		of A.spec_ast
        | decl 		of A.decl_ast
        | binding 	of (string * string option)
@@ -40,62 +45,62 @@ fun outputRaw s = print (s:string)
        | bindinglist 	of (string * string option) list
        | raw	 	of unit
        | prelude	of unit
-       | postlude	of unit
+       | postlude	of unit *)
 
-%start full
+%start <BurgAST.spec_ast> full
 
-%pos int
-%pure
+(* %pos int *)
+(* %pure *)
 
-%eop K_EOF 
+(* %eop K_EOF *) 
 
-%name Burg
+(* %name Burg *)
 
 %%
 
-full		: decls PPERCENT rules PPERCENT	
-					(A.SPEC{head=PPERCENT1,
-						decls=rev decls,
-						rules=rev rules,
-						tail=PPERCENT2})
+full		: ds = decls p1 = PPERCENT rs = rules p2 = PPERCENT	
+					{ A.SPEC{head=p1;
+						decls=List.rev ds;
+						rules=List.rev rs;
+						tail=p2} }
 
-decls		: (* empty *)		([])
-		| decls decl		(decl :: decls)
+decls		: (* empty *)		{ [] }
+		| ds = decls d = decl		{ d :: ds }
 
-decl		: K_TERM bindinglist	(A.TERM (rev bindinglist))
-		| K_START ID		(A.START ID)
-		| K_TERMPREFIX ID	(A.TERMPREFIX ID)
-		| K_RULEPREFIX ID	(A.RULEPREFIX ID)
-		| K_SIG ID		(A.SIG ID)
-
-
-bindinglist	: binding		([binding])
-		| bindinglist K_PIPE binding
-					(binding :: bindinglist)
-
-binding		: ID			((ID, NONE))
-		| ID K_EQUAL ID		((ID1, SOME ID2))
-
-rules		: (* empty *)		([])
-		| rules rule		(rule :: rules)
-
-rule		: ID K_COLON pattern K_EQUAL rulename cost K_SEMICOLON
-					(A.RULE(ID, pattern, rulename, cost))
-
-rulename	: ID			(ID)
-
-pattern		: ID 			(A.PAT(ID, []))
-		| ID K_LPAREN pattern patterntail K_RPAREN		
-					(A.PAT(ID, pattern :: patterntail))
-
-patterntail	: (* empty *)		([])
-		| K_COMMA pattern patterntail
-					(pattern :: patterntail)
+decl		: K_TERM bs = bindinglist	{ A.TERM (List.rev bs) }
+		| K_START id = ID		{ A.START id }
+		| K_TERMPREFIX id = ID	{ A.TERMPREFIX id }
+		| K_RULEPREFIX id = ID	{ A.RULEPREFIX id }
+		| K_SIG id = ID		{ A.SIG id }
 
 
-cost		: (* empty *)		([])
-		| K_LPAREN INT costtail K_RPAREN	
-					(INT :: costtail)
+bindinglist	: b = binding		{ [b] }
+		| bs = bindinglist K_PIPE b = binding
+					{ b :: bs }
 
-costtail	: (* empty *)		([])
-		| K_COMMA INT costtail	(INT :: costtail) 
+binding		: id = ID			{ (id, None) }
+		| id1 = ID K_EQUAL id2 = ID		{ (id1, Some id2) }
+
+rules		: (* empty *)		{ [] }
+		| rs = rules r = rule		{ r :: rs }
+
+rule		: id = ID K_COLON p = pattern K_EQUAL r = rulename c = cost K_SEMICOLON
+					{ A.RULE(id, p, r, c) }
+
+rulename	: id = ID			{ id }
+
+pattern		: id = ID 			{ A.PAT(id, []) }
+		| id = ID K_LPAREN p = pattern tail = patterntail K_RPAREN		
+					{ A.PAT(id, p :: tail) }
+
+patterntail	: (* empty *)		{ [] }
+		| K_COMMA p = pattern tail = patterntail
+					{ p :: tail }
+
+
+cost		: (* empty *)		{ [] }
+		| K_LPAREN i = INT tail = costtail K_RPAREN	
+					{ i :: tail }
+
+costtail	: (* empty *)		{ [] }
+		| K_COMMA i = INT tail = costtail	{ i :: tail }
