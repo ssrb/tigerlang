@@ -30,19 +30,19 @@
  * Version 109
  * 
  *)
+open Core
 
-
-signature BURGEMIT = sig
+module type BURGEMIT = sig
   exception BurgError
   val emit : TextIO.instream * (unit -> TextIO.outstream) -> unit
 end
 
 
 
-structure BurgEmit : BURGEMIT =
+module BurgEmit : BURGEMIT =
   struct
 
-    structure HashStringKey : HASH_KEY = struct
+    (* structure HashStringKey : HASH_KEY = struct
       type hash_key = string
       val hashVal = HashString.hashString
       val sameKey = (op =) : string * string -> bool
@@ -50,172 +50,189 @@ structure BurgEmit : BURGEMIT =
     structure BurgHash = HashTableFn (HashStringKey)
     exception NotThere;				  (* raised by BurgHash.find *)
 	
-    exception BurgError				      (* for error reporting *)
+    exception BurgError				      (* for error reporting *) *)
 
-    val inf = 16383
+    let inf = 16383
 
     open BurgAST
 
     (* debugging *)
-    fun debug s = (TextIO.output (TextIO.stdErr, s); 
-		   TextIO.flushOut TextIO.stdErr)
-
+    let debug s = Out_channel.(
+			output_string stderr s; 
+			flush stderr
+		)
 
     (* Output functions *)
-    val s_out = ref TextIO.stdOut	   (* changed into the output stream *)
-    fun say s = TextIO.output (!s_out, s)
-    fun saynl s = say (s^"\n")
-    fun sayi s = say ("\t"^s)
-    fun sayinl s = say ("\t"^s^"\n")
+    let s_out = ref Out_channel.stdout	   (* changed into the output stream *)
+    let say s = Out_channel.output_string !s_out s
+    let saynl s = say (s^"\n")
+    let sayi s = say ("\t"^s)
+    let sayinl s = say ("\t"^s^"\n")
 
 
-    fun arrayapp (function, array) =
-      let
-	val len = Array.length array
-	fun loop pos =
-	  if pos=len then ()
-	  else
-	    (function (Array.sub (array, pos)); loop (pos+1))
+    let arrayapp (f, array) =
+      let len = Array.length array in
+			let loop pos =
+	  		if pos=len then 
+					()
+	  		else (
+	    		f (Array.sub (array, pos));
+					loop (pos+1)
+				)
       in
-	loop 0
-      end
-    
-    fun arrayiter (function, array) =
-      let
-	val len = Array.length array
-	fun loop pos =
-	  if pos=len then ()
-	  else
-	    (function (pos, Array.sub (array, pos)); loop (pos+1))
-      in
-	loop 0
-      end
+			loop 0
+   
+    let arrayiter (f, array) =
+      let len = Array.length array in
+			let loop pos =
+				if pos=len then
+					()
+				else (
+					f (pos, Array.sub (array, pos));
+					loop (pos+1)
+				)
+			in
+			loop 0
 
-    fun iter (function, n) =
-      let
-	fun loop pos =
-	  if pos=n then () else (function pos; loop (pos+1))
+    let iter (f, n) =
+      let loop pos =
+	  		if pos=n then () else (f pos; loop (pos+1))
       in
-	loop 0
-      end
+			loop 0
+      
 
-    fun listiter (function, lis) =
-      let
-	fun loop (pos, li) =
-	  case li of
-	    [] => ()
-	  | (l::ll) => (function (pos, l); loop ((pos+1), ll))
+    let listiter (f, lis) =
+      let loop (pos, li) =
+	  		match li with
+	    	| [] -> ()
+	  		| (l::ll) -> 
+					f (pos, l); 
+					loop ((pos+1), ll)
       in
-	loop (0, lis)
-      end
+			loop (0, lis)
 
     exception NotSameSize
 
-    fun exists2 (function, list1, list2) =
-      let
-	exception Found
-	fun loop ([],[]) = ()
-	  | loop (e1::l1,e2::l2) =
-	      if function (e1,e2) then raise Found else loop (l1,l2)
-	  | loop _ = raise NotSameSize
+    let exists2 (f, list1, list2) =
+      let loop = function
+			| ([],[]) -> False
+	  	| (e1::l1, e2::l2) ->
+	      if f (e1,e2) then True else loop (l1, l2)
+	  	| _ -> raise NotSameSize
       in
-	(loop (list1,list2); false) handle Found => true
-      end
+			loop (list1, list2)
 
-    fun forall2 (f,l1,l2) = not (exists2 (not o f, l1, l2))
+    let forall2 (f,l1,l2) = not (exists2 (not o f, l1, l2))
 
-    fun map2 (function, list1, list2) =
-      let
-	fun loop ([],[],acc) = rev acc
-	  | loop (e1::l1,e2::l2,acc) = loop (l1,l2,(function(e1,e2))::acc)
-	  | loop _ = raise NotSameSize
+    let map2 (f, list1, list2) =
+      let loop = function
+			| ([],[],acc) -> rev acc
+	  	| (e1::l1,e2::l2,acc) -> loop (l1,l2,(f (e1,e2))::acc)
+	  	| _ -> raise NotSameSize
       in
-	loop (list1,list2,[])
-      end
+			loop (list1,list2,[])
 
-    fun tofirstupper s = (case String.explode s
-	   of [] => ""
-	     | (c::r) => implode(Char.toUpper c :: (map Char.toLower r))
-	  (* end case *))
+    let tofirstupper s =
+			match String.explode s with
+	  	| [] -> ""
+	  	| (c::r) -> implode(Char.toUpper c :: (map Char.toLower r))
 
-    fun emit (s_in, oustreamgen) =
-      let
+    let emit (s_in, oustreamgen) =
+			(*
+			* Error reporting
+			*)
+	    let error_encountered = ref false in
+			let warning s = Out_channel.(
+				error_encountered := true;
+				output_string stderr "Error: "^s^"\n";
+				flush stderr
+			) in
+			let error s = Out_channel.(
+				output_string stderr "Error: "^s^"\n";
+		    flush stderr;
+		    raise BurgError
+			) in
+			let stop_if_error () = 
+				if !error_encountered then 
+					raise BurgError 
+				else 
+					()
+			in
+			(*
+			* ids (for hashing) :
+			* TERMINAL (internal terminal number, external terminal string/number)
+			* NONTERMINAL (internal nonterminal number)
+			*)
+			let module F = struct
+		
+				type ids = TERMINAL of int * string | NONTERMINAL of int
+				
+				(* hash table type *)
+				type htt = ids BurgHash.hash_table
+				
+				(*
+				* rule_pat :
+				* NT (nonterminal)
+				* T (terminal, sons)
+				*)
+				type rule_pat = NT of int | T of int * rule_pat list
+				
+				(*
+				* rule
+				*)
+				type ern = string		      (* type for external rule name *)
+				type rule = { bnt:int; pat:rule_pat; ern:ern; cost: int; num:int}
 
-	(*
-	 * Error reporting
-	 *)
-	val error_encountered = ref false
-	fun warning s = (error_encountered := true;
-			 TextIO.output (TextIO.stdErr, "Error: "^s^"\n");
-			 TextIO.flushOut TextIO.stdErr)
-	fun error s = (TextIO.output (TextIO.stdErr, "Error: "^s^"\n");
-		       TextIO.flushOut TextIO.stdErr;
-		       raise BurgError)
-	fun stop_if_error () = if !error_encountered then raise BurgError else ()
+			end
+			in 
 
-	(*
-	 * ids (for hashing) :
-	 * TERMINAL (internal terminal number, external terminal string/number)
-	 * NONTERMINAL (internal nonterminal number)
-	 *)
-	datatype ids = TERMINAL of int * string
-		     | NONTERMINAL of int
-	  
-	(* hash table type *)
-	type htt = ids BurgHash.hash_table
-	  
-	(*
-	 * rule_pat :
-	 * NT (nonterminal)
-	 * T (terminal, sons)
-	 *)
-	datatype rule_pat = NT of int | T of int * rule_pat list
-	  
-	(*
-	 * rule
-	 *)
-	type ern = string		      (* type for external rule name *)
-	type rule = {nt:int, pat:rule_pat, ern:ern, cost: int, num:int}
+			(* hash table symbols *)
+			let ht : htt = BurgHash.mkTable (60, NotThere)  in
 
+			(* hash table for rule names and the arity of the pattern *)
+			let hr : int BurgHash.hash_table = BurgHash.mkTable (60, NotThere) in
 
+ 			(* %start symbol *)
+			let start_sym = ref (NONE : string option) in
 
-	(* hash table symbols *)
-	val HT = BurgHash.mkTable (60, NotThere) : htt
+			(* nonterminal where to start *)
+			let start = ref 0 in
 
-	(* hash table for rule names and the arity of the pattern *)
-	val HR = BurgHash.mkTable (60, NotThere)
-	  : int BurgHash.hash_table
+			(* prefix for terminals *)
+			let term_prefix = ref "" in  
 
+			(* prefix for rules *)  
+			let rule_prefix = ref "" in		
 
-	val start_sym = ref (NONE : string option)	    (* %start symbol *)
-	val start = ref 0		       (* nonterminal where to start *)
+			(* BURM by default *) 
+			let sig_name = ref "" in	 
 
+			(* Burm (first upper, rest lower) *) 
+			let struct_name = ref "" in	   
 
-	val term_prefix = ref ""		     (* prefix for terminals *)
-	val rule_prefix = ref ""			 (* prefix for rules *)
-	val sig_name = ref ""				  (* BURM by default *)
-	val struct_name = ref ""	   (* Burm (first upper, rest lower) *)
-
-	val nb_t = ref 0		 (* current internal terminal number *)
-	val nb_nt = ref 0	      (* current internal nonterminal number *)
+			(* current internal terminal number *)
+			let nb_t = ref 0 in
+			
+			(* current internal nonterminal number *)
+			let nb_nt = ref 0	in
 
 	(* Return a new internal terminal number *)
-	fun gen_tnum () = !nb_t before (nb_t := !nb_t+1)
+	let gen_tnum () = !nb_t before (nb_t := !nb_t + 1) in
 
 	(* Return a new internal nonterminal number *)
-	fun gen_ntnum () = !nb_nt before (nb_nt := !nb_nt+1)
+	let gen_ntnum () = !nb_nt before (nb_nt := !nb_nt + 1) in
 
 
 	(*
 	 * Emit the header
 	 *)
-	fun emit_header (SPEC {head, ...}) = app say head
+	let emit_header (SPEC {head; _}) = app say head in
 
 
 	(*
 	 * Emit the tail
 	 *)
-	fun emit_tail (SPEC {tail, ...}) = app say tail
+	let emit_tail (SPEC {tail; _}) = app say tail in
 
 
 	(*
@@ -223,7 +240,7 @@ structure BurgEmit : BURGEMIT =
 	 * and remember the external terminal number.
 	 * Also, find start symbol.
 	 *)
-	fun reparse_decls (SPEC {decls=decls, ...}) =
+	let reparse_decls (SPEC {decls=decls; _}) =
 	  let
 	    val t_prefix = ref (NONE : string option)
 	    val r_prefix = ref (NONE : string option)
@@ -235,8 +252,8 @@ structure BurgEmit : BURGEMIT =
 		  SOME str => str
 		| NONE => sym
 	      in
-		case (BurgHash.find HT sym) : ids option of
-		  NONE => BurgHash.insert HT (sym, TERMINAL (gen_tnum(), etn))
+		case (BurgHash.find ht sym) : ids option of
+		  NONE => BurgHash.insert ht (sym, TERMINAL (gen_tnum(), etn))
 		| SOME _ => warning ("term "^sym^" redefined")
 	      end
 
@@ -277,7 +294,7 @@ structure BurgEmit : BURGEMIT =
 
 
 	fun get_id sym =
-	  case (BurgHash.find HT sym) : ids option of
+	  case (BurgHash.find ht sym) : ids option of
 	    NONE => error ("symbol "^sym^" not declared")
 	  | SOME id => id
 
@@ -298,7 +315,7 @@ structure BurgEmit : BURGEMIT =
 	  in
 	    sym_terminals := Array.array (!nb_t, ("",""));
 	    sym_nonterminals := Array.array (!nb_nt, (""));
-	    BurgHash.appi store HT
+	    BurgHash.appi store ht
 	  end
 
 	fun get_ntsym nt = Array.sub (!sym_nonterminals, nt)
@@ -311,8 +328,8 @@ structure BurgEmit : BURGEMIT =
 	    val t_arity = Array.array (!nb_t, NONE : int option)
 
 	    fun newnt (RULE (ntsym, _, _, _)) =
-	      case (BurgHash.find HT ntsym) : ids option of
-		NONE => BurgHash.insert HT (ntsym, NONTERMINAL (gen_ntnum ()))
+	      case (BurgHash.find ht ntsym) : ids option of
+		NONE => BurgHash.insert ht (ntsym, NONTERMINAL (gen_ntnum ()))
 	      | SOME (TERMINAL _) =>
 		  warning (ntsym^" redefined as a nonterminal")
 	      | SOME (NONTERMINAL _) => ()
@@ -325,7 +342,7 @@ structure BurgEmit : BURGEMIT =
 		val num = (rule_num := !rule_num+1; !rule_num)
 
 		val nt =
-		  case BurgHash.find HT ntsym of
+		  case BurgHash.find ht ntsym of
 		    SOME (NONTERMINAL nt) => nt
 		  | _ => error "internal : get nt"
 
@@ -361,8 +378,8 @@ structure BurgEmit : BURGEMIT =
 		    cnt (pat, 0)
 		  end
 	      in
-		case (BurgHash.find HR ern) of
-		  NONE => BurgHash.insert HR (ern, patarity)
+		case (BurgHash.find hr ern) of
+		  NONE => BurgHash.insert hr (ern, patarity)
 		| SOME ar => if ar = patarity then () else
 		    warning ("rulename "^ern^" is used with patterns of different arity");
 		{nt=nt, pat=pat, ern=ern, cost=cost, num=num}
@@ -756,7 +773,7 @@ structure BurgEmit : BURGEMIT =
                   NONE =>
 		    let
 		      val patarity =
-			case (BurgHash.find HR ern) of
+			case (BurgHash.find hr ern) of
 			  NONE => error "emit_type_rule, no rule name ?"
 			| SOME ar => ar
 		      fun pr 0 = ""
@@ -786,7 +803,7 @@ structure BurgEmit : BURGEMIT =
 		case (BurgHash.find H name)
 		of NONE => let 
 		     val patarity = 
-			   case BurgHash.find HR ern 
+			   case BurgHash.find hr ern 
 			   of NONE    => error "emit_ruleToString.onerule"
 			    | SOME ar => ar
 		     fun pr 0 = ""
