@@ -730,186 +730,165 @@ module BurgEmit : BURGEMIT =
 		in
 
 
-	(*
-	 * Check that each nonterminal is reachable from start.
-	 *)
-	fun check_reachable (start, rules_for_lhs : rule list array) =
-	  let
-	    val notseen = Array.array (!nb_nt, true)
-	    fun explore_nt nt =
-	      (Array.update (notseen, nt, false);
-	       app (fn ({pat,...}:rule) => reach pat)
-	           (Array.sub (rules_for_lhs, nt))
-	      )
-	    and reach (NT nt) =
-	          if Array.sub (notseen, nt) then explore_nt nt else ()
-	      | reach (T (t, sons)) = app reach sons
-	    fun test (nt, b) =
-	      if b then
-		warning ("nonterminal "^(get_ntsym nt)^" is unreachable")
-	      else ()
-	  in
-	    explore_nt start;
-	    arrayiter (test, notseen);
-	    stop_if_error ()
-	  end
+		(*
+		* Check that each nonterminal is reachable from start.
+		*)
+		let check_reachable (start, (rules_for_lhs : rule list array)) =
+			let notseen = Array.array (!nb_nt, true) in
+			let rec explore_nt nt = (
+				Array.update (notseen, nt, false);
+				app (fun ({pat; _}:rule) -> reach pat)
+						(Array.sub (rules_for_lhs, nt))
+			)
+			and reach = function 
+			| (NT nt) -> if Array.sub (notseen, nt) then explore_nt nt else ()
+			| (T (t, sons)) -> app reach sons
+			in
+			let test (nt, b) =
+					if b then
+						warning ("nonterminal "^(get_ntsym nt)^" is unreachable")
+					else 
+						()
+			in
+			explore_nt start;
+			arrayiter (test, notseen);
+			stop_if_error ()
+		in
 	      
 
-	(**
-	 ** Emit the code
-	 **)
+		(**
+		** Emit the code
+		**)
 
-	fun emit_type_rule rules =
-	  let
-	    (* I just want a map, really, not a hashtable. *)
-	    val H = BurgHash.mkTable (32, NotThere) : unit BurgHash.hash_table
-	    val first = ref true
-	    fun onerule (rule as {ern=ern, ...} : rule) =
-	      let
-		val name = prep_rule_cons rule
-	      in
-                case (BurgHash.find H name) of
-                  NONE =>
-		    let
-		      val patarity =
-			case (BurgHash.find hr ern) of
-			  NONE => error "emit_type_rule, no rule name ?"
-			| SOME ar => ar
-		      fun pr 0 = ""
-			| pr 1 = " of (rule * tree)"
-			| pr n = ((pr (n-1))^" * (rule * tree)")
-		      val constructor = name^(pr patarity)
-		    in
-		      BurgHash.insert H (name, ());
-		      if !first then first := false else say "\t\t| ";
-		      saynl constructor
-		    end
-		| SOME _ => ()
-	      end
-	  in
-	    say "  datatype rule = ";
-	    arrayapp (onerule, rules)
-	  end
+		let emit_type_rule rules =
+	  	(* I just want a map, really, not a hashtable. *)
+			let h : unit BurgHash.hash_table = BurgHash.mkTable (32, NotThere) in
+	    let first = ref true in
+	    let onerule ({ern = ern; _} as rule : rule) =
+	      let name = prep_rule_cons rule in
+					match (BurgHash.find h name) with
+					| None ->
+		    		let patarity =
+						match (BurgHash.find hr ern) with
+						|	None -> error "emit_type_rule, no rule name ?"
+						| Some ar -> ar
+						in
+						let pr = function
+						| 0 -> ""
+						| 1 -> " of (rule * tree)"
+						| n -> ((pr (n-1))^" * (rule * tree)")
+		      	in
+						let constructor = name ^ (pr patarity) in
+		      	BurgHash.insert h (name, ());
+		      	if !first then first := false else say "\t\t| ";
+		      	saynl constructor
+					| Some _ -> ()
+	    	in
+	    	say "  datatype rule = ";
+	    	arrayapp (onerule, rules)
+	  	in
 
+      let emit_ruleToString rules = 
+				let H : unit BurgHash.hash_table = BurgHash.mkTable(32,NotThere) in
+	    	let first = ref true in
+	    	let onerule ({ern; _} as rule : rule) = 
+					let name = prep_rule_cons rule in
+					match (BurgHash.find H name) with
+					| None -> 
+						let patarity = 
+							match BurgHash.find hr ern with
+							| None -> error "emit_ruleToString.onerule"
+							| Some ar -> ar
+		     		in
+						let pr = function 
+							| 0 -> ""
+							| _ -> " _"
+						in
+		     		let constructor = "("^ name ^ (pr patarity) ^ ")" in
+						BurgHash.insert H (name,());
+						if !first then first:=false 
+												else say "      | ruleToString";
+						say constructor;
+						saynl (" = " ^ "\"" ^ name ^ "\"")
+	        | Some _ -> ()
+      	in
+	    	say "    fun ruleToString ";
+	    	arrayapp (onerule,rules)
+      in
 
-
-        fun emit_ruleToString rules = let
-	    val H : unit BurgHash.hash_table = BurgHash.mkTable(32,NotThere) 
-	    val first = ref true
-	    fun onerule (rule as {ern,...}:rule) = let
-		val name = prep_rule_cons rule
-	      in
-		case (BurgHash.find H name)
-		of NONE => let 
-		     val patarity = 
-			   case BurgHash.find hr ern 
-			   of NONE    => error "emit_ruleToString.onerule"
-			    | SOME ar => ar
-		     fun pr 0 = ""
-		       | pr _ = " _"
-		     val constructor = "("^ name ^ (pr patarity) ^ ")"
-		   in
-		      BurgHash.insert H (name,());
-		      if !first then first:=false 
-                      else say "      | ruleToString";
-		      say constructor;
-		      saynl (" = " ^ "\"" ^ name ^ "\"")
-		   end
-	        | SOME _ => ()
-	      end
-          in
-	     say "    fun ruleToString ";
-	     arrayapp (onerule,rules)
-          end
-
-
-
-	fun emit_debug rules =
-	  let
-	    fun p_nterm (i, sym) =
-	      saynl ("nonterm "^(Int.toString i)^" : "^sym)
-	    fun p_rule (i, rule as {num, ...} : rule) =
-	      (say ("rule "^(Int.toString num)^" : ");
-	       print_rule rule
-	      )
-	  in
-	    saynl "(***** debug info *****";
-	    arrayiter (p_nterm, !sym_nonterminals);
-	    say "\n";
-	    arrayiter (p_rule, rules);
-	    saynl "**********************)\n\n"
-	  end
+			let emit_debug rules =
+				let p_nterm (i, sym) = saynl ("nonterm "^(Int.toString i)^" : "^sym) in
+				let p_rule (i, {num; _} as rule : rule) =
+						(say ("rule "^(Int.toString num)^" : ");
+						print_rule rule
+						)
+				in
+				saynl "(***** debug info *****";
+				arrayiter (p_nterm, !sym_nonterminals);
+				say "\n";
+				arrayiter (p_rule, rules);
+				saynl "**********************)\n\n"
+			in
 
 
-	fun emit_struct_burmterm () =
-	  let
-	     fun loop t =
-	       (if t=0 then () else say "\t       | ";
-		saynl (prep_term_cons t)
-	       )
-	  in
-	    saynl ("structure "^(!struct_name)^"Ops = struct");
-	    say "  datatype ops = ";
-	    iter (loop, !nb_t);
-	    saynl "end\n\n"
-	  end
+			let emit_struct_burmterm () =
+				let loop t =
+					if t=0 then () else say "\t       | ";
+					saynl (prep_term_cons t)
+				in
+				saynl ("structure "^(!struct_name)^"Ops = struct");
+				say "  datatype ops = ";
+				iter (loop, !nb_t);
+				saynl "end\n\n"
+			in
 
-	fun emit_sig_burmgen () =
-	  (saynl ("signature "^(!sig_name)^"_INPUT_SPEC = sig");
-	   saynl "  type tree";
-	   saynl ("  val opchildren : tree -> "^(!struct_name)
-		  ^"Ops.ops * (tree list)");
-	   saynl "end\n\n"
-	  )
-	  
-	fun emit_sig_burm rules =
-	  (saynl ("signature "^(!sig_name)^" = sig");
-	   saynl "  exception NoMatch";
-	   saynl "  type tree";
-	   emit_type_rule rules;
-	   saynl "  val reduce : tree -> rule * tree";
-	   saynl "  val ruleToString : rule -> string";
-	   saynl "end\n\n"
-	  )
+			let emit_sig_burmgen () =
+				saynl ("signature "^(!sig_name)^"_INPUT_SPEC = sig");
+				saynl "  type tree";
+				saynl ("  val opchildren : tree -> "^(!struct_name)
+				^"Ops.ops * (tree list)");
+				saynl "end\n\n"
+	  	in
 
-	fun emit_beg_functor (rules, arity) =
-	  let
-	    fun loop_node t =
-	      let
-		val ar = Array.sub (arity, t)
-		fun loop_sons i =
-		  (say "s_tree";
-		   if i=ar then () else
-		     (say " * "; loop_sons (i+1))
-		  )
-	      in
-		say (if t=0 then "      " else "    | ");
-		say (prep_node_cons t);
-		if ar>0 then
-		  (say "\t\tof ";
-		   loop_sons 1
-		  )
-		else ();
-		say "\n"
-	      end
-	  in
-	    saynl ("functor "^(!struct_name)^"Gen (In : "
-		   ^(!sig_name)^"_INPUT_SPEC) : "^(!sig_name)^" =");
-	    saynl "  struct\n";
-	    saynl "    type tree = In.tree\n";
-	    saynl "    exception NoMatch";
-	    emit_type_rule rules;
-	    say "\n\n";
-	    emit_ruleToString rules; say "\n\n";
-	    saynl "    type s_cost = int Array.array";
-	    saynl "    type s_rule = int Array.array";
-	    saynl "    datatype s_node =";
-	    iter (loop_node, !nb_t);
-	    saynl "    withtype s_tree = s_cost * s_rule * s_node * tree\n\n";
-	    saynl "    val sub = Array.sub";
-	    saynl "    val update = Array.update"
-	  end
+			let emit_sig_burm rules = 
+				saynl ("signature "^(!sig_name)^" = sig");
+				saynl "  exception NoMatch";
+				saynl "  type tree";
+				emit_type_rule rules;
+				saynl "  val reduce : tree -> rule * tree";
+				saynl "  val ruleToString : rule -> string";
+				saynl "end\n\n"
+			in
 
+			let emit_beg_functor (rules, arity) =
+				let loop_node t =
+					let ar = Array.sub (arity, t) in
+					let loop_sons i =
+						say "s_tree";
+						if i=ar then () 
+						else (say " * "; loop_sons (i+1))
+					in
+					say (if t=0 then "      " else "    | ");
+					say (prep_node_cons t);
+					if ar>0 then (say "\t\tof "; loop_sons 1)
+					else ();
+					say "\n"
+				in
+				saynl ("functor "^(!struct_name)^"Gen (In : "
+				^(!sig_name)^"_INPUT_SPEC) : "^(!sig_name)^" =");
+				saynl "  struct\n";
+				saynl "    type tree = In.tree\n";
+				saynl "    exception NoMatch";
+				emit_type_rule rules;
+				say "\n\n";
+				emit_ruleToString rules; say "\n\n";
+				saynl "    type s_cost = int Array.array";
+				saynl "    type s_rule = int Array.array";
+				saynl "    datatype s_node =";
+				iter (loop_node, !nb_t);
+				saynl "    withtype s_tree = s_cost * s_rule * s_node * tree\n\n";
+				saynl "    val sub = Array.sub";
+				saynl "    val update = Array.update"
 
 	fun emit_val_cst (rules, arity, chains_for_rhs, rule_groups) =
 	  let
