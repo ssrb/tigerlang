@@ -216,190 +216,194 @@ module BurgEmit : BURGEMIT =
 			(* current internal nonterminal number *)
 			let nb_nt = ref 0	in
 
-	(* Return a new internal terminal number *)
-	let gen_tnum () = !nb_t before (nb_t := !nb_t + 1) in
+			(* Return a new internal terminal number *)
+			let gen_tnum () = !nb_t before (nb_t := !nb_t + 1) in
 
-	(* Return a new internal nonterminal number *)
-	let gen_ntnum () = !nb_nt before (nb_nt := !nb_nt + 1) in
-
-
-	(*
-	 * Emit the header
-	 *)
-	let emit_header (SPEC {head; _}) = app say head in
+			(* Return a new internal nonterminal number *)
+			let gen_ntnum () = !nb_nt before (nb_nt := !nb_nt + 1) in
 
 
-	(*
-	 * Emit the tail
-	 *)
-	let emit_tail (SPEC {tail; _}) = app say tail in
+			(*
+			* Emit the header
+			*)
+			let emit_header (SPEC {head; _}) = app say head in
 
 
-	(*
-	 * Give each terminal an internal terminal number,
-	 * and remember the external terminal number.
-	 * Also, find start symbol.
-	 *)
-	let reparse_decls (SPEC {decls=decls; _}) =
-	  let
-	    val t_prefix = ref (NONE : string option)
-	    val r_prefix = ref (NONE : string option)
-	    val s_name = ref (NONE : string option)
-
-	    fun newt (sym, etn') =
-	      let
-		val etn = case etn' of
-		  SOME str => str
-		| NONE => sym
-	      in
-		case (BurgHash.find ht sym) : ids option of
-		  NONE => BurgHash.insert ht (sym, TERMINAL (gen_tnum(), etn))
-		| SOME _ => warning ("term "^sym^" redefined")
-	      end
-
-	    fun newdecl (START s) =
-	          (case !start_sym of
-		     NONE => start_sym := (SOME s)
-		   | (SOME _) => warning "%start redefined")
-	      | newdecl (TERM l) = app newt l
-	      | newdecl (TERMPREFIX tp) =
-		  (case (!t_prefix) of
-		     NONE => t_prefix := (SOME tp)
-		   | _ => warning "%termprefix redefined")
-	      | newdecl (RULEPREFIX rp) =
-		  (case (!r_prefix) of
-		     NONE => r_prefix := (SOME rp)
-		   | _ => warning "%ruleprefix redefined")
-	      | newdecl (SIG s) =
-		  (case (!s_name) of
-		     NONE => s_name := (SOME s)
-		   | _ => warning "%sig redefined")
-	  in
-	    app newdecl decls;
-	    if !nb_t=0 then error "no terminals !" else ();
-	    term_prefix :=
-	      (case (!t_prefix) of
-		 NONE => ""
-	       | SOME tp => tp);
-	    rule_prefix :=
-	      (case (!r_prefix) of
-		 NONE => ""
-	       | SOME rp => rp);
-	    sig_name :=
-	      (case (!s_name) of
-		 NONE => "BURM"
-	       | SOME s => String.translate (String.str o Char.toUpper) s);
-	    struct_name := tofirstupper (!sig_name)
-	  end (* fun reparse_decls *)
+			(*
+			* Emit the tail
+			*)
+			let emit_tail (SPEC {tail; _}) = app say tail in
 
 
-	fun get_id sym =
-	  case (BurgHash.find ht sym) : ids option of
-	    NONE => error ("symbol "^sym^" not declared")
-	  | SOME id => id
+			(*
+			* Give each terminal an internal terminal number,
+			* and remember the external terminal number.
+			* Also, find start symbol.
+			*)
+			let reparse_decls (SPEC {decls=decls; _}) =
+				let t_prefix = ref (None : string option) in
+				let r_prefix = ref (None : string option) in
+				let s_name = ref (None : string option) in
+				
+				let newt (sym, etn') =
+						let etn = match etn' with
+											|	Some str -> str
+											| None -> sym
+						in
+						match ((BurgHash.find ht sym) : ids option) with
+						| None -> BurgHash.insert ht (sym, TERMINAL (gen_tnum(), etn))
+						| Some _ -> warning ("term "^sym^" redefined")
+				in
+				
+				let newdecl = function
+				| START s ->
+					begin
+							match !start_sym with
+							| None -> start_sym := (Somme s)
+							| Some _ -> warning "%start redefined"
+					end
+				| TERM l -> app newt l
+				| TERMPREFIX tp ->
+					begin
+						match !t_prefix with
+						| None -> t_prefix := Some tp
+						| _ -> warning "%termprefix redefined"
+					end
+				| RULEPREFIX rp ->
+					begin
+						match !r_prefix with
+						| None -> r_prefix := (SOME rp)
+						| _ -> warning "%ruleprefix redefined"
+					end
+				| SIG s ->
+					begin
+						match !s_name with
+						| None -> s_name := (SOME s)
+						| _ -> warning "%sig redefined"
+					end
+				in
+					app newdecl decls;
+					if !nb_t = 0 then error "no terminals !" else ();
+					term_prefix :=
+						(match !t_prefix with
+						| None -> ""
+						| SOME tp -> tp);
+					rule_prefix :=
+						(match !r_prefix with
+						| None -> ""
+						| Some rp -> rp);
+					sig_name :=
+						(match !s_name with
+						| None -> "BURM"
+						| SOME s -> String.translate (String.str o Char.toUpper) s);
+					struct_name := tofirstupper (!sig_name)
+				(* fun reparse_decls *)
+			in
+
+			let get_id sym =
+				match ((BurgHash.find ht sym) : ids option) with
+				| None -> error ("symbol "^sym^" not declared")
+				| Some id -> id
+			in
+
+			(*
+			* Arrays that contain for each t or nt its external symbol.
+			*)
+			let sym_terminals = ref (Array.array (0,("",""))) in
+			let sym_nonterminals = ref (Array.array (0,"")) in
 
 
-	(*
-	 * Arrays that contain for each t or nt its external symbol.
-	 *)
-	val sym_terminals = ref (Array.array (0,("","")))
-	val sym_nonterminals = ref (Array.array (0,""))
+			let build_num_to_sym_arrays () =
+				let store = function
+				| (sym, TERMINAL (t, etn)) -> Array.update (!sym_terminals, t, (sym, etn))
+				| (sym, NONTERMINAL nt) -> Array.update (!sym_nonterminals, nt, sym)
+				in
+				sym_terminals := Array.array (!nb_t, ("",""));
+				sym_nonterminals := Array.array (!nb_nt, (""));
+				BurgHash.appi store ht
+			in
+
+			let get_ntsym nt = Array.sub (!sym_nonterminals, nt) in
+			let get_tsym t = fst (Array.sub (!sym_terminals, t)) in
 
 
-	fun build_num_to_sym_arrays () =
-	  let
-	    fun store (sym, TERMINAL (t, etn)) =
-	          Array.update (!sym_terminals, t, (sym, etn))
-	      | store (sym, NONTERMINAL nt) =
-		  Array.update (!sym_nonterminals, nt, sym)
-	  in
-	    sym_terminals := Array.array (!nb_t, ("",""));
-	    sym_nonterminals := Array.array (!nb_nt, (""));
-	    BurgHash.appi store ht
-	  end
+			let reparse_rules SPEC {rules=spec_rules; _} =
+				(* Arity for terminals. *)
+				let t_arity = Array.array (!nb_t, NONE : int option) in
+				let newnt (RULE (ntsym, _, _, _)) =
+						match ((BurgHash.find ht ntsym) : ids option) with
+						| None -> BurgHash.insert ht (ntsym, NONTERMINAL (gen_ntnum ()))
+						| Some (TERMINAL _) -> warning (ntsym^" redefined as a nonterminal")
+						| SOME (NONTERMINAL _) -> ()
+				in
+				(* first rule is rule 1 *)
+				let rule_num = ref 0 in   
+				
+				let newrule (RULE (ntsym, pattern, ern, costlist)) =
+						let num = (rule_num := !rule_num+1; !rule_num) in
+						let nt = 
+							match BurgHash.find ht ntsym with
+							| Some (NONTERMINAL nt) -> nt
+							| _ -> error "internal : get nt"
+						in
+						let cost = match costlist with [] -> 0 | (c::_) -> c in
+					
+						let pat =
+							let makepat (PAT (sym, sons)) =
+								match get_id sym with
+								| NONTERMINAL nt -> (NT nt) before
+									(if (null sons) then () else
+									warning ("nonterminal "^sym^" is not a tree"))
+								| TERMINAL (t, _) ->
+									begin
+										let len = List.length sons in
+										match Array.sub (t_arity, t) with
+										| None -> Array.update (t_arity, t, SOME len)
+										| Some len' -> 
+											if len=len' then 
+												() 
+											else 
+												warning ("bad arity for terminal "^sym);
+											T (t, map makepat sons)
+										end
+							in
+							makepat pattern
+						(* val pat *)
+						in
 
-	fun get_ntsym nt = Array.sub (!sym_nonterminals, nt)
-	fun get_tsym t = #1 (Array.sub (!sym_terminals, t))
+						let patarity =
+							let cnt = function 
+							| (NT _, n) -> n + 1
+							| (T (_, pat), n) -> List.foldl cnt n pat
+							in
+							cnt (pat, 0)
+						in
 
+					match (BurgHash.find hr ern) with
+					| None -> BurgHash.insert hr (ern, patarity)
+					| Some ar -> 
+						if ar = patarity then () else
+						warning ("rulename "^ern^" is used with patterns of different arity");
+						{nt=nt; pat=pat; ern=ern; cost=cost; num=num}
+					(* fun newrule *)
+				in
 
-	fun reparse_rules (SPEC {rules=spec_rules, ...}) =
-	  let
-	    (* Arity for terminals. *)
-	    val t_arity = Array.array (!nb_t, NONE : int option)
-
-	    fun newnt (RULE (ntsym, _, _, _)) =
-	      case (BurgHash.find ht ntsym) : ids option of
-		NONE => BurgHash.insert ht (ntsym, NONTERMINAL (gen_ntnum ()))
-	      | SOME (TERMINAL _) =>
-		  warning (ntsym^" redefined as a nonterminal")
-	      | SOME (NONTERMINAL _) => ()
-
-
-	    val rule_num = ref 0		     (* first rule is rule 1 *)
-
-	    fun newrule (RULE (ntsym, pattern, ern, costlist)) =
-	      let
-		val num = (rule_num := !rule_num+1; !rule_num)
-
-		val nt =
-		  case BurgHash.find ht ntsym of
-		    SOME (NONTERMINAL nt) => nt
-		  | _ => error "internal : get nt"
-
-		val cost = case costlist of [] => 0 | (c::_) => c
-
-		val pat =
-		  let
-		    fun makepat (PAT (sym, sons)) =
-		      case get_id sym of
-			NONTERMINAL nt =>
-			  (NT nt) before
-			  (if (null sons) then () else
-			     warning ("nonterminal "^sym^" is not a tree"))
-		      | TERMINAL (t, _) =>
-			  let
-			    val len = List.length sons
-			  in
-			    case Array.sub (t_arity, t) of
-			      NONE => Array.update (t_arity, t, SOME len)
-			    | SOME len' => if len=len' then () else
-				warning ("bad arity for terminal "^sym);
-				T (t, map makepat sons)
-			  end
-		  in
-		    makepat pattern
-		  end (* val pat *)
-		val patarity =
-		  let
-		    fun cnt (NT _, n) = n+1
-		      | cnt (T (_, pat), n) =
-			  List.foldl cnt n pat
-		  in
-		    cnt (pat, 0)
-		  end
-	      in
-		case (BurgHash.find hr ern) of
-		  NONE => BurgHash.insert hr (ern, patarity)
-		| SOME ar => if ar = patarity then () else
-		    warning ("rulename "^ern^" is used with patterns of different arity");
-		{nt=nt, pat=pat, ern=ern, cost=cost, num=num}
-	      end (* fun newrule *)
-
-	    val _ = app newnt spec_rules
-	    val _ = stop_if_error ()
-	    val _ = if !nb_nt=0 then error "no rules !" else ()
-	    val rules = Array.fromList (map newrule spec_rules)
-	    val _ = stop_if_error ()
-	    val _ = build_num_to_sym_arrays ()
-	    val arity = Array.tabulate (!nb_t,     (* terminals numbers begin at 0 *)
-			fn i => case Array.sub (t_arity, i) of
-			    NONE => 0 before
-				(warning ("terminal "^(get_tsym i)^" unused"))
-			  | SOME len => len)
-	    val _ = stop_if_error ()
-	  in
-	    (rules, arity)
-	  end (* fun reparse_rules *)
+				app newnt spec_rules;
+				stop_if_error ();
+				if !nb_nt = 0 then error "no rules !" else ();
+				let rules = Array.fromList (map newrule spec_rules) in
+				stop_if_error ();
+				build_num_to_sym_arrays ();
+				let arity = Array.tabulate (!nb_t,     (* terminals numbers begin at 0 *)
+					fun i -> match Array.sub (t_arity, i) with
+						| None -> 0 before
+						(warning ("terminal "^(get_tsym i)^" unused"))
+						| Some len -> len)
+				in
+				stop_if_error ();
+				(rules, arity)
+				(* fun reparse_rules *)
+			in
 
 
 	fun print_intarray array =
