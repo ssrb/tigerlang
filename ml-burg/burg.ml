@@ -126,7 +126,7 @@ module BurgEmit : BURGEMIT = struct
     in
     loop (list1, list2)
 
-  let forall2 (f, l1, l2) = not (exists2 (f @@ not, l1, l2))
+  let forall2 (f, l1, l2) = not (exists2 ((fun x -> not (f x)), l1, l2))
 
   let map2 (f, list1, list2) =
     let rec loop = function
@@ -194,8 +194,7 @@ module BurgEmit : BURGEMIT = struct
       type rule = { nt : int; pat : rule_pat; ern : ern; cost : int; num : int}
 
     end
-    in
-    let open F in
+    in let open F in
 
     (* hash table symbols *)
     let ht : htt = BurgHash.create () in
@@ -502,8 +501,7 @@ module BurgEmit : BURGEMIT = struct
         (rule, flat [] pat)
       in
 
-      (*local
-        exception NotSamePat;*)
+      let exception NotSamePat in
 
       let rec samepattern = function 
         | (NT _, NT _) -> true
@@ -513,50 +511,48 @@ module BurgEmit : BURGEMIT = struct
             else raise NotSamePat
         | _ -> raise NotSamePat
       and samepatternsons (l1, l2) =
-        if (try forall2 (fun (p1,p2) -> samepattern (p1,p2), l1, l2) with NotSameSize -> raise NotSamePat)
-        then true
-        else raise NotSamePat
+        if (try (forall2 (samepattern, l1, l2)) with NotSameSize -> raise NotSamePat) then 
+          true
+        else 
+          raise NotSamePat
       in
 
-				let samepat (p1,p2) = samepattern (p1,p2) handle NotSamePat => false in
+      let samepat ab = try samepattern ab with NotSamePat -> false in
 
-	    	let clustersamepat ((({pat; _} as zap : rule), _), rg) =
-	      	let rec loop = function 
-					| ([],_) -> (pat,[zap])::rg
-		  		| (((p,zapl))::rest as e, acc) ->
-		      	if samepat (p,pat)
-						then acc@((p,zap::zapl)::rest)	 (* don't keep order *)
-						else loop (rest,e::acc)
-	      	in
-					loop (rg, [])
-	      in
+      let clustersamepat ((({pat; _} as zap : rule), _), rg) =
+        let rec loop = function 
+        | ([], _) -> (pat,[zap])::rg
+        | (((p,zapl) as e)::rest, acc) ->
+          if samepat (p, pat) then 
+            acc @ ((p,zap::zapl)::rest)	 (* don't keep order *)
+          else 
+            loop (rest, e::acc)
+        in
+        loop (rg, [])
+      in
 
-
-				let minmaxcostlhss (pat,zapl) =
-					let min ((({cost; _}:rule),_), b) = if cost<=b then cost else b in
-					let max ((({cost; _}:rule),_), b) = if cost>=b then cost else b in
-					let mincost = List.foldl min inf zapl in
-					let maxcost = List.foldl max (lnot 1) zapl in
-					let addlhs ((({nt=lhs; _} : rule),_), lhss) =
-						let rec loop = function 
-							| ([],_) -> lhs::lhss
-							| ((i::il) as e, acc) ->
-								if lhs=i then lhss
-								else if lhs<i then (rev acc)@(lhs::e)
-								else loop (il,i::acc)
-						in
-						loop (lhss, [])
-				in
-			
-				let lhss = List.foldl addlhs [] zapl in
+      let minmaxcostlhss (pat,zapl) =
+        let min b (({cost; _} : rule), _) = if cost <= b then cost else b in
+        let max b (({cost; _} : rule), _) = if cost >= b then cost else b in
+        let mincost = List.fold ~init:inf ~f:min zapl in
+        let maxcost = List.fold ~init: (lnot 1) ~f:max zapl in
+        let addlhs lhss (({nt = lhs; _} : rule), _) =
+          let rec loop = function 
+            | ([],_) -> lhs::lhss
+            | ((i::il) as e, acc) ->
+              if lhs=i then lhss
+              else if lhs < i then (List.rev acc) @ (lhs::e)
+              else loop (il,i::acc)
+          in
+          loop (lhss, [])
+        in
+				let lhss = List.fold ~init:[] ~f:addlhs zapl in
 				(pat,zapl,mincost,maxcost,lhss)
-	   
 		  in
 	    
-
 	    (* zapl is (rule,ntl) list *)
 	    let clustersamentl (pat,zapl,min,max,lhss) =
-	      let scan ((r,ntl),clusters) =
+	      let scan clusters (r,ntl) =
 		    	let rec loop = function 
 						| ([],_) -> ([r],ntl)::clusters
 		      	| (((rl,ntl') as e)::rest, acc) ->
@@ -566,36 +562,36 @@ module BurgEmit : BURGEMIT = struct
 		  		in
 		    	loop (clusters ,[])
 		  	in
-				let rlntll = List.foldl scan [] zapl in
+				let rlntll = List.fold ~init:[] ~f:scan zapl in
 				(* rlntll is (rule list,ntl) list *)
 				(pat,rlntll,min,max,lhss)
 			in
 
-
-	    (* datatype utype = NotUnif | NoMG | SameG | FirstMG | SecondMG
-
-	    local
-	      exception Forced of utype *)
-	    let uniftype = function 
-			| (NT _, NT _) -> SameG
-			| (NT _, T _) -> FirstMG
-			| (T _, NT _) -> SecondMG
-			| (T (t1,spat1), T (t2,spat2)) ->
-		    if t1 <> t2 then raise (Forced NotUnif) else (
-					let sonsg = map2 (uniftype, spat1, spat2) in
-			 		let addson = function 
-					| (NotUnif,_) -> raise (Forced NotUnif)
-			   	| (_,NotUnif) -> raise (Forced NotUnif)
-			   	| (NoMG,_) -> NoMG
-			   	| (_,NoMG) -> NoMG
-			   	| (SameG,x) -> x
-			   	| (x,SameG) -> x
-			   	| (FirstMG, FirstMG) -> FirstMG
-			   	| (SecondMG, SecondMG) -> SecondMG
-			   	| _ -> NoMG
-		      in
-					try List.foldl addson SameG sonsg with NotSameSize -> error "bug : uniftype"
-				)
+      let module F = struct
+	      type utype = NotUnif | NoMG | SameG | FirstMG | SecondMG
+        exception Forced of utype
+      end in let open F in
+      
+	    let rec uniftype = function 
+        | (NT _, NT _) -> SameG
+        | (NT _, T _) -> FirstMG
+        | (T _, NT _) -> SecondMG
+        | (T (t1,spat1), T (t2,spat2)) ->
+          if t1 <> t2 then raise (Forced NotUnif) else (
+            let sonsg = map2 (uniftype, spat1, spat2) in
+            let addson = function 
+            | (NotUnif,_) -> raise (Forced NotUnif)
+            | (_,NotUnif) -> raise (Forced NotUnif)
+            | (NoMG,_) -> NoMG
+            | (_,NoMG) -> NoMG
+            | (SameG,x) -> x
+            | (x,SameG) -> x
+            | (FirstMG, FirstMG) -> FirstMG
+            | (SecondMG, SecondMG) -> SecondMG
+            | _ -> NoMG
+            in
+            try List.fold ~init:SameG ~f:addson onsg with NotSameSize -> error "bug : uniftype"
+          )
 	    in
 
 	    let unify (p1,p2) = try (uniftype (p1,p2)) with Forced x -> x in
