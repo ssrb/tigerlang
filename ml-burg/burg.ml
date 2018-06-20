@@ -34,476 +34,489 @@ open Core
 
 module type BURGEMIT = sig
   exception BurgError
-  val emit : TextIO.instream * (unit -> TextIO.outstream) -> unit
+  val emit : In_channel.t * (unit -> Out_channel.t) -> unit
 end
 
 
 
-module BurgEmit : BURGEMIT =
-  struct
+module BurgEmit : BURGEMIT = struct
 
-    (* structure HashStringKey : HASH_KEY = struct
-      type hash_key = string
-      val hashVal = HashString.hashString
-      val sameKey = (op =) : string * string -> bool
-    end
-    structure BurgHash = HashTableFn (HashStringKey)
-    exception NotThere;				  (* raised by BurgHash.find *)
-	
-    exception BurgError				      (* for error reporting *) *)
+  module BurgHash = String.Table
 
-    let inf = 16383
+  exception BurgError				      (* for error reporting *)
 
-    open BurgAST
+  let inf = 16383
 
-    (* debugging *)
-    let debug s = Out_channel.(
-			output_string stderr s; 
-			flush stderr
-		)
+  open BurgAST
 
-    (* Output functions *)
-    let s_out = ref Out_channel.stdout	   (* changed into the output stream *)
-    let say s = Out_channel.output_string !s_out s
-    let saynl s = say (s^"\n")
-    let sayi s = say ("\t"^s)
-    let sayinl s = say ("\t"^s^"\n")
+  (* debugging *)
+  let debug s = Out_channel.(
+    output_string stderr s; 
+    flush stderr
+  )
 
+  (* Output functions *)
+  let s_out = ref Out_channel.stdout	   (* changed into the output stream *)
+  let say s = Out_channel.output_string !s_out s
+  let saynl s = say (s^"\n")
+  let sayi s = say ("\t"^s)
+  let sayinl s = say ("\t"^s^"\n")
 
-    let arrayapp (f, array) =
-      let len = Array.length array in
-			let loop pos =
-	  		if pos=len then 
-					()
-	  		else (
-	    		f (Array.sub (array, pos));
-					loop (pos+1)
-				)
-      in
-			loop 0
+  let arrayapp (f, array) =
+    let len = Array.length array in
+    let rec loop pos =
+      if pos <> len then  (
+        f array.(pos);
+        loop (pos + 1)
+      )
+    in
+    loop 0
    
-    let arrayiter (f, array) =
-      let len = Array.length array in
-			let loop pos =
-				if pos=len then
-					()
-				else (
-					f (pos, Array.sub (array, pos));
-					loop (pos+1)
-				)
-			in
-			loop 0
+  let arrayiter (f, array) =
+    let len = Array.length array in
+    let rec loop pos =
+      if pos <> len then  (
+        f (pos, array.(pos));
+        loop (pos + 1)
+      )
+    in
+    loop 0
 
-    let iter (f, n) =
-      let loop pos =
-	  		if pos=n then () else (f pos; loop (pos+1))
-      in
-			loop 0
+  let iter (f, n) =
+    let rec loop pos =
+      if pos <> n then (
+        f pos;
+        loop (pos + 1)
+      )
+    in
+    loop 0
       
+  let listiter (f, lis) =
+    let rec loop (pos, li) =
+      match li with
+      | [] -> ()
+      | l::ll -> 
+        f (pos, l); 
+        loop ((pos + 1), ll)
+    in
+    loop (0, lis)
 
-    let listiter (f, lis) =
-      let loop (pos, li) =
-	  		match li with
-	    	| [] -> ()
-	  		| (l::ll) -> 
-					f (pos, l); 
-					loop ((pos+1), ll)
-      in
-			loop (0, lis)
+  let explode s =
+    let rec exp i l =
+      if i < 0 then l else exp (i - 1) (s.[i] :: l) 
+    in
+    exp (String.length s - 1) []
 
-    exception NotSameSize
+  let implode l =
+    let res = String.create (List.length l) in
+    let rec imp i = function
+    | [] -> res
+    | c :: l -> res.[i] <- c; imp (i + 1) l 
+    in
+    imp 0 l
 
-    let exists2 (f, list1, list2) =
-      let loop = function
-			| ([],[]) -> False
-	  	| (e1::l1, e2::l2) ->
-	      if f (e1,e2) then True else loop (l1, l2)
-	  	| _ -> raise NotSameSize
-      in
-			loop (list1, list2)
+  exception NotSameSize
 
-    let forall2 (f,l1,l2) = not (exists2 (not o f, l1, l2))
+  let exists2 (f, list1, list2) =
+    let rec loop = function
+    | ([],[]) -> false
+    | (e1::l1, e2::l2) ->
+      if f (e1,e2) then true else loop (l1, l2)
+    | _ -> raise NotSameSize
+    in
+    loop (list1, list2)
 
-    let map2 (f, list1, list2) =
-      let loop = function
-			| ([],[],acc) -> rev acc
-	  	| (e1::l1,e2::l2,acc) -> loop (l1,l2,(f (e1,e2))::acc)
-	  	| _ -> raise NotSameSize
-      in
-			loop (list1,list2,[])
+  let forall2 (f, l1, l2) = not (exists2 (f @@ not, l1, l2))
 
-    let tofirstupper s =
-			match String.explode s with
-	  	| [] -> ""
-	  	| (c::r) -> implode(Char.toUpper c :: (map Char.toLower r))
+  let map2 (f, list1, list2) =
+    let rec loop = function
+    | ([], [], acc) -> List.rev acc
+    | (e1::l1, e2::l2, acc) -> loop (l1,l2,(f (e1,e2))::acc)
+    | _ -> raise NotSameSize
+    in
+    loop (list1, list2, [])
 
-    let emit (s_in, oustreamgen) =
-			(*
-			* Error reporting
-			*)
-	    let error_encountered = ref false in
-			let warning s = Out_channel.(
-				error_encountered := true;
-				output_string stderr "Error: "^s^"\n";
-				flush stderr
-			) in
-			let error s = Out_channel.(
-				output_string stderr "Error: "^s^"\n";
-		    flush stderr;
-		    raise BurgError
-			) in
-			let stop_if_error () = 
-				if !error_encountered then 
-					raise BurgError 
-				else 
-					()
-			in
-			(*
-			* ids (for hashing) :
-			* TERMINAL (internal terminal number, external terminal string/number)
-			* NONTERMINAL (internal nonterminal number)
-			*)
-			let module F = struct
+  let tofirstupper s =
+    match explode s with
+    | [] -> ""
+    | c::r -> implode((Char.uppercase c)::(List.map r Char.lowercase))
+
+  let emit (s_in, oustreamgen) =
+    (*
+    * Error reporting
+    *)
+    let error_encountered = ref false in
+
+    let warning s = Out_channel.(
+      error_encountered := true;
+      output_string stderr ("Error: " ^ s ^ "\n");
+      flush stderr
+    ) 
+    in
+
+    let error s = Out_channel.(
+      output_string stderr ("Error: " ^ s ^ "\n");
+      flush stderr;
+      raise BurgError
+    ) 
+    in
+
+    let stop_if_error () = 
+      if !error_encountered then 
+        raise BurgError 
+      else 
+        ()
+    in
+
+    (*
+    * ids (for hashing) :
+    * TERMINAL (internal terminal number, external terminal string/number)
+    * NONTERMINAL (internal nonterminal number)
+    *)
+    let module F = struct
 		
-				type ids = TERMINAL of int * string | NONTERMINAL of int
+      type ids = TERMINAL of int * string | NONTERMINAL of int
+      
+      (* hash table type *)
+      type htt = ids BurgHash.t
+      
+      (*
+      * rule_pat :
+      * NT (nonterminal)
+      * T (terminal, sons)
+      *)
+      type rule_pat = NT of int | T of int * rule_pat list
+      
+      (*
+      * rule
+      *)
+      type ern = string		      (* type for external rule name *)
+      type rule = { nt : int; pat : rule_pat; ern : ern; cost : int; num : int}
+
+    end
+    in
+    let open F in
+
+    (* hash table symbols *)
+    let ht : htt = BurgHash.create () in
+
+    (* hash table for rule names and the arity of the pattern *)
+    let hr : int BurgHash.t = BurgHash.create () in
+
+    (* %start symbol *)
+    let start_sym = ref (None : string option) in
+
+    (* nonterminal where to start *)
+    let start = ref 0 in
+
+    (* prefix for terminals *)
+    let term_prefix = ref "" in  
+
+    (* prefix for rules *)  
+    let rule_prefix = ref "" in		
+
+    (* BURM by default *) 
+    let sig_name = ref "" in	 
+
+    (* Burm (first upper, rest lower) *) 
+    let struct_name = ref "" in	   
+
+    (* current internal terminal number *)
+    let nb_t = ref 0 in
+    
+    (* current internal nonterminal number *)
+    let nb_nt = ref 0	in
+
+    (* Return a new internal terminal number *)
+    let gen_tnum () = let t = !nb_t in nb_t := !nb_t + 1; t in
+
+    (* Return a new internal nonterminal number *)
+    let gen_ntnum () = let t = !nb_nt in nb_nt := !nb_nt + 1; t in
+
+    (*
+    * Emit the header
+    *)
+    let emit_header (SPEC {head; _}) = List.iter head say in
+
+    (*
+    * Emit the tail
+    *)
+    let emit_tail (SPEC {tail; _}) = List.iter tail say in
+
+
+    (*
+    * Give each terminal an internal terminal number,
+    * and remember the external terminal number.
+    * Also, find start symbol.
+    *)
+    let reparse_decls (SPEC {decls = decls; _}) =
+    
+      let t_prefix = ref (None : string option) in
+      let r_prefix = ref (None : string option) in
+      let s_name = ref (None : string option) in
 				
-				(* hash table type *)
-				type htt = ids BurgHash.hash_table
+      let newt (sym, etn') =
+        let etn = match etn' with
+                  |	Some str -> str
+                  | None -> sym
+        in
+        match ((BurgHash.find ht sym) : ids option) with
+        | None -> BurgHash.add_exn ht sym (TERMINAL (gen_tnum(), etn))
+        | Some _ -> warning ("term " ^ sym ^ " redefined")
+      in
 				
-				(*
-				* rule_pat :
-				* NT (nonterminal)
-				* T (terminal, sons)
-				*)
-				type rule_pat = NT of int | T of int * rule_pat list
+      let newdecl = function
+        | START s ->
+          begin
+              match !start_sym with
+              | None -> start_sym := Some s
+              | Some _ -> warning "%start redefined"
+          end
+        | TERM l -> List.iter l newt
+        | TERMPREFIX tp ->
+          begin
+            match !t_prefix with	
+            | None -> t_prefix := Some tp
+            | _ -> warning "%termprefix redefined"
+          end
+        | RULEPREFIX rp ->
+          begin
+            match !r_prefix with
+            | None -> r_prefix := Some rp
+            | _ -> warning "%ruleprefix redefined"
+          end
+        | SIG s ->
+          begin
+            match !s_name with
+            | None -> s_name := Some s
+            | _ -> warning "%sig redefined"
+          end
+      in
+      List.iter decls newdecl;
+
+      if !nb_t = 0 then error "no terminals !" else ();
+      
+      term_prefix :=
+        (match !t_prefix with
+        | None -> ""
+        | Some tp -> tp);
+      
+      rule_prefix :=
+        (match !r_prefix with
+        | None -> ""
+        | Some rp -> rp);
+      
+      sig_name :=
+        (match !s_name with
+        | None -> "BURM"
+        | Some s -> String.uppercase s);
+
+      struct_name := tofirstupper (!sig_name)
+    (* reparse_decls *)
+    in
+
+
+    let get_id sym =
+      match ((BurgHash.find ht sym) : ids option) with
+      | None -> error ("symbol " ^ sym ^ " not declared")
+      | Some id -> id
+    in
+
+    (*
+    * Arrays that contain for each t or nt its external symbol.
+    *)
+    let sym_terminals = ref (Array.create 0 ("", "")) in
+    let sym_nonterminals = ref (Array.create 0 "") in
+
+    let build_num_to_sym_arrays () =
+      let store ~key ~data =
+        match data with
+        | TERMINAL (t, etn) -> (!sym_terminals).(t) <- (key, etn)
+        | NONTERMINAL nt -> (!sym_nonterminals).(nt) <- key
+      in
+      sym_terminals := Array.create !nb_t ("","");
+      sym_nonterminals := Array.create !nb_nt "";
+      BurgHash.iteri ht ~f:store
+    in
+
+    let get_ntsym nt = (!sym_nonterminals).(nt) in
+    let get_tsym t = fst (!sym_terminals).(t) in
+
+    let reparse_rules (SPEC {rules = spec_rules; _}) =
+
+      (* Arity for terminals. *)
+      let t_arity = Array.create !nb_t (None : int option) in
+      let newnt (RULE (ntsym, _, _, _)) =
+        match ((BurgHash.find ht ntsym) : ids option) with
+        | None -> BurgHash.add_exn ht ntsym (NONTERMINAL (gen_ntnum ()))
+        | Some (TERMINAL _) -> warning (ntsym ^ " redefined as a nonterminal")
+        | Some (NONTERMINAL _) -> ()
+      in
+
+      (* first rule is rule 1 *)
+      let rule_num = ref 0 in   
 				
-				(*
-				* rule
-				*)
-				type ern = string		      (* type for external rule name *)
-				type rule = { bnt:int; pat:rule_pat; ern:ern; cost: int; num:int}
+      let newrule (RULE (ntsym, pattern, ern, costlist)) =
 
-			end
-			in 
+        let num = (rule_num := !rule_num + 1; !rule_num) in
+      
+        let nt = 
+          match BurgHash.find ht ntsym with
+          | Some (NONTERMINAL nt) -> nt
+          | _ -> error "internal : get nt"
+        in
+      
+        let cost = match costlist with [] -> 0 | (c::_) -> c in
+      
+        let pat =
+          let rec makepat (PAT (sym, sons)) =
+            match get_id sym with
+            | NONTERMINAL nt ->
+              if not (List.is_empty sons) then
+                warning ("nonterminal "^ sym ^ " is not a tree");
+              NT nt
+            | TERMINAL (t, _) ->
+              let len = List.length sons in
+              (match t_arity.(t) with
+              | None -> t_arity.(t) <- Some len
+              | Some len' -> 
+                if len <> len' then
+                  warning ("bad arity for terminal "^sym));
+              T (t, List.map ~f:makepat sons)
+          in
+          makepat pattern
+        (* val pat *)
+        in
 
-			(* hash table symbols *)
-			let ht : htt = BurgHash.mkTable (60, NotThere)  in
+        let patarity =
+          let rec cnt n = function 
+          | NT _ -> n + 1
+          | T (_, pat) -> List.fold ~init:n ~f:cnt pat
+          in
+          cnt 0 pat
+        in
 
-			(* hash table for rule names and the arity of the pattern *)
-			let hr : int BurgHash.hash_table = BurgHash.mkTable (60, NotThere) in
+        (match BurgHash.find hr ern with
+        | None -> BurgHash.add_exn hr ern patarity
+        | Some ar -> 
+          if ar <> patarity then
+            warning ("rulename " ^ ern ^ " is used with patterns of different arity"));
+      
+        {nt=nt; pat=pat; ern=ern; cost=cost; num=num}
 
- 			(* %start symbol *)
-			let start_sym = ref (NONE : string option) in
+      (* fun newrule *)
+			in
 
-			(* nonterminal where to start *)
-			let start = ref 0 in
+			List.iter spec_rules newnt;
+      stop_if_error ();
+      if !nb_nt = 0 then error "no rules !";
+      let rules = Array.of_list (List.map spec_rules newrule) in
+      stop_if_error ();
+      build_num_to_sym_arrays ();
+      let arity = Array.init !nb_t     (* terminals numbers begin at 0 *)
+        (fun i -> match t_arity.(i) with
+          | None ->
+            warning ("terminal "^(get_tsym i)^" unused");
+            0
+          | Some len -> len)
+      in
+      stop_if_error ();
+      (rules, arity)
+    (* fun reparse_rules *)
+    in
 
-			(* prefix for terminals *)
-			let term_prefix = ref "" in  
+    let print_intarray array =
+      let printit (pos, n) =
+        if pos > 0 then say ",";
+        say (Int.to_string n)
+      in
+        arrayiter (printit, array)
+    in
 
-			(* prefix for rules *)  
-			let rule_prefix = ref "" in		
+    (*
+    * Print a rule.
+    *)
+    let print_rule ({nt; pat; ern; cost; _} : rule) =
+      let rec print_sons = function 
+        | [] -> ()
+        | [p] -> print_pat p
+        | p::pl ->
+          (print_pat p; say ","; print_sons pl)
+      and print_pat = function 
+        | NT nt -> say (get_ntsym nt)
+        | T (t, sons) ->
+        begin
+          say (get_tsym t);
+          match List.length sons with
+          | 0 -> ()
+          | len -> (say "("; print_sons sons; say ")")
+        end
+      in
+      say ((get_ntsym nt) ^ ":\t");
+      print_pat pat;
+      say ("\t= " ^ ern ^ " (" ^ (Int.to_string cost) ^ ");\n")
+    in
 
-			(* BURM by default *) 
-			let sig_name = ref "" in	 
+    let prep_rule_cons ({ern = ern; _} : rule) = (!rule_prefix) ^ ern in
 
-			(* Burm (first upper, rest lower) *) 
-			let struct_name = ref "" in	   
+    let prep_node_cons t =
+      let (sym, _) = (!sym_terminals).(t) in
+      "N_" ^ sym
+    in
 
-			(* current internal terminal number *)
-			let nb_t = ref 0 in
+    let prep_term_cons t = (!term_prefix) ^ (snd (!sym_terminals.(t))) in
+
+    (*
+    * rules_for_lhs : array with the rules for a given lhs nt
+    * chains_for_rhs : array with the chain rules for a given rhs nt
+    * rule_groups :
+    *      (rl,ntl,str_for_match,uniqstr,iscst,iswot) list list array
+    * array of, for each terminal that begin a pattern
+    *   list of, for each different "case of"
+    *     list of, for each pattern in "case of"
+    *       (rule list * ntl) list
+    *	 string for the match expression printing
+    *	 unique string for constant patterns
+    *       is_cst (bool: is the pattern without nonterminals)
+    *       is_wot (bool: is the pattern without terminals : A(x,y,z,t))
+    *)
+
+    let build_rules_tables (rules : rule array) =
 			
-			(* current internal nonterminal number *)
-			let nb_nt = ref 0	in
+      let rules_for_lhs = Array.create !nb_nt ([] : rule list) in
+    
+      let chains_for_rhs = Array.create !nb_nt ([] : rule list) in
 
-			(* Return a new internal terminal number *)
-			let gen_tnum () = !nb_t before (nb_t := !nb_t + 1) in
+      let add_lhs_rhs ({nt; pat; _} as rule : rule) =
+        rules_for_lhs.(nt) <- rule::rules_for_lhs.(nt);
+        match pat with
+        | NT rhs -> chains_for_rhs.(rhs) <- rule::chains_for_rhs.(rhs)
+        | _ -> ()
+      in
 
-			(* Return a new internal nonterminal number *)
-			let gen_ntnum () = !nb_nt before (nb_nt := !nb_nt + 1) in
+      let findntl ({pat; _} as rule: rule) =
+        let rec flat ntl = function 
+          | NT nt -> nt::ntl
+          | T (_,sons) -> List.fold ~init:ntl ~f:flat sons
+        in
+        (rule, flat [] pat)
+      in
 
+      (*local
+        exception NotSamePat;*)
 
-			(*
-			* Emit the header
-			*)
-			let emit_header (SPEC {head; _}) = app say head in
-
-
-			(*
-			* Emit the tail
-			*)
-			let emit_tail (SPEC {tail; _}) = app say tail in
-
-
-			(*
-			* Give each terminal an internal terminal number,
-			* and remember the external terminal number.
-			* Also, find start symbol.
-			*)
-			let reparse_decls (SPEC {decls=decls; _}) =
-				let t_prefix = ref (None : string option) in
-				let r_prefix = ref (None : string option) in
-				let s_name = ref (None : string option) in
-				
-				let newt (sym, etn') =
-						let etn = match etn' with
-											|	Some str -> str
-											| None -> sym
-						in
-						match ((BurgHash.find ht sym) : ids option) with
-						| None -> BurgHash.insert ht (sym, TERMINAL (gen_tnum(), etn))
-						| Some _ -> warning ("term "^sym^" redefined")
-				in
-				
-				let newdecl = function
-				| START s ->
-					begin
-							match !start_sym with
-							| None -> start_sym := (Some s)
-							| Some _ -> warning "%start redefined"
-					end
-				| TERM l -> app newt l
-				| TERMPREFIX tp ->
-					begin
-						match !t_prefix with	
-						| None -> t_prefix := Some tp
-						| _ -> warning "%termprefix redefined"
-					end
-				| RULEPREFIX rp ->
-					begin
-						match !r_prefix with
-						| None -> r_prefix := (SOME rp)
-						| _ -> warning "%ruleprefix redefined"
-					end
-				| SIG s ->
-					begin
-						match !s_name with
-						| None -> s_name := (SOME s)
-						| _ -> warning "%sig redefined"
-					end
-				in
-					app newdecl decls;
-					if !nb_t = 0 then error "no terminals !" else ();
-					term_prefix :=
-						(match !t_prefix with
-						| None -> ""
-						| SOME tp -> tp);
-					rule_prefix :=
-						(match !r_prefix with
-						| None -> ""
-						| Some rp -> rp);
-					sig_name :=
-						(match !s_name with
-						| None -> "BURM"
-						| SOME s -> String.translate (String.str o Char.toUpper) s);
-					struct_name := tofirstupper (!sig_name)
-				(* fun reparse_decls *)
-			in
-
-			let get_id sym =
-				match ((BurgHash.find ht sym) : ids option) with
-				| None -> error ("symbol "^sym^" not declared")
-				| Some id -> id
-			in
-
-			(*
-			* Arrays that contain for each t or nt its external symbol.
-			*)
-			let sym_terminals = ref (Array.array (0,("",""))) in
-			let sym_nonterminals = ref (Array.array (0,"")) in
-
-
-			let build_num_to_sym_arrays () =
-				let store = function
-				| (sym, TERMINAL (t, etn)) -> Array.update (!sym_terminals, t, (sym, etn))
-				| (sym, NONTERMINAL nt) -> Array.update (!sym_nonterminals, nt, sym)
-				in
-				sym_terminals := Array.array (!nb_t, ("",""));
-				sym_nonterminals := Array.array (!nb_nt, (""));
-				BurgHash.appi store ht
-			in
-
-			let get_ntsym nt = Array.sub (!sym_nonterminals, nt) in
-			let get_tsym t = fst (Array.sub (!sym_terminals, t)) in
-
-
-			let reparse_rules SPEC {rules=spec_rules; _} =
-				(* Arity for terminals. *)
-				let t_arity = Array.array (!nb_t, NONE : int option) in
-				let newnt (RULE (ntsym, _, _, _)) =
-						match ((BurgHash.find ht ntsym) : ids option) with
-						| None -> BurgHash.insert ht (ntsym, NONTERMINAL (gen_ntnum ()))
-						| Some (TERMINAL _) -> warning (ntsym^" redefined as a nonterminal")
-						| SOME (NONTERMINAL _) -> ()
-				in
-				(* first rule is rule 1 *)
-				let rule_num = ref 0 in   
-				
-				let newrule (RULE (ntsym, pattern, ern, costlist)) =
-						let num = (rule_num := !rule_num+1; !rule_num) in
-						let nt = 
-							match BurgHash.find ht ntsym with
-							| Some (NONTERMINAL nt) -> nt
-							| _ -> error "internal : get nt"
-						in
-						let cost = match costlist with [] -> 0 | (c::_) -> c in
-					
-						let pat =
-							let makepat (PAT (sym, sons)) =
-								match get_id sym with
-								| NONTERMINAL nt -> (NT nt) before
-									(if (null sons) then () else
-									warning ("nonterminal "^sym^" is not a tree"))
-								| TERMINAL (t, _) ->
-									begin
-										let len = List.length sons in
-										match Array.sub (t_arity, t) with
-										| None -> Array.update (t_arity, t, SOME len)
-										| Some len' -> 
-											if len=len' then 
-												() 
-											else 
-												warning ("bad arity for terminal "^sym);
-											T (t, map makepat sons)
-										end
-							in
-							makepat pattern
-						(* val pat *)
-						in
-
-						let patarity =
-							let cnt = function 
-							| (NT _, n) -> n + 1
-							| (T (_, pat), n) -> List.foldl cnt n pat
-							in
-							cnt (pat, 0)
-						in
-
-					match (BurgHash.find hr ern) with
-					| None -> BurgHash.insert hr (ern, patarity)
-					| Some ar -> 
-						if ar = patarity then () else
-						warning ("rulename "^ern^" is used with patterns of different arity");
-						{nt=nt; pat=pat; ern=ern; cost=cost; num=num}
-					(* fun newrule *)
-				in
-
-				app newnt spec_rules;
-				stop_if_error ();
-				if !nb_nt = 0 then error "no rules !" else ();
-				let rules = Array.fromList (map newrule spec_rules) in
-				stop_if_error ();
-				build_num_to_sym_arrays ();
-				let arity = Array.tabulate (!nb_t,     (* terminals numbers begin at 0 *)
-					fun i -> match Array.sub (t_arity, i) with
-						| None -> 0 before
-						(warning ("terminal "^(get_tsym i)^" unused"))
-						| Some len -> len)
-				in
-				stop_if_error ();
-				(rules, arity)
-				(* fun reparse_rules *)
-			in
-
-
-			let print_intarray array =
-				let printit (pos, n) =
-					if pos>0 then say "," else ();
-					say (Int.toString n)
-				in
-					arrayiter (printit, array)
-			in
-
-			(*
-			* Print a rule.
-			*)
-			let print_rule ({nt; pat; ern; cost; _} : rule) =
-				let print_sons = function 
-					| [] -> ()
-					| [p] -> print_pat p
-					| (p::pl) ->
-						(print_pat p; say ","; print_sons pl)
-				in
-				let print_pat = function 
-					| (NT nt) -> say (get_ntsym nt)
-					| (T (t, sons)) ->
-					begin
-						say (get_tsym t);
-						match List.length sons with
-						| 0 -> ()
-						| len -> (say "("; print_sons sons; say ")")
-					end
-				in
-					say ((get_ntsym nt)^":\t");
-					print_pat pat;
-					say ("\t= "^ern^" ("^(Int.toString cost)^");\n")
-			in
-
-			let prep_rule_cons ({ern=ern; _} : rule) = (!rule_prefix) ^ ern in
-
-
-			let prep_node_cons t =
-				let (sym, _) = Array.sub (!sym_terminals, t) in
-				"N_" ^ sym
-			in
-
-
-			let prep_term_cons t = (!term_prefix)^(snd (Array.sub (!sym_terminals, t))) in
-
-
-			(*
-			* rules_for_lhs : array with the rules for a given lhs nt
-			* chains_for_rhs : array with the chain rules for a given rhs nt
-			* rule_groups :
-			*      (rl,ntl,str_for_match,uniqstr,iscst,iswot) list list array
-			* array of, for each terminal that begin a pattern
-			*   list of, for each different "case of"
-			*     list of, for each pattern in "case of"
-			*       (rule list * ntl) list
-			*	 string for the match expression printing
-			*	 unique string for constant patterns
-			*       is_cst (bool: is the pattern without nonterminals)
-			*       is_wot (bool: is the pattern without terminals : A(x,y,z,t))
-			*)
-
-			let build_rules_tables (rules : rule array) =
-			
-				let rules_for_lhs = Array.array (!nb_nt, []:rule list) in
-			
-				let chains_for_rhs = Array.array (!nb_nt, []:rule list) in
-
-				let add_lhs_rhs ({nt; pat; _} as rule: rule) =
-						Array.update (rules_for_lhs, nt,
-							rule::(Array.sub (rules_for_lhs, nt)));
-						match pat with
-						| NT rhs -> Array.update (chains_for_rhs, rhs,
-							rule::(Array.sub (chains_for_rhs, rhs)))
-						| _ -> ()
-				in
-
-				let findntl ({pat; _} as rule: rule) =
-					let flat = function 
-					| (NT nt, ntl) -> nt::ntl
-					| (T (_,sons), ntl) -> List.foldr flat ntl sons
-					in
-					(rule, flat (pat,[]))
-				in
-
-				(*local
-					exception NotSamePat;*)
-
-				let samepattern = function 
-					| (NT _, NT _) -> true
-					| (T (t1,spat1), T (t2, spat2)) ->
-						if t1=t2
-							then samepatternsons (spat1,spat2)
-							else raise NotSamePat
-					| _ -> raise NotSamePat
-				and samepatternsons (l1, l2) =
-					if (try forall2 (fun (p1,p2) -> samepattern (p1,p2), l1, l2) with NotSameSize -> raise NotSamePat)
-					then true
-					else raise NotSamePat
-				in
+      let rec samepattern = function 
+        | (NT _, NT _) -> true
+        | (T (t1,spat1), T (t2, spat2)) ->
+          if t1=t2
+            then samepatternsons (spat1,spat2)
+            else raise NotSamePat
+        | _ -> raise NotSamePat
+      and samepatternsons (l1, l2) =
+        if (try forall2 (fun (p1,p2) -> samepattern (p1,p2), l1, l2) with NotSameSize -> raise NotSamePat)
+        then true
+        else raise NotSamePat
+      in
 
 				let samepat (p1,p2) = samepattern (p1,p2) handle NotSamePat => false in
 
