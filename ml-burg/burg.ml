@@ -889,259 +889,269 @@ module BurgEmit : BURGEMIT =
 				saynl "    withtype s_tree = s_cost * s_rule * s_node * tree\n\n";
 				saynl "    val sub = Array.sub";
 				saynl "    val update = Array.update"
+			in
 
-	fun emit_val_cst (rules, arity, chains_for_rhs, rule_groups) =
-	  let
-	    fun do_cstrule (t, rlntll: (rule list * int list) list,
-			    uniqstr, iscst) =
-	      if iscst then
-		let
-		  val ar = Array.sub (arity, t)
-		  val a_cost = Array.array (!nb_nt, inf);
-		  val a_rule = Array.array (!nb_nt, 0);
-		    
-		  fun record ({nt=lhs, cost, num, ...} : rule, c) =
-		    let
-		      val cc = c + cost
-		    in
-		      if cc < (Array.sub (a_cost, lhs)) then
-			(Array.update (a_cost, lhs, cc);
-			 Array.update (a_rule, lhs, num);
-			 app (fn rule => record (rule, cc))
-			     (Array.sub (chains_for_rhs, lhs))
-		        )
-		      else ()
-		    end
-		in
-		  app ((app (fn rule => record (rule, 0))) o #1) rlntll;
-		  if ar=0 then
-		    (saynl ("    val leaf_"^(prep_node_cons t)^" =");
-		     say "      (Array.fromList [";
-		     print_intarray a_cost;
-		     say "],\n       Array.fromList [";
-		     print_intarray a_rule;
-		     saynl ("],\n       "^(prep_node_cons t)^")")
-		    )
-		  else
-		    (say ("    val cst_cost_"^uniqstr^" = Array.fromList [");
-		     print_intarray a_cost;
-		     saynl "]";
-		     say ("    val cst_rule_"^uniqstr^" = Array.fromList [");
-		     print_intarray a_rule;
-		     saynl "]"
-		    )
-		end
+			let emit_val_cst (rules, arity, chains_for_rhs, rule_groups) =
+	  		let do_cstrule (t, (rlntll: (rule list * int list) list), uniqstr, iscst) =
+	      	if iscst then
+						let ar = Array.sub (arity, t) in
+		  			let a_cost = Array.array (!nb_nt, inf) in
+		  			let a_rule = Array.array (!nb_nt, 0) in
+		  			let record (({nt=lhs; cost; num; _} : rule), c) =
+		    			let cc = c + cost in
+							if cc < (Array.sub (a_cost, lhs)) then (
+								Array.update (a_cost, lhs, cc);
+								Array.update (a_rule, lhs, num);
+								app (fn rule => record (rule, cc))
+								(Array.sub (chains_for_rhs, lhs))
+							)
+							else ()
+						in
+						begin
+							app ((app (fun rule -> record (rule, 0))) o fst) rlntll;
+							if ar=0 then (
+								saynl ("    val leaf_"^(prep_node_cons t)^" =");
+								say "      (Array.fromList [";
+								print_intarray a_cost;
+								say "],\n       Array.fromList [";
+								print_intarray a_rule;
+								saynl ("],\n       "^(prep_node_cons t)^")")
+							) else (
+								say ("    val cst_cost_"^uniqstr^" = Array.fromList [");
+								print_intarray a_cost;
+								saynl "]";
+								say ("    val cst_rule_"^uniqstr^" = Array.fromList [");
+								print_intarray a_rule;
+								saynl "]"
+							)
+						end
 	      else ()
+			in
 
-	    fun do_cstrules (t, ll) =
-	      app (app (fn (rlntll,_,uniqstr,iscst,_) =>
+	    let do_cstrules (t, ll) =
+	      app (app (fun (rlntll,_,uniqstr,iscst,_) ->
 		            do_cstrule (t, rlntll, uniqstr, iscst)))  ll
-	    val n = Int.toString (!nb_nt)
-	    val sinf = Int.toString inf
-	  in
+			in
+
+	    let n = Int.toString (!nb_nt) in
+	    let sinf = Int.toString inf in
 	    arrayiter (do_cstrules, rule_groups);
 	    saynl ("    val s_c_nothing = Array.array ("^n^","^sinf^")");
 	    saynl ("    val s_r_nothing = Array.array ("^n^",0)");
 	    say "\n\n"
-	  end
-
-
-	fun emit_label_function (rules, arity, chains_for_rhs, rule_groups) =
-	  let
-	    val firstcl = ref true
-	    fun emit_closure (nt, rl : rule list) =
-	      let
-		val firstrule = ref true
-		fun emit_cl ({nt=lhs, cost, num, ...} : rule) =
-		  let
-		    val c = Int.toString cost
-		    val slhs = Int.toString lhs;
-		  in
-		    if !firstrule
-		      then firstrule := false
-		      else say ";\n\t   ";
-		    saynl ("if c + "^c^" < sub (s_c,"^slhs^") then");
-		    sayinl ("     (update (s_c,"^slhs^",c + "^c^");");
-		    sayi ("      update (s_r,"^slhs^","^(Int.toString num)
-			  ^")");
-		    if null (Array.sub (chains_for_rhs, lhs)) then () else
-		      say (";\n\t      closure_"^(get_ntsym lhs)
-			   ^" (s_c, s_r, c + "^c^")");
-		      saynl "\n\t     )";
-		      sayinl "   else";
-		      sayi "     ()"
-		  end
-	      in
-		if null rl then () else
-		  (if !firstcl then
-		     (firstcl := false; say "\tfun") else say "\tand";
-		   saynl (" closure_"^(get_ntsym nt)^" (s_c, s_r, c) =");
-		   sayi "  (";
-		   List.app emit_cl rl;
-		   saynl "\n\t  )"
-		  ) 
-	      end
-
-
-	    val nbnt = Int.toString (!nb_nt)
-	    val sinf = Int.toString inf
-	    val firstmatch = ref true
-
-	    fun emit_match t =
-	      let (* "(" *)
-		val ar = Array.sub (arity, t)
-
-		fun inlistofsons i = (say ("t"^(Int.toString i));
-				      if i=(ar-1) then () else say ",")
-
-		fun listofsons () =
-		  (say " ("; iter (inlistofsons, ar); say ")")
-
-		val firstcst = ref true
-		fun emit_match_cst (_,str,uniq,iscst,_) =
-		  if iscst then
-		    (if !firstcst
-		       then (say "\t    "; firstcst := false)
-		       else say "\t  | ";
-		     saynl ("("^str^") =>");
-		     sayinl ("\t      (cst_cost_"^uniq^", cst_rule_"^uniq^")")
-		    )
-		  else ()
-
-
-
-		val firstcase = ref true
-		val firstcaseelem = ref true
-		fun emit_match_case (rlntll,str,uniq,iscst,iswot) =
-		  if iscst then () else
-		    (if !firstcase then
-		       (firstcase := false;
-			saynl "z =>";
-			sayinl "\tlet";
-			sayinl ("\t  val s_c = Array.array ("
-			      ^nbnt^","^sinf^")");
-			sayinl ("\t  val s_r = Array.array ("
-				^nbnt^",0)");
-			sayinl "\tin")
-		     else ();
-		     if !firstcaseelem then
-		       (firstcaseelem := false;
-			sayinl "\tcase z of";
-			sayi "\t    ")
-		     else sayi "\t  | ";
-		     saynl ("("^str^") =>");
-		     sayinl "\t      (";
-		     let
-		       fun dorules (rl : rule list, ntl) =
-			 let
-			   fun dorule ({nt=lhs, num, cost, ...} : rule) =
-			     let
-			       val slhs = Int.toString lhs
-			       val c = Int.toString cost
-			     in
-			       sayinl ("\t\t   if c + "^c^" < sub (s_c,"^slhs
-				       ^") then");
-			       sayinl ("\t\t     (update (s_c, "^slhs
-				       ^", c + "^c^");");
-			       sayinl ("\t\t      update (s_r, "^slhs
-				       ^", "^(Int.toString num)^");");
-			       if null (Array.sub (chains_for_rhs, lhs)) then ()
-			       else sayinl ("\t\t      closure_"
-					    ^(get_ntsym lhs)
-					    ^" (s_c, s_r, c + "^c^");");
-			       sayinl "\t\t     ())";
-			       sayinl "\t\t   else ();"
-			     end
-			 in
-			   sayi "\t       if ";
-			   listiter ((fn (i, nt) =>
-				      (if i=0 then () else say "andalso ";
-					 say ("sub (s"^(Int.toString i)^"_r,"
-					      ^(Int.toString (nt:int))
-					      ^")<>0 "))),
-				     ntl);
-			   saynl "then";
-			   sayinl "\t\t let";
-			   sayi ("\t\t   val c = ");
-			   listiter ((fn (i, nt) =>
-				      (if i=0 then () else say " + ";
-					 say ("sub (s"^(Int.toString i)^"_c,"
-					      ^(Int.toString (nt:int))^")"))),
-				     ntl);
-			   saynl "\n\t\t\t in";
-			   app dorule rl;
-			   sayinl "\t\t   ()";
-			   sayinl "\t\t end";
-			   sayinl "\t       else ();"
-			 end
-		     in
-		       app dorules rlntll
-		     end;
-		     sayinl "\t       ()";
-		     sayinl "\t      )"
-		    ) (* fun emit_match_case *)
-
-	      in (* ")(" fun emit_match *)
-
-		if !firstmatch
-		  then (sayi "  "; firstmatch := false)
-		  else sayi "| ";
-		say ((!struct_name)^"Ops.");
-		saynl ((prep_term_cons t)^" =>");
-
-		if ar=0 then					(* leaf term *)
-		  if null (Array.sub (rule_groups, t))
-		    then sayinl ("    (s_c_nothing, s_r_nothing, "
-				 ^(prep_node_cons t)^")")
-		    else sayinl ("    leaf_"^(prep_node_cons t))
-		else						    (* ar<>0 *)
-		  let
-		    val group = Array.sub (rule_groups, t)
-		    fun dosamecase eleml =
-		      (firstcaseelem := true;
-		       app emit_match_case eleml;
-		       if (not (!firstcaseelem) andalso
-			   not (List.exists (fn (_,_,_,_,iswot) => iswot) eleml))
-			 then sayinl "\t  | _ => ()" else ();
-		       if (not (!firstcaseelem)) then sayinl "\t  ;" else ()
-		       )
-		  in
-		    sayinl "    let";
-		    sayi "      val [";
-		    iter (inlistofsons, ar);
-		    saynl "] = map rec_label children";
-		    sayinl "    in";
-		    if null group then		   (* transfert rule *)
-		      (sayi "      (s_c_nothing, s_r_nothing, ";
-		       say (prep_node_cons t);
-		       listofsons ();
-		       saynl ")"
-		      )
-		    else
-		      (sayi "      let val (s_c, s_r) = case";
-		       listofsons ();
-		       saynl " of";
-		       app (app emit_match_cst) group;
-		       sayi (if !firstcst then "\t    " else "\t  | ");
-		       app dosamecase group;
-		       if !firstcase then
-			 saynl "_ => (s_c_nothing, s_r_nothing)"
-		       else
-			 (sayinl "\t  (s_c, s_r)";
-			  sayinl "\tend"
-			 );
-		       sayi "      in (s_c, s_r, ";
-		       say (prep_node_cons t);
-		       listofsons ();
-		       saynl ") end"
-		      );
-		    sayinl "    end"
-		  end
-
-	      end (* ")" fun emit_match *)
-
-
 	  in
+
+		let emit_label_function (rules, arity, chains_for_rhs, rule_groups) =
+			let firstcl = ref true in
+			let emit_closure (nt, (rl : rule list)) =
+				let firstrule = ref true in
+				let emit_cl ({nt=lhs; cost; num; _} : rule) =
+					let c = Int.toString cost in
+					let slhs = Int.toString lhs in
+					if !firstrule then 
+						firstrule := false
+					else 
+						say ";\n\t   ";
+					saynl ("if c + "^c^" < sub (s_c,"^slhs^") then");
+					sayinl ("     (update (s_c,"^slhs^",c + "^c^");");
+					sayi ("      update (s_r,"^slhs^","^(Int.toString num)^")");
+					if null (Array.sub (chains_for_rhs, lhs)) then 
+						() 
+					else
+						say (";\n\t      closure_"^(get_ntsym lhs)^" (s_c, s_r, c + "^c^")");
+					saynl "\n\t     )";
+					sayinl "   else";
+					sayi "     ()"
+				in
+				if null rl then 
+					() 
+				else (
+					if !firstcl then (
+						firstcl := false; 
+						say "\tfun"
+					) 
+					else 
+						say "\tand";
+					saynl (" closure_"^(get_ntsym nt)^" (s_c, s_r, c) =");
+					sayi "  (";
+					List.app emit_cl rl;
+					saynl "\n\t  )"
+				)
+			in
+			let nbnt = Int.toString (!nb_nt) in
+			let sinf = Int.toString inf in
+			let firstmatch = ref true in
+			let emit_match t =
+				(* "(" *)
+				let ar = Array.sub (arity, t) in
+				let inlistofsons i = (
+					say ("t"^(Int.toString i));
+					if i=(ar-1) then 
+						() 
+					else 
+						say ","
+				)
+				in
+
+				let listofsons () = (
+					say " ("; 
+					iter (inlistofsons, ar); 
+					say ")"
+				)
+				in
+
+				let firstcst = ref true in
+				let emit_match_cst (_,str,uniq,iscst,_) =
+					if iscst then
+						(if !firstcst
+							then (say "\t    "; firstcst := false)
+							else say "\t  | ";
+						saynl ("("^str^") =>");
+						sayinl ("\t      (cst_cost_"^uniq^", cst_rule_"^uniq^")")
+						)
+					else 
+						()
+				in
+
+				let firstcase = ref true in
+				let firstcaseelem = ref true in
+				let emit_match_case (rlntll,str,uniq,iscst,iswot) =
+					if iscst then 
+						() 
+					else (
+
+						if !firstcase then (
+							firstcase := false;
+							saynl "z =>";
+							sayinl "\tlet";
+							sayinl ("\t  val s_c = Array.array ("^nbnt^","^sinf^")");
+							sayinl ("\t  val s_r = Array.array ("^nbnt^",0)");
+							sayinl "\tin"
+						)
+						else 
+						();
+
+						if !firstcaseelem then (
+							firstcaseelem := false;
+							sayinl "\tcase z of";
+							sayi "\t    "
+						)
+						else 
+						sayi "\t  | ";
+
+						saynl ("("^str^") =>");
+						sayinl "\t      (";
+						
+						let dorules ((rl : rule list), ntl) =
+							let dorule ({nt=lhs; num; cost; _} : rule) =
+								let slhs = Int.toString lhs in
+								let c = Int.toString cost in
+								sayinl ("\t\t   if c + "^c^" < sub (s_c,"^slhs^") then");
+								sayinl ("\t\t     (update (s_c, "^slhs^", c + "^c^");");
+								sayinl ("\t\t      update (s_r, "^slhs^", "^(Int.toString num)^");");
+							
+								if null (Array.sub (chains_for_rhs, lhs)) then 
+									()
+								else 
+									sayinl ("\t\t      closure_"^(get_ntsym lhs)^" (s_c, s_r, c + "^c^");");
+
+								sayinl "\t\t     ())";
+								sayinl "\t\t   else ();"
+							in
+
+							sayi "\t       if ";
+							
+							listiter ((fun (i, nt) -> (
+								if i=0 then () else say "andalso ";
+								say ("sub (s"^(Int.toString i)^"_r,"^(Int.toString (nt:int))^")<>0 "))), ntl);
+							
+							saynl "then";
+							sayinl "\t\t let";
+							sayi ("\t\t   val c = ");
+
+							listiter ((fun (i, nt) -> (
+								if i = 0 then () else say " + ";
+								say ("sub (s"^(Int.toString i)^"_c,"^(Int.toString (nt:int))^")"))), ntl);
+							
+							saynl "\n\t\t\t in";
+							app dorule rl;
+							sayinl "\t\t   ()";
+							sayinl "\t\t end";
+							sayinl "\t       else ();"
+						in
+						app dorules rlntll
+						
+						sayinl "\t       ()";
+						sayinl "\t      )"
+					) (* fun emit_match_case *)
+				in
+				(* ")(" fun emit_match *)
+				if !firstmatch then (
+					sayi "  "; 
+					firstmatch := false
+				)
+				else 
+					sayi "| ";
+				
+				say ((!struct_name)^"Ops.");
+				saynl ((prep_term_cons t)^" =>");
+
+				if ar=0 then (* leaf term *)
+		  		if null (Array.sub (rule_groups, t)) then 
+						sayinl ("    (s_c_nothing, s_r_nothing, " ^(prep_node_cons t)^")")
+		    	else sayinl ("    leaf_"^(prep_node_cons t))
+				else (* ar<>0 *)
+					let group = Array.sub (rule_groups, t) in
+					let dosamecase eleml = (
+						firstcaseelem := true;
+						app emit_match_case eleml;
+						if (not (!firstcaseelem) && not (List.exists (fun (_,_,_,_,iswot) -> iswot) eleml)) then 
+							sayinl "\t  | _ => ()" 
+						else 
+							();
+						if (not (!firstcaseelem)) then 
+							sayinl "\t  ;" 
+						else 
+							()
+					)
+		  		in
+		    	sayinl "    let";
+		    	sayi "      val [";
+		    	iter (inlistofsons, ar);
+		    	saynl "] = map rec_label children";
+		    	sayinl "    in";
+		    	
+					if null group then (		   
+						(* transfert rule *)
+		      	sayi "      (s_c_nothing, s_r_nothing, ";
+		       	say (prep_node_cons t);
+		       	listofsons ();
+		      	saynl ")"
+		      ) else (
+					
+						sayi "      let val (s_c, s_r) = case";
+		      	listofsons ();
+		      	saynl " of";
+		      	app (app emit_match_cst) group;
+		      	sayi (if !firstcst then "\t    " else "\t  | ");
+		      	app dosamecase group;
+		      	
+						if !firstcase then
+			 				saynl "_ => (s_c_nothing, s_r_nothing)"
+		       	else (
+							sayinl "\t  (s_c, s_r)";
+			  			sayinl "\tend"
+			 			);
+		       
+					 	sayi "      in (s_c, s_r, ";
+		       	say (prep_node_cons t);
+		       	listofsons ();
+		       	saynl ") end"
+		      );
+
+		    	sayinl "    end"
+			in
+			(* ")" fun emit_match *)
 	    saynl "    fun rec_label (tree : In.tree) =";
 	    saynl "      let";
 	    arrayiter (emit_closure, chains_for_rhs);
@@ -1151,10 +1161,9 @@ module BurgEmit : BURGEMIT =
 	    saynl "      in";
 	    saynl "        (s_c, s_r, t, tree)";
 	    saynl "      end\n"
-	  end
+	  in
 
-
-	fun emit_reduce_function (rules) =
+		let emit_reduce_function (rules) =
 	  let
 	    val firstmatch = ref true
 
