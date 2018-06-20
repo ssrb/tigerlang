@@ -519,7 +519,7 @@ module BurgEmit : BURGEMIT = struct
 
       let samepat ab = try samepattern ab with NotSamePat -> false in
 
-      let clustersamepat ((({pat; _} as zap : rule), _), rg) =
+      let clustersamepat rg (({pat; _} as zap : rule), _) =
         let rec loop = function 
         | ([], _) -> (pat,[zap])::rg
         | (((p,zapl) as e)::rest, acc) ->
@@ -579,18 +579,19 @@ module BurgEmit : BURGEMIT = struct
         | (T (t1,spat1), T (t2,spat2)) ->
           if t1 <> t2 then raise (Forced NotUnif) else (
             let sonsg = map2 (uniftype, spat1, spat2) in
-            let addson = function 
-            | (NotUnif,_) -> raise (Forced NotUnif)
-            | (_,NotUnif) -> raise (Forced NotUnif)
-            | (NoMG,_) -> NoMG
-            | (_,NoMG) -> NoMG
-            | (SameG,x) -> x
-            | (x,SameG) -> x
-            | (FirstMG, FirstMG) -> FirstMG
-            | (SecondMG, SecondMG) -> SecondMG
-            | _ -> NoMG
+            let addson b a = 
+              match (a, b) with 
+              | (NotUnif,_) -> raise (Forced NotUnif)
+              | (_,NotUnif) -> raise (Forced NotUnif)
+              | (NoMG,_) -> NoMG
+              | (_,NoMG) -> NoMG
+              | (SameG,x) -> x
+              | (x,SameG) -> x
+              | (FirstMG, FirstMG) -> FirstMG
+              | (SecondMG, SecondMG) -> SecondMG
+              | _ -> NoMG
             in
-            try List.fold ~init:SameG ~f:addson onsg with NotSameSize -> error "bug : uniftype"
+            try List.fold ~init:SameG ~f:addson sonsg with NotSameSize -> error "bug : uniftype"
           )
 	    in
 
@@ -607,18 +608,20 @@ module BurgEmit : BURGEMIT = struct
 	     * nothing in not seeing the more general one).
 	     * That's all.
 	     *)
-	    let clustermatches ((pat,_,mincost,maxcost,lhss) as elem, matches) =
+	    let clustermatches matches ((pat, _, mincost, maxcost, lhss) as elem) =
 	  		(* works on already (increasing,unique) ordered lists *)
 		    let rec subset = function 
-				| ([],_) -> true
-		  	| (_,[]) -> false
-		  	| ((e1::l1) as a1,e2::l2) ->
+				| ([], _) -> true
+		  	| (_, []) -> false
+		  	| ((e1::l1) as a1, e2::l2) ->
 		      if e1 = e2 then subset (l1,l2)
 		      else if e1 > (e2 : int) then subset (a1,l2)
 		      else false
 				in
 
-				(* datatype sowhat = ANOTHER | NOTU | AFTER | BEFORE of int *)
+        let module F = struct
+				  type sowhat = ANOTHER | NOTU | AFTER | BEFORE of int
+        end in let open F in
 
 				let rec loop = function 
 				| (prev, i, []) -> prev
@@ -628,7 +631,7 @@ module BurgEmit : BURGEMIT = struct
 		      | NoMG -> ANOTHER
 		      | SameG -> error "bug : clustermatches.SameG"
 		      | FirstMG ->
-			  		if mincost>(max:int) andalso subset (lhss,lh) then
+			  		if mincost > (max : int) && subset (lhss,lh) then
 			      	match prev with
 							| NOTU -> loop (AFTER,i+1,rest)
 			      	| AFTER -> loop (AFTER,i+1,rest)
@@ -636,7 +639,7 @@ module BurgEmit : BURGEMIT = struct
 			      	| _ -> error "bug : clustermatches.FirstMG"
 			    	else ANOTHER
 		      | SecondMG ->
-			  		if min>(maxcost:int) andalso subset (lh,lhss) then
+			  		if min > (maxcost : int) && subset (lh,lhss) then
 			      	match prev with
 							| NOTU -> loop (BEFORE i,i+1,rest)
 			      	| AFTER -> loop (BEFORE i,i+1,rest)
@@ -646,21 +649,21 @@ module BurgEmit : BURGEMIT = struct
 				in
 
 				let rec insertat = function 
-				| (0,prev,next,e) -> (rev prev)@(e::next)
-				| (n,prev,x::next,e) -> insertat (n-1,x::prev,next,e)
-				| (_,prev,[],e) -> rev (e::prev)
+          | (0,prev,next,e) -> (List.rev prev)@(e::next)
+          | (n,prev,x::next,e) -> insertat (n-1,x::prev,next,e)
+          | (_,prev,[],e) -> List.rev (e::prev)
 				in
 
 				let rec _try = function 
-				| ([],_) -> [elem]::matches
-				| (l::ll,acc) ->
-					begin
-						match loop (NOTU,0,l) with
-						| ANOTHER -> _try (ll,l::acc)
-						| NOTU -> acc@((elem::l)::ll)	 (* don't keep order *)
-						| AFTER -> acc@((l@[elem])::ll)
-						| BEFORE i -> acc@((insertat (i,[],l,elem))::ll)
-					end
+          | ([],_) -> [elem]::matches
+          | (l::ll,acc) ->
+            begin
+              match loop (NOTU,0,l) with
+              | ANOTHER -> _try (ll,l::acc)
+              | NOTU -> acc@((elem::l)::ll)	 (* don't keep order *)
+              | AFTER -> acc@((l@[elem])::ll)
+              | BEFORE i -> acc@((insertat (i,[],l,elem))::ll)
+            end
 				in
 				_try (matches,[])
 			in
@@ -670,24 +673,23 @@ module BurgEmit : BURGEMIT = struct
 	    let compute (pat, rlntll, _, _, _) =
 	      
 				let rec do_pat = function 
-				| (NT nt, cnt, iswot) ->
-		      let s = Int.to_string cnt in
-					("(s"^s^"_c,s"^s^"_r,_,_)", cnt+1, iswot)
-		  	| (T (t,sons), cnt, _) ->
-		      let (s,cnt',_) = do_sons (sons, cnt) in
-					("(_,_,"^(prep_node_cons t)
-					^(if null sons then "" else
-			     if null (tl sons) then s else
-			       "("^s^")")
-			 		^",_)"
-			 		, cnt', false)
-				
-				and do_sons (sons,cnt) =
-				  let (s,cnt,_,iswot) = List.foldl (fun (pat,(s,cnt,first,iswot)) ->
+          | (NT nt, cnt, iswot) ->
+            let s = Int.to_string cnt in
+            ("(s"^s^"_c,s"^s^"_r,_,_)", cnt+1, iswot)
+          | (T (t,sons), cnt, _) ->
+            let (s,cnt',_) = do_sons (sons, cnt) in
+            ("(_,_,"^(prep_node_cons t)
+            ^(if List.is_empty sons then "" else
+            if List.is_empty (List.tl_exn sons) then s else
+              "("^s^")")
+            ^",_)"
+            , cnt', false)
+				and do_sons (sons, cnt) =
+				  let (s,cnt,_,iswot) = List.fold ~init:("", cnt, true, true) ~f:(fun (s,cnt,first,iswot) pat ->
 			      let (s',cnt',iswot') = do_pat (pat,cnt,iswot) in
-				 		(if first then s' else s^","^s', cnt', false, iswot')
-			    ) ("",cnt,true,true) sons
-					in (s,cnt,iswot)
+				 		((if first then s' else s ^ "," ^ s'), cnt', false, iswot')
+			    ) sons
+					in (s, cnt, iswot)
 				in
 
 				let (string_for_match, iscst, iswot) =
@@ -697,35 +699,35 @@ module BurgEmit : BURGEMIT = struct
 		  		| NT _ -> error "bug : string_for_match"
 				in
 
-				let uniqstr = Int.to_string(!uniq_cnt) before (uniq_cnt := !uniq_cnt+1) in
+				let uniqstr = let t = !uniq_cnt in uniq_cnt := !uniq_cnt + 1; Int.to_string(t) in
 		  
 				(rlntll, string_for_match, uniqstr, iscst, iswot)
 	    
 			in
 		  
-	    let tgroup = Array.array (!nb_t, []:rule list) in
+	    let tgroup = Array.create !nb_t ([] : rule list) in
 
 	    let addt ({pat; _} as rule: rule) =
 	    	match pat with
-				| T (t,_) -> Array.update (tgroup, t, rule::(Array.sub (tgroup, t)))
+				| T (t,_) -> tgroup.(t) <- rule::tgroup.(t)
 	      | NT _ -> ()
 	    in
 
 			arrayapp (addt,rules);
 
 	    let eacht t =
-	      let v1 = Array.sub (tgroup, t) in
+	      let v1 = tgroup.(t) in
 				(* v1 : rule list *)
-				let v2 = map findntl v1 in
+				let v2 = List.map v1 findntl in
 				(* v2 : (rule * ntl) list  (= zap list) *)
-				let v3 = List.foldl clustersamepat [] v2 in
+				let v3 = List.fold ~init:[] ~f:clustersamepat v2 in
 				(* v3 : (pattern * zap list) list *)
-				let v4 = map minmaxcostlhss v3 in
+				let v4 = List.map v3 minmaxcostlhss in
 				(* v4 : (pattern * zap list * mincost * maxcost * lhss) list*)
-				let v5 = map clustersamentl v4 in
+				let v5 = List.map v4 clustersamentl in
 				(* v5 : same thing with (rule list * ntl) list  (= rlntll)
 					instead of zap list *)
-				let v6 = List.foldl clustermatches [] v5 in
+				let v6 = List.fold ~init:[] ~f:clustermatches v5 in
 				(* v6 : (pattern * rlntll * min * max * lhss) list list *)
 				(* now, inside each subgroup, compute the elements *)
 				map (map compute) v6
