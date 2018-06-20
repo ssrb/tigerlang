@@ -1164,138 +1164,138 @@ module BurgEmit : BURGEMIT =
 	  in
 
 		let emit_reduce_function (rules) =
-	  let
-	    val firstmatch = ref true
-
-	    fun domatch (rule as {num, pat, ...} : rule) =
-	      let
-		fun flatsons (the_sons, cnt, ntl) =
-		  List.foldl
-		    (fn (patson, (b, c, l, ss)) =>
-		       let
-			 val (c', l', ss') = flat (patson, c, l)
-		       in
-			 (false, c', l', (if b then ss' else ss^","^ss'))
-		       end)
-		    (true, cnt, ntl, "")
-		    the_sons
-		and flat (pat, cnt, ntl) =
-		  case pat of
-		    NT nt => (cnt+1, nt::ntl, "t"^(Int.toString cnt))
-		  | T (t, sons) =>
-		      let
-			val len = List.length sons
-			val (_, cnt', ntl', s') = flatsons (sons, cnt, ntl)
-			val nexts =
-			  "(_,_,"^(prep_node_cons t)
-			  ^(if len=0 then "" else
-			      (if len=1 then " "^s' else " ("^s'^")"))
-			  ^",_)"
+	  	let firstmatch = ref true in
+			let domatch (({num; pat; _} as rule): rule) =
+	      let flatsons (the_sons, cnt, ntl) =
+		  		List.foldl (fun (patson, (b, c, l, ss)) ->
+		      	let (c', l', ss') = flat (patson, c, l) in 
+						(false, c', l', (if b then ss' else ss^","^ss'))
+					) (true, cnt, ntl, "") the_sons
+				and flat (pat, cnt, ntl) =
+		  		match pat with
+		    	| NT nt -> (cnt+1, nt::ntl, "t"^(Int.toString cnt))
+		  		| T (t, sons) ->
+		      	let len = List.length sons in
+						let (_, cnt', ntl', s') = flatsons (sons, cnt, ntl) in
+						let nexts = "(_,_,"^(prep_node_cons t)^(
+							if len=0 then 
+								"" 
+							else (
+								if len=1 then 
+									" "^s' 
+								else 
+								" ("^s'^")")
+						) ^",_)"
+		      	in
+						(cnt', ntl', nexts)
 		      in
-			(cnt', ntl', nexts)
-		      end
+					let (cnt, ntl, s) = flat (pat, 0, []) in
+					let ntl = rev ntl in
+					
+					if !firstmatch then (
+						firstmatch := false; 
+						say "\t\t("
+					) 
+					else
+		  			say "\t      | (";
 
-		val (cnt, ntl, s) = flat (pat, 0, [])
-		val ntl = rev ntl
-	      in
-		if !firstmatch then (firstmatch := false; say "\t\t(") else
-		  say "\t      | (";
-		saynl ((Int.toString num)^", "^s^") =>");
-		sayi ("\t  ("^(prep_rule_cons rule));
-		case pat of
-		  NT nt => say (" (doreduce (t0,"^(Int.toString nt)^"))")
-		| T (t, _) =>
-		    (case List.length ntl of
-		       0 => ()
-		     | _ =>
-			 (say " (";
-			  listiter ((fn (i,nt) =>
-				     (if i=0 then () else say ", ";
-					say ("doreduce (t"^(Int.toString i)^","
-					     ^(Int.toString nt)^")"))),
-				    ntl);
-			  say ")")
-		    );
-		saynl ")"
-	      end
-	  in
-	    saynl "    fun doreduce (stree : s_tree, nt) =";
-	    saynl "      let";
-	    sayinl "val (s_c, s_r, _, tree) = stree";
-	    sayinl "val cost = sub (s_c, nt)";
-	    saynl "      in";
+					saynl ((Int.toString num)^", "^s^") =>");
+					sayi ("\t  ("^(prep_rule_cons rule));
+					
+					match pat with
+		  		| NT nt -> say (" (doreduce (t0,"^(Int.toString nt)^"))")
+					| T (t, _) -> (
+						match List.length ntl with
+		       	| 0 -> ()
+		     		| _ -> (
+							say " (";
+			  			listiter ((fun (i,nt) -> (
+								if i=0 then 
+									() 
+								else 
+									say ", ";
+					
+								say ("doreduce (t"^(Int.toString i)^","^(Int.toString nt)^")"))), ntl);
+			  				say ")"
+							)
+		    		);
+						
+						saynl ")"
+	  		in
+	    	saynl "    fun doreduce (stree : s_tree, nt) =";
+	    	saynl "      let";
+	    	sayinl "val (s_c, s_r, _, tree) = stree";
+	    	sayinl "val cost = sub (s_c, nt)";
+	    	saynl "      in";
 
-sayinl ("if cost="^(Int.toString inf)^" then");
-sayinl ("  (print (\"No Match on nonterminal \"^(Int.toString nt)^\"\\n\");");
-sayinl ("   print \"Possibilities were :\\n\";");
-sayinl ("   let");
-sayinl ("     fun loop n =");
-sayinl ("       let");
-sayinl ("         val c = Array.sub (s_c, n);");
-sayinl ("         val r = Array.sub (s_r, n);");
-sayinl ("       in");
-sayinl ("         if c=16383 then () else");
-sayinl ("           print (\"rule \"^(Int.toString r)^\" with cost \"");
-sayinl ("                  ^(Int.toString c)^\"\\n\");");
-sayinl ("         loop (n+1)");
-sayinl ("       end");
-sayinl ("   in");
-sayinl ("     (loop 0) handle General.Subscript => ()");
-sayinl ("   end;");
-sayinl ("   raise NoMatch)");
-sayinl ("else");
+				sayinl ("if cost="^(Int.toString inf)^" then");
+				sayinl ("  (print (\"No Match on nonterminal \"^(Int.toString nt)^\"\\n\");");
+				sayinl ("   print \"Possibilities were :\\n\";");
+				sayinl ("   let");
+				sayinl ("     fun loop n =");
+				sayinl ("       let");
+				sayinl ("         val c = Array.sub (s_c, n);");
+				sayinl ("         val r = Array.sub (s_r, n);");
+				sayinl ("       in");
+				sayinl ("         if c=16383 then () else");
+				sayinl ("           print (\"rule \"^(Int.toString r)^\" with cost \"");
+				sayinl ("                  ^(Int.toString c)^\"\\n\");");
+				sayinl ("         loop (n+1)");
+				sayinl ("       end");
+				sayinl ("   in");
+				sayinl ("     (loop 0) handle General.Subscript => ()");
+				sayinl ("   end;");
+				sayinl ("   raise NoMatch)");
+				sayinl ("else");
 
 
-	    sayinl "  let";
-	    sayinl "    val rulensons =";
-	    sayinl "      case (sub (s_r, nt), stree) of";
-	    arrayapp (domatch, rules);
-	    sayinl "      | _ => raise NoMatch (* bug in iburg *)";
-	    sayinl "  in";
-	    sayinl "    (rulensons, tree)";
-	    sayinl "  end";
-	    saynl "      end\n"
-	  end
+				sayinl "  let";
+				sayinl "    val rulensons =";
+				sayinl "      case (sub (s_r, nt), stree) of";
+				arrayapp (domatch, rules);
+				sayinl "      | _ => raise NoMatch (* bug in iburg *)";
+				sayinl "  in";
+				sayinl "    (rulensons, tree)";
+				sayinl "  end";
+				saynl "      end\n"
+	  	in
 	
-
-	fun emit_end_functor (start : int) =
-	  (saynl "    fun reduce (tree) =";
-	   saynl ("      doreduce (rec_label (tree), "^(Int.toString start)^")");
-	   saynl "  end\n\n"
-	  )
-
+			let emit_end_functor (start : int) = (
+				saynl "    fun reduce (tree) =";
+	   		saynl ("      doreduce (rec_label (tree), "^(Int.toString start)^")");
+	   		saynl "  end\n\n"
+	  	)
       in
-	let
-	  val spec = #1 (Parse.parse s_in) before TextIO.closeIn s_in
-	  val _ = reparse_decls spec
-	  val (rules, arity) = reparse_rules spec
-	  val start =
- 	    case !start_sym of
-	      NONE => 0
-	    | SOME sym =>
-		case get_id sym of
-		  TERMINAL _ => error ("cannot start on a terminal")
-		| NONTERMINAL n => n
-	  (* rule numbers for each nonterminal (array) *)
-	  val (rules_for_lhs, chains_for_rhs, rule_groups)
-	    = build_rules_tables rules
-	in
-	  check_reachable (start, rules_for_lhs);
-	  s_out := (oustreamgen ());
-	  emit_header (spec);
-	  emit_debug (rules);
-	  emit_struct_burmterm ();
-	  emit_sig_burmgen ();
-	  emit_sig_burm (rules);
-	  emit_beg_functor (rules, arity);
-	  emit_val_cst (rules, arity, chains_for_rhs, rule_groups);
-	  emit_label_function (rules, arity, chains_for_rhs, rule_groups);
-	  emit_reduce_function (rules);
-	  emit_end_functor (start);
-	  emit_tail (spec);
-	  TextIO.closeOut (!s_out)
-	end
-      end (* fun emit *)
-
-  end
+	
+			let spec = fst (Parse.parse s_in) before TextIO.closeIn s_in in
+	  	reparse_decls spec;
+	  	let (rules, arity) = reparse_rules spec in
+	  	let start =
+ 	    	match !start_sym with
+	      | None -> 0
+	    	| Some sym ->
+				begin
+					match get_id sym with
+					| TERMINAL _ -> error ("cannot start on a terminal")
+					| NONTERMINAL n -> n
+				end
+			in
+	  	(* rule numbers for each nonterminal (array) *)
+	  	let (rules_for_lhs, chains_for_rhs, rule_groups) = build_rules_tables rules in
+			check_reachable (start, rules_for_lhs);
+			s_out := (oustreamgen ());
+			emit_header (spec);
+			emit_debug (rules);
+			emit_struct_burmterm ();
+			emit_sig_burmgen ();
+			emit_sig_burm (rules);
+			emit_beg_functor (rules, arity);
+			emit_val_cst (rules, arity, chains_for_rhs, rule_groups);
+			emit_label_function (rules, arity, chains_for_rhs, rule_groups);
+			emit_reduce_function (rules);
+			emit_end_functor (start);
+			emit_tail (spec);
+			Out_channel.close(!s_out)
+      (* fun emit *)
+end
 
