@@ -24,28 +24,23 @@
  * Version 109
  * 
  *)
-structure Parse = 
-struct
-  structure BurgLrVals = BurgLrValsFun(structure Token = LrParser.Token)
+  (*structure BurgLrVals = BurgLrValsFun(structure Token = LrParser.Token)
   structure BurgLex    = BurgLexFun(structure Tokens = BurgLrVals.Tokens)
   structure BurgParser = Join(structure ParserData = BurgLrVals.ParserData
 			      structure Lex 	   = BurgLex
-			      structure LrParser   = LrParser)
+			      structure LrParser   = LrParser)*)
 
-  fun parse stream = 
-    let
-      val lexer = BurgParser.makeLexer(fn n => TextIO.inputN(stream,n))
-      fun error(msg,i:int,_) = 
+  let parse stream = 
+    let lexer = BurgParser.makeLexer(fn n => TextIO.inputN(stream,n)) in
+    let error(msg,i:int,_) = 
 	    TextIO.output(TextIO.stdOut,
 			  "Error: line " ^ Int.toString i ^ ", " ^ msg ^ "\n")
     in
-	 BurgParser.parse(30,lexer,error,()) 
+	    BurgParser.parse(30,lexer,error,()) 
 	    before
-	        BurgLex.UserDeclarations.resetState()
-    end
+	    BurgLex.UserDeclarations.resetState()
 
-  fun reset () =
+  let reset () =
     BurgLex.UserDeclarations.resetState()
-    
-end
+
 
