@@ -519,7 +519,7 @@ module BurgEmit : BURGEMIT = struct
 
       let samepat ab = try samepattern ab with NotSamePat -> false in
 
-      let clustersamepat rg (({pat; _} as zap : rule), _) =
+      let clustersamepat rg ((({pat; _} : rule), _) as zap) =
         let rec loop = function 
         | ([], _) -> (pat,[zap])::rg
         | (((p,zapl) as e)::rest, acc) ->
@@ -531,7 +531,7 @@ module BurgEmit : BURGEMIT = struct
         loop (rg, [])
       in
 
-      let minmaxcostlhss (pat,zapl) =
+      let minmaxcostlhss (pat, zapl) =
         let min b (({cost; _} : rule), _) = if cost <= b then cost else b in
         let max b (({cost; _} : rule), _) = if cost >= b then cost else b in
         let mincost = List.fold ~init:inf ~f:min zapl in
@@ -540,14 +540,16 @@ module BurgEmit : BURGEMIT = struct
           let rec loop = function 
             | ([],_) -> lhs::lhss
             | ((i::il) as e, acc) ->
-              if lhs=i then lhss
-              else if lhs < i then (List.rev acc) @ (lhs::e)
+              if lhs = i then 
+								lhss
+              else if lhs < i then 
+								(List.rev acc) @ (lhs::e)
               else loop (il,i::acc)
           in
           loop (lhss, [])
         in
 				let lhss = List.fold ~init:[] ~f:addlhs zapl in
-				(pat,zapl,mincost,maxcost,lhss)
+				(pat, zapl, mincost, maxcost, lhss)
 		  in
 	    
 	    (* zapl is (rule,ntl) list *)
@@ -730,11 +732,11 @@ module BurgEmit : BURGEMIT = struct
 				let v6 = List.fold ~init:[] ~f:clustermatches v5 in
 				(* v6 : (pattern * rlntll * min * max * lhss) list list *)
 				(* now, inside each subgroup, compute the elements *)
-				map (map compute) v6
+				List.map v6 (fun v -> List.map v compute)
 			(* : (rlntll*str_for_match*uniqstr*iscst*iswot) list list *)
 	    in
 
-	    let rule_groups = Array.tabulate (!nb_t, eacht) in
+	    let rule_groups = Array.init !nb_t eacht in
 	    arrayapp (add_lhs_rhs, rules);
 	    (rules_for_lhs, chains_for_rhs, rule_groups)
 	  
@@ -745,21 +747,18 @@ module BurgEmit : BURGEMIT = struct
 		* Check that each nonterminal is reachable from start.
 		*)
 		let check_reachable (start, (rules_for_lhs : rule list array)) =
-			let notseen = Array.array (!nb_nt, true) in
+			let notseen = Array.create !nb_nt true in
 			let rec explore_nt nt = (
-				Array.update (notseen, nt, false);
-				app (fun ({pat; _}:rule) -> reach pat)
-						(Array.sub (rules_for_lhs, nt))
+				notseen.(nt) <- false;
+				List.iter ~f:(fun ({pat; _} : rule) -> reach pat) rules_for_lhs.(nt)
 			)
 			and reach = function 
-			| (NT nt) -> if Array.sub (notseen, nt) then explore_nt nt else ()
-			| (T (t, sons)) -> app reach sons
+			| NT nt -> if notseen.(nt) then explore_nt nt
+			| T (t, sons) -> List.iter ~f:reach sons
 			in
 			let test (nt, b) =
 					if b then
 						warning ("nonterminal "^(get_ntsym nt)^" is unreachable")
-					else 
-						()
 			in
 			explore_nt start;
 			arrayiter (test, notseen);
@@ -773,24 +772,24 @@ module BurgEmit : BURGEMIT = struct
 
 		let emit_type_rule rules =
 	  	(* I just want a map, really, not a hashtable. *)
-			let h : unit BurgHash.hash_table = BurgHash.mkTable (32, NotThere) in
+			let h : unit BurgHash.t = BurgHash.create () in
 	    let first = ref true in
 	    let onerule ({ern = ern; _} as rule : rule) =
 	      let name = prep_rule_cons rule in
-					match (BurgHash.find h name) with
+					match BurgHash.find h name with
 					| None ->
 		    		let patarity =
-						match (BurgHash.find hr ern) with
+						match BurgHash.find hr ern with
 						|	None -> error "emit_type_rule, no rule name ?"
 						| Some ar -> ar
 						in
-						let pr = function
+						let rec pr = function
 						| 0 -> ""
 						| 1 -> " of (rule * tree)"
-						| n -> ((pr (n-1))^" * (rule * tree)")
+						| n -> ((pr (n - 1))^" * (rule * tree)")
 		      	in
 						let constructor = name ^ (pr patarity) in
-		      	BurgHash.insert h (name, ());
+		      	BurgHash.add_exn h name ();
 		      	if !first then first := false else say "\t\t| ";
 		      	saynl constructor
 					| Some _ -> ()
@@ -800,11 +799,11 @@ module BurgEmit : BURGEMIT = struct
 	  	in
 
       let emit_ruleToString rules = 
-				let H : unit BurgHash.hash_table = BurgHash.mkTable(32,NotThere) in
+				let h : unit BurgHash.t = BurgHash.create () in
 	    	let first = ref true in
 	    	let onerule ({ern; _} as rule : rule) = 
 					let name = prep_rule_cons rule in
-					match (BurgHash.find H name) with
+					match BurgHash.find h name with
 					| None -> 
 						let patarity = 
 							match BurgHash.find hr ern with
@@ -816,9 +815,8 @@ module BurgEmit : BURGEMIT = struct
 							| _ -> " _"
 						in
 		     		let constructor = "("^ name ^ (pr patarity) ^ ")" in
-						BurgHash.insert H (name,());
-						if !first then first:=false 
-												else say "      | ruleToString";
+						BurgHash.add_exn h name ();
+						if !first then first:=false else say "      | ruleToString";
 						say constructor;
 						saynl (" = " ^ "\"" ^ name ^ "\"")
 	        | Some _ -> ()
@@ -828,11 +826,11 @@ module BurgEmit : BURGEMIT = struct
       in
 
 			let emit_debug rules =
-				let p_nterm (i, sym) = saynl ("nonterm "^(Int.toString i)^" : "^sym) in
-				let p_rule (i, {num; _} as rule : rule) =
-						(say ("rule "^(Int.toString num)^" : ");
-						print_rule rule
-						)
+				let p_nterm (i, sym) = saynl ("nonterm " ^ (Int.to_string i) ^ " : " ^ sym) in
+				let p_rule (i, ({num; _} as rule : rule)) = (
+					say ("rule " ^ (Int.to_string num) ^ " : ");
+					print_rule rule
+				)
 				in
 				saynl "(***** debug info *****";
 				arrayiter (p_nterm, !sym_nonterminals);
@@ -841,28 +839,27 @@ module BurgEmit : BURGEMIT = struct
 				saynl "**********************)\n\n"
 			in
 
-
 			let emit_struct_burmterm () =
 				let loop t =
-					if t=0 then () else say "\t       | ";
+					if t <> 0 then say "\t       | ";
 					saynl (prep_term_cons t)
 				in
-				saynl ("structure "^(!struct_name)^"Ops = struct");
+				saynl ("structure " ^ (!struct_name) ^ "Ops = struct");
 				say "  datatype ops = ";
 				iter (loop, !nb_t);
 				saynl "end\n\n"
 			in
 
 			let emit_sig_burmgen () =
-				saynl ("signature "^(!sig_name)^"_INPUT_SPEC = sig");
+				saynl ("signature " ^ (!sig_name) ^ "_INPUT_SPEC = sig");
 				saynl "  type tree";
-				saynl ("  val opchildren : tree -> "^(!struct_name)
+				saynl ("  val opchildren : tree -> " ^ (!struct_name)
 				^"Ops.ops * (tree list)");
 				saynl "end\n\n"
 	  	in
 
 			let emit_sig_burm rules = 
-				saynl ("signature "^(!sig_name)^" = sig");
+				saynl ("signature " ^ (!sig_name) ^ " = sig");
 				saynl "  exception NoMatch";
 				saynl "  type tree";
 				emit_type_rule rules;
@@ -873,20 +870,18 @@ module BurgEmit : BURGEMIT = struct
 
 			let emit_beg_functor (rules, arity) =
 				let loop_node t =
-					let ar = Array.sub (arity, t) in
-					let loop_sons i =
+					let ar = arity.(t) in
+					let rec loop_sons i =
 						say "s_tree";
-						if i=ar then () 
-						else (say " * "; loop_sons (i+1))
+						if i <> ar then (say " * "; loop_sons (i+1))
 					in
 					say (if t=0 then "      " else "    | ");
 					say (prep_node_cons t);
-					if ar>0 then (say "\t\tof "; loop_sons 1)
-					else ();
+					if ar>0 then (say "\t\tof "; loop_sons 1);
 					say "\n"
 				in
-				saynl ("functor "^(!struct_name)^"Gen (In : "
-				^(!sig_name)^"_INPUT_SPEC) : "^(!sig_name)^" =");
+				saynl ("functor " ^ (!struct_name) ^ "Gen (In : "
+				 ^ (!sig_name) ^ "_INPUT_SPEC) : " ^ (!sig_name) ^ " =");
 				saynl "  struct\n";
 				saynl "    type tree = In.tree\n";
 				saynl "    exception NoMatch";
@@ -905,33 +900,31 @@ module BurgEmit : BURGEMIT = struct
 			let emit_val_cst (rules, arity, chains_for_rhs, rule_groups) =
 	  		let do_cstrule (t, (rlntll: (rule list * int list) list), uniqstr, iscst) =
 	      	if iscst then
-						let ar = Array.sub (arity, t) in
-		  			let a_cost = Array.array (!nb_nt, inf) in
-		  			let a_rule = Array.array (!nb_nt, 0) in
-		  			let record (({nt=lhs; cost; num; _} : rule), c) =
+						let ar = arity.(t) in
+		  			let a_cost = Array.create !nb_nt inf in
+		  			let a_rule = Array.create !nb_nt 0 in
+		  			let rec record (({nt=lhs; cost; num; _} : rule), c) =
 		    			let cc = c + cost in
-							if cc < (Array.sub (a_cost, lhs)) then (
-								Array.update (a_cost, lhs, cc);
-								Array.update (a_rule, lhs, num);
-								app (fn rule => record (rule, cc))
-								(Array.sub (chains_for_rhs, lhs))
+							if cc < a_cost.(lhs) then (
+								a_cost.(lhs) <- cc;
+								a_rule.(lhs) <- num;
+								List.iter ~f:(fun rule -> record (rule, cc)) chains_for_rhs.(lhs)
 							)
-							else ()
 						in
 						begin
-							app ((app (fun rule -> record (rule, 0))) o fst) rlntll;
-							if ar=0 then (
-								saynl ("    val leaf_"^(prep_node_cons t)^" =");
+							List.iter ~f:(fun (rules, _) -> List.iter ~f:(fun rule -> record (rule, 0)) rules) rlntll;
+							if ar = 0 then (
+								saynl ("    val leaf_" ^ (prep_node_cons t) ^ " =");
 								say "      (Array.fromList [";
 								print_intarray a_cost;
 								say "],\n       Array.fromList [";
 								print_intarray a_rule;
-								saynl ("],\n       "^(prep_node_cons t)^")")
+								saynl ("],\n       " ^ (prep_node_cons t) ^ ")")
 							) else (
-								say ("    val cst_cost_"^uniqstr^" = Array.fromList [");
+								say ("    val cst_cost_" ^ uniqstr ^ " = Array.fromList [");
 								print_intarray a_cost;
 								saynl "]";
-								say ("    val cst_rule_"^uniqstr^" = Array.fromList [");
+								say ("    val cst_rule_" ^ uniqstr ^ " = Array.fromList [");
 								print_intarray a_rule;
 								saynl "]"
 							)
@@ -940,12 +933,12 @@ module BurgEmit : BURGEMIT = struct
 			in
 
 	    let do_cstrules (t, ll) =
-	      app (app (fun (rlntll,_,uniqstr,iscst,_) ->
+	      List.iter ~f:(List.iter ~f:(fun (rlntll,_,uniqstr,iscst,_) ->
 		            do_cstrule (t, rlntll, uniqstr, iscst)))  ll
 			in
 
-	    let n = Int.toString (!nb_nt) in
-	    let sinf = Int.toString inf in
+	    let n = Int.to_string (!nb_nt) in
+	    let sinf = Int.to_string inf in
 	    arrayiter (do_cstrules, rule_groups);
 	    saynl ("    val s_c_nothing = Array.array ("^n^","^sinf^")");
 	    saynl ("    val s_r_nothing = Array.array ("^n^",0)");
@@ -957,26 +950,22 @@ module BurgEmit : BURGEMIT = struct
 			let emit_closure (nt, (rl : rule list)) =
 				let firstrule = ref true in
 				let emit_cl ({nt=lhs; cost; num; _} : rule) =
-					let c = Int.toString cost in
-					let slhs = Int.toString lhs in
+					let c = Int.to_string cost in
+					let slhs = Int.to_string lhs in
 					if !firstrule then 
 						firstrule := false
 					else 
 						say ";\n\t   ";
 					saynl ("if c + "^c^" < sub (s_c,"^slhs^") then");
 					sayinl ("     (update (s_c,"^slhs^",c + "^c^");");
-					sayi ("      update (s_r,"^slhs^","^(Int.toString num)^")");
-					if null (Array.sub (chains_for_rhs, lhs)) then 
-						() 
-					else
+					sayi ("      update (s_r,"^slhs^","^(Int.to_string num)^")");
+					if not (List.is_empty chains_for_rhs.(lhs)) then 
 						say (";\n\t      closure_"^(get_ntsym lhs)^" (s_c, s_r, c + "^c^")");
 					saynl "\n\t     )";
 					sayinl "   else";
 					sayi "     ()"
 				in
-				if null rl then 
-					() 
-				else (
+				if not (List.is_empty rl) then (
 					if !firstcl then (
 						firstcl := false; 
 						say "\tfun"
@@ -985,18 +974,18 @@ module BurgEmit : BURGEMIT = struct
 						say "\tand";
 					saynl (" closure_"^(get_ntsym nt)^" (s_c, s_r, c) =");
 					sayi "  (";
-					List.app emit_cl rl;
+					List.iter ~f:emit_cl rl;
 					saynl "\n\t  )"
 				)
 			in
-			let nbnt = Int.toString (!nb_nt) in
-			let sinf = Int.toString inf in
+			let nbnt = Int.to_string (!nb_nt) in
+			let sinf = Int.to_string inf in
 			let firstmatch = ref true in
 			let emit_match t =
 				(* "(" *)
-				let ar = Array.sub (arity, t) in
+				let ar = arity.(t) in
 				let inlistofsons i = (
-					say ("t"^(Int.toString i));
+					say ("t"^(Int.to_string i));
 					if i=(ar-1) then 
 						() 
 					else 
@@ -1055,15 +1044,13 @@ module BurgEmit : BURGEMIT = struct
 						
 						let dorules ((rl : rule list), ntl) =
 							let dorule ({nt=lhs; num; cost; _} : rule) =
-								let slhs = Int.toString lhs in
-								let c = Int.toString cost in
+								let slhs = Int.to_string lhs in
+								let c = Int.to_string cost in
 								sayinl ("\t\t   if c + "^c^" < sub (s_c,"^slhs^") then");
 								sayinl ("\t\t     (update (s_c, "^slhs^", c + "^c^");");
-								sayinl ("\t\t      update (s_r, "^slhs^", "^(Int.toString num)^");");
+								sayinl ("\t\t      update (s_r, "^slhs^", "^(Int.to_string num)^");");
 							
-								if null (Array.sub (chains_for_rhs, lhs)) then 
-									()
-								else 
+								if not (List.is_empty chains_for_rhs.(lhs)) then
 									sayinl ("\t\t      closure_"^(get_ntsym lhs)^" (s_c, s_r, c + "^c^");");
 
 								sayinl "\t\t     ())";
@@ -1074,7 +1061,7 @@ module BurgEmit : BURGEMIT = struct
 							
 							listiter ((fun (i, nt) -> (
 								if i=0 then () else say "andalso ";
-								say ("sub (s"^(Int.toString i)^"_r,"^(Int.toString (nt:int))^")<>0 "))), ntl);
+								say ("sub (s"^(Int.to_string i)^"_r,"^(Int.to_string (nt:int))^")<>0 "))), ntl);
 							
 							saynl "then";
 							sayinl "\t\t let";
@@ -1082,16 +1069,15 @@ module BurgEmit : BURGEMIT = struct
 
 							listiter ((fun (i, nt) -> (
 								if i = 0 then () else say " + ";
-								say ("sub (s"^(Int.toString i)^"_c,"^(Int.toString (nt:int))^")"))), ntl);
+								say ("sub (s"^(Int.to_string i)^"_c,"^(Int.to_string (nt:int))^")"))), ntl);
 							
 							saynl "\n\t\t\t in";
-							app dorule rl;
+							List.iter ~f:dorule rl;
 							sayinl "\t\t   ()";
 							sayinl "\t\t end";
 							sayinl "\t       else ();"
 						in
-						app dorules rlntll
-						
+						List.iter ~f:dorules rlntll;
 						sayinl "\t       ()";
 						sayinl "\t      )"
 					) (* fun emit_match_case *)
@@ -1108,15 +1094,15 @@ module BurgEmit : BURGEMIT = struct
 				saynl ((prep_term_cons t)^" =>");
 
 				if ar=0 then (* leaf term *)
-		  		if null (Array.sub (rule_groups, t)) then 
+		  		if List.is_empty rule_groups.(t) then 
 						sayinl ("    (s_c_nothing, s_r_nothing, " ^(prep_node_cons t)^")")
 		    	else sayinl ("    leaf_"^(prep_node_cons t))
 				else (* ar<>0 *)
-					let group = Array.sub (rule_groups, t) in
+					let group = rule_groups.(t) in
 					let dosamecase eleml = (
 						firstcaseelem := true;
-						app emit_match_case eleml;
-						if (not (!firstcaseelem) && not (List.exists (fun (_,_,_,_,iswot) -> iswot) eleml)) then 
+						List.iter ~f:emit_match_case eleml;
+						if (not (!firstcaseelem) && not (List.exists ~f:(fun (_,_,_,_,iswot) -> iswot) eleml)) then 
 							sayinl "\t  | _ => ()" 
 						else 
 							();
@@ -1132,7 +1118,7 @@ module BurgEmit : BURGEMIT = struct
 		    	saynl "] = map rec_label children";
 		    	sayinl "    in";
 		    	
-					if null group then (		   
+					if List.is_empty group then (		   
 						(* transfert rule *)
 		      	sayi "      (s_c_nothing, s_r_nothing, ";
 		       	say (prep_node_cons t);
@@ -1143,9 +1129,9 @@ module BurgEmit : BURGEMIT = struct
 						sayi "      let val (s_c, s_r) = case";
 		      	listofsons ();
 		      	saynl " of";
-		      	app (app emit_match_cst) group;
+		      	List.iter ~f:(List.iter ~f:emit_match_cst) group;
 		      	sayi (if !firstcst then "\t    " else "\t  | ");
-		      	app dosamecase group;
+		      	List.iter ~f:dosamecase group;
 		      	
 						if !firstcase then
 			 				saynl "_ => (s_c_nothing, s_r_nothing)"
@@ -1177,14 +1163,14 @@ module BurgEmit : BURGEMIT = struct
 		let emit_reduce_function (rules) =
 	  	let firstmatch = ref true in
 			let domatch (({num; pat; _} as rule): rule) =
-	      let flatsons (the_sons, cnt, ntl) =
-		  		List.foldl (fun (patson, (b, c, l, ss)) ->
+	      let rec flatsons (the_sons, cnt, ntl) =
+		  		List.fold ~init: (true, cnt, ntl, "") ~f:(fun (b, c, l, ss) patson ->
 		      	let (c', l', ss') = flat (patson, c, l) in 
 						(false, c', l', (if b then ss' else ss^","^ss'))
-					) (true, cnt, ntl, "") the_sons
+					) the_sons
 				and flat (pat, cnt, ntl) =
 		  		match pat with
-		    	| NT nt -> (cnt+1, nt::ntl, "t"^(Int.toString cnt))
+		    	| NT nt -> (cnt+1, nt::ntl, "t"^(Int.to_string cnt))
 		  		| T (t, sons) ->
 		      	let len = List.length sons in
 						let (_, cnt', ntl', s') = flatsons (sons, cnt, ntl) in
@@ -1201,7 +1187,7 @@ module BurgEmit : BURGEMIT = struct
 						(cnt', ntl', nexts)
 		      in
 					let (cnt, ntl, s) = flat (pat, 0, []) in
-					let ntl = rev ntl in
+					let ntl = List.rev ntl in
 					
 					if !firstmatch then (
 						firstmatch := false; 
@@ -1210,11 +1196,11 @@ module BurgEmit : BURGEMIT = struct
 					else
 		  			say "\t      | (";
 
-					saynl ((Int.toString num)^", "^s^") =>");
+					saynl ((Int.to_string num)^", "^s^") =>");
 					sayi ("\t  ("^(prep_rule_cons rule));
 					
 					match pat with
-		  		| NT nt -> say (" (doreduce (t0,"^(Int.toString nt)^"))")
+		  		| NT nt -> say (" (doreduce (t0,"^(Int.to_string nt)^"))")
 					| T (t, _) -> (
 						match List.length ntl with
 		       	| 0 -> ()
@@ -1226,7 +1212,7 @@ module BurgEmit : BURGEMIT = struct
 								else 
 									say ", ";
 					
-								say ("doreduce (t"^(Int.toString i)^","^(Int.toString nt)^")"))), ntl);
+								say ("doreduce (t"^(Int.to_string i)^","^(Int.to_string nt)^")"))), ntl);
 			  				say ")"
 							)
 		    		);
@@ -1239,7 +1225,7 @@ module BurgEmit : BURGEMIT = struct
 	    	sayinl "val cost = sub (s_c, nt)";
 	    	saynl "      in";
 
-				sayinl ("if cost="^(Int.toString inf)^" then");
+				sayinl ("if cost="^(Int.to_string inf)^" then");
 				sayinl ("  (print (\"No Match on nonterminal \"^(Int.toString nt)^\"\\n\");");
 				sayinl ("   print \"Possibilities were :\\n\";");
 				sayinl ("   let");
@@ -1273,12 +1259,12 @@ module BurgEmit : BURGEMIT = struct
 	
 			let emit_end_functor (start : int) = (
 				saynl "    fun reduce (tree) =";
-	   		saynl ("      doreduce (rec_label (tree), "^(Int.toString start)^")");
+	   		saynl ("      doreduce (rec_label (tree), "^(Int.to_string start)^")");
 	   		saynl "  end\n\n"
 	  	)
       in
 	
-			let spec = fst (Parse.parse s_in) before TextIO.closeIn s_in in
+			let spec = let t = fst (Parse.parse s_in) in Out_channel.close s_in; t in
 	  	reparse_decls spec;
 	  	let (rules, arity) = reparse_rules spec in
 	  	let start =
