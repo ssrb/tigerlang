@@ -164,8 +164,6 @@ module BurgEmit : BURGEMIT = struct
     let stop_if_error () = 
       if !error_encountered then 
         raise BurgError 
-      else 
-        ()
     in
 
     (*
@@ -293,7 +291,7 @@ module BurgEmit : BURGEMIT = struct
       in
       List.iter decls newdecl;
 
-      if !nb_t = 0 then error "no terminals !" else ();
+      if !nb_t = 0 then error "no terminals !";
       
       term_prefix :=
         (match !t_prefix with
@@ -929,7 +927,6 @@ module BurgEmit : BURGEMIT = struct
 								saynl "]"
 							)
 						end
-	      else ()
 			in
 
 	    let do_cstrules (t, ll) =
@@ -986,9 +983,7 @@ module BurgEmit : BURGEMIT = struct
 				let ar = arity.(t) in
 				let inlistofsons i = (
 					say ("t"^(Int.to_string i));
-					if i=(ar-1) then 
-						() 
-					else 
+					if i <> (ar-1) then
 						say ","
 				)
 				in
@@ -1009,16 +1004,12 @@ module BurgEmit : BURGEMIT = struct
 						saynl ("("^str^") =>");
 						sayinl ("\t      (cst_cost_"^uniq^", cst_rule_"^uniq^")")
 						)
-					else 
-						()
 				in
 
 				let firstcase = ref true in
 				let firstcaseelem = ref true in
 				let emit_match_case (rlntll,str,uniq,iscst,iswot) =
-					if iscst then 
-						() 
-					else (
+					if not iscst then (
 
 						if !firstcase then (
 							firstcase := false;
@@ -1027,9 +1018,7 @@ module BurgEmit : BURGEMIT = struct
 							sayinl ("\t  val s_c = Array.array ("^nbnt^","^sinf^")");
 							sayinl ("\t  val s_r = Array.array ("^nbnt^",0)");
 							sayinl "\tin"
-						)
-						else 
-						();
+						);
 
 						if !firstcaseelem then (
 							firstcaseelem := false;
@@ -1037,7 +1026,7 @@ module BurgEmit : BURGEMIT = struct
 							sayi "\t    "
 						)
 						else 
-						sayi "\t  | ";
+							sayi "\t  | ";
 
 						saynl ("("^str^") =>");
 						sayinl "\t      (";
@@ -1060,7 +1049,7 @@ module BurgEmit : BURGEMIT = struct
 							sayi "\t       if ";
 							
 							listiter ((fun (i, nt) -> (
-								if i=0 then () else say "andalso ";
+								if i <> 0 then say "andalso ";
 								say ("sub (s"^(Int.to_string i)^"_r,"^(Int.to_string (nt:int))^")<>0 "))), ntl);
 							
 							saynl "then";
@@ -1068,7 +1057,7 @@ module BurgEmit : BURGEMIT = struct
 							sayi ("\t\t   val c = ");
 
 							listiter ((fun (i, nt) -> (
-								if i = 0 then () else say " + ";
+								if i <> 0 then say " + ";
 								say ("sub (s"^(Int.to_string i)^"_c,"^(Int.to_string (nt:int))^")"))), ntl);
 							
 							saynl "\n\t\t\t in";
@@ -1103,13 +1092,9 @@ module BurgEmit : BURGEMIT = struct
 						firstcaseelem := true;
 						List.iter ~f:emit_match_case eleml;
 						if (not (!firstcaseelem) && not (List.exists ~f:(fun (_,_,_,_,iswot) -> iswot) eleml)) then 
-							sayinl "\t  | _ => ()" 
-						else 
-							();
+							sayinl "\t  | _ => ()";
 						if (not (!firstcaseelem)) then 
-							sayinl "\t  ;" 
-						else 
-							()
+							sayinl "\t  ;"
 					)
 		  		in
 		    	sayinl "    let";
@@ -1207,9 +1192,7 @@ module BurgEmit : BURGEMIT = struct
 		     		| _ -> (
 							say " (";
 			  			listiter ((fun (i,nt) -> (
-								if i=0 then 
-									() 
-								else 
+								if i <> 0 then
 									say ", ";
 					
 								say ("doreduce (t"^(Int.to_string i)^","^(Int.to_string nt)^")"))), ntl);
@@ -1264,7 +1247,7 @@ module BurgEmit : BURGEMIT = struct
 	  	)
       in
 	
-			let spec = let t = fst (Parse.parse s_in) in Out_channel.close s_in; t in
+			let spec = let t = Parse.parse s_in in In_channel.close s_in; t in
 	  	reparse_decls spec;
 	  	let (rules, arity) = reparse_rules spec in
 	  	let start =

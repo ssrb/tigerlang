@@ -8,34 +8,14 @@
 open Core
 open Lexing
 
-module T = struct
-type ('a,'b) token = 
-	| K_LPAREN of ('a *'b)
-	| K_RPAREN of ('a *'b)
-	| K_COMMA of ('a *'b)
-	| K_COLON of ('a *'b)
-	| K_SEMICOLON of ('a *'b)
-	| K_EQUAL of ('a *'b)
-	| K_PIPE of ('a *'b)
-	| K_TERM of ('a *'b)
-	| K_START of ('a *'b)
-	| K_TERMPREFIX of ('a *'b)
-	| K_RULEPREFIX of ('a *'b)
-	| K_SIG of ('a *'b)
-	| INT of (int * 'a *'b)
-	| ID of (string * 'a *'b)
-	| K_EOF of ('a *'b)
-	| PPERCENT of ('a *'b)
-
-type svalue = int
-end
+module T = Burgparse
 
 exception SyntaxError of string
 
 type pos 		= int
-type svalue		= T.svalue
-type ('a,'b) token 	= ('a,'b) T.token
-type lexresult		= (svalue, pos) token
+type svalue		= int
+type token	 	= T.token
+type lexresult		= token
 
 let comLevel		= ref 0
 let lineNum		= ref 0
@@ -74,11 +54,14 @@ let eof ()		= (if !comLevel > 0 then raise (SyntaxError "unclosed comment")
 				   raise (SyntaxError  "unclosed user input")
 			        else ();
 			   if !reachedEop 
-			   then T.K_EOF(!lineNum,!lineNum)
-			   else	(rawStop ();
-				 T.PPERCENT( (*rev(!raw),*) !lineNum,!lineNum)
-				(* before (raw := [];
-				        reachedEop := true) *)))
+			   then T.K_EOF
+			   else	(
+					rawStop ();
+					let t = T.PPERCENT( List.rev(!raw) ) in
+					raw := [];
+				    reachedEop := true;
+					t
+			   ))
 }
 
 (* %s 			COMMENT DUMP POSTLUDE; *)
@@ -97,26 +80,28 @@ rule read =
 	| "%%" { (inc percentCount; 
 			    if !percentCount = 2 then 
 					( (* YYBEGIN POSTLUDE; *) read lexbuf)
-			    else 
-					T.PPERCENT( (*rev(!raw),*) !lineNum,!lineNum)
-					(*before raw := []*) ) }
+			    else (
+					let t = T.PPERCENT( List.rev(!raw)) in
+					raw := [];
+					t
+				) ) }
 	| ws { (read lexbuf) }
 	| '\n' { (inc lineNum; read lexbuf) }
-	| "(" { (T.K_LPAREN(!lineNum,!lineNum)) }
-	| ")" { (T.K_RPAREN(!lineNum,!lineNum)) }
-	| "," {(T.K_COMMA(!lineNum,!lineNum)) }
-	| ":" { (T.K_COLON(!lineNum,!lineNum)) }
-	| ";" { (T.K_SEMICOLON(!lineNum,!lineNum)) }
-	| "=" { (T.K_EQUAL(!lineNum,!lineNum)) }
-	| "|" { (T.K_PIPE(!lineNum,!lineNum)) }
-	| "%term" { (T.K_TERM(!lineNum,!lineNum)) }
-	| "%start" { (T.K_START(!lineNum,!lineNum)) }
-	| "%termprefix" { (T.K_TERMPREFIX(!lineNum,!lineNum)) }
-	| "%ruleprefix"	{ (T.K_RULEPREFIX(!lineNum,!lineNum)) }
-	| "%sig" { (T.K_SIG(!lineNum,!lineNum)) }
+	| "(" { (T.K_LPAREN) }
+	| ")" { (T.K_RPAREN) }
+	| "," {(T.K_COMMA) }
+	| ":" { (T.K_COLON) }
+	| ";" { (T.K_SEMICOLON) }
+	| "=" { (T.K_EQUAL) }
+	| "|" { (T.K_PIPE) }
+	| "%term" { (T.K_TERM) }
+	| "%start" { (T.K_START) }
+	| "%termprefix" { (T.K_TERMPREFIX) }
+	| "%ruleprefix"	{ (T.K_RULEPREFIX) }
+	| "%sig" { (T.K_SIG) }
 	| "(*" { ( (*YYBEGIN COMMENT;*) comLevel:=1; read lexbuf) }
-	| num { (T.INT( (*valOf*) (Int.of_string (Lexing.lexeme lexbuf)), !lineNum,!lineNum)) }
-	| id { (T.ID((Lexing.lexeme lexbuf),!lineNum,!lineNum)) }
+	| num { (T.INT( (*valOf*) (Int.of_string (Lexing.lexeme lexbuf)))) }
+	| id { (T.ID((Lexing.lexeme lexbuf))) }
 
 and read_comment =
 	parse

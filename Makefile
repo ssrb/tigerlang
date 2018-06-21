@@ -142,7 +142,9 @@ define PROJ_burg
 	RESULT = ml-burg/burg
 	SOURCES = ml-burg/burgAST.ml \
 	ml-burg/burgparse.mly \
-	ml-burg/burglex.mll
+	ml-burg/burglex.mll \
+	ml-burg/parse.ml \
+	ml-burg/burg.ml
 endef
 export PROJ_burg
 

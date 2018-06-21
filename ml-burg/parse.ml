@@ -31,16 +31,10 @@
 			      structure LrParser   = LrParser)*)
 
   let parse stream = 
-    let lexer = BurgParser.makeLexer(fn n => TextIO.inputN(stream,n)) in
-    let error(msg,i:int,_) = 
-	    TextIO.output(TextIO.stdOut,
-			  "Error: line " ^ Int.toString i ^ ", " ^ msg ^ "\n")
-    in
-	    BurgParser.parse(30,lexer,error,()) 
-	    before
-	    BurgLex.UserDeclarations.resetState()
+  	let lexbuf = Lexing.from_channel stream in
+	  Burgparse.full Burglex.read lexbuf
+	  (* BurgLex.UserDeclarations.resetState() *)
 
   let reset () =
-    BurgLex.UserDeclarations.resetState()
-
-
+    (* BurgLex.UserDeclarations.resetState() *)
+    ()
