@@ -249,7 +249,7 @@ let emit (s_in, oustreamgen) =
 								| None -> sym
 			in
 			match ((BurgHash.find ht sym) : ids option) with
-			| None -> BurgHash.add_exn ht sym (TERMINAL (gen_tnum(), etn))
+			| None -> BurgHash.set ht sym (TERMINAL (gen_tnum(), etn))
 			| Some _ -> warning ("term " ^ sym ^ " redefined")
 		in
 			
@@ -336,7 +336,7 @@ let emit (s_in, oustreamgen) =
 		let t_arity = Array.create !nb_t (None : int option) in
 		let newnt (RULE (ntsym, _, _, _)) =
 			match ((BurgHash.find ht ntsym) : ids option) with
-			| None -> BurgHash.add_exn ht ntsym (NONTERMINAL (gen_ntnum ()))
+			| None -> BurgHash.set ht ntsym (NONTERMINAL (gen_ntnum ()))
 			| Some (TERMINAL _) -> warning (ntsym ^ " redefined as a nonterminal")
 			| Some (NONTERMINAL _) -> ()
 		in
@@ -385,7 +385,7 @@ let emit (s_in, oustreamgen) =
 			in
 
 			(match BurgHash.find hr ern with
-			| None -> BurgHash.add_exn hr ern patarity
+			| None -> BurgHash.set hr ern patarity
 			| Some ar -> 
 				if ar <> patarity then
 					warning ("rulename " ^ ern ^ " is used with patterns of different arity"));
@@ -778,7 +778,7 @@ let emit (s_in, oustreamgen) =
 					| n -> ((pr (n - 1))^" * (rule * tree)")
 					in
 					let constructor = name ^ (pr patarity) in
-					BurgHash.add_exn h name ();
+					BurgHash.set h name ();
 					if !first then first := false else say "\t\t| ";
 					saynl constructor
 				| Some _ -> ()
@@ -804,7 +804,7 @@ let emit (s_in, oustreamgen) =
 						| _ -> " _"
 					in
 					let constructor = "("^ name ^ (pr patarity) ^ ")" in
-					BurgHash.add_exn h name ();
+					BurgHash.set h name ();
 					if !first then first:=false else say "      | ruleToString";
 					say constructor;
 					saynl (" = " ^ "\"" ^ name ^ "\"")

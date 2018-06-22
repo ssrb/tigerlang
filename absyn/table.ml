@@ -14,7 +14,7 @@ struct
   
   let empty = Int.Map.empty
   
-  let enter (t, k, a) = Map.add_exn t ~key:(Key.getInt k) ~data:a
+  let enter (t, k, a) = Map.set t ~key:(Key.getInt k) ~data:a
   
   let look (t, k) = Map.find t (Key.getInt k)
 
