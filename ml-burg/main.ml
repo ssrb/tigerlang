@@ -39,47 +39,47 @@
  * Version 109
  * 
  *)
-structure Main = struct
 
-    fun main (cmdName, argv) = let
-	  fun help () = (
-		TextIO.output (TextIO.stdErr, "usage: mlburg [<filename>.burg]\n");
-		OS.Process.failure)
-          in
-	    case argv
-	     of [] => (
-		  BurgEmit.emit (TextIO.stdIn, (fn () => TextIO.stdOut));
-		  OS.Process.success)
-	      | ("-h"::_) => help ()
-	      | ("-help"::_) => help ()
-	      | files => let
-		  fun findname file = let
-		        val {base, ext} = OS.Path.splitBaseExt file
-		        in
-		          case ext
-		           of (SOME("brg" | "burg")) =>
-			        OS.Path.joinBaseExt{base=base, ext=SOME "sml"}
-		            | _ => file ^ ".sml"
-		          (* end case *)
-		        end
-		  val names = map (fn n => (n,findname n)) files
-		  fun emit (inname, outname) = (let
-			val s_in = TextIO.openIn inname
-			in
-			  BurgEmit.emit (s_in, (fn () => (TextIO.openOut outname)))
-			end) 
-			  handle err => (TextIO.output (TextIO.stdErr,
-							General.exnMessage err^"\n");
-					 raise err)
-		  in
-		    app emit names;
-		    OS.Process.success
-		  end
-	  end
+open Core
+
+let main (cmdName, argv) = 
+	let help () = Out_channel.(
+		output_string stderr "usage: mlburg [<filename>.burg]\n";
+		exit (-1)
+	)
+	in
+
+	match argv with
+	| [] ->
+		Burg.emit (In_channel.stdin, (fun () -> Out_channel.stdout));
+		exit 0
+	| "-h"::_ -> help ()
+	| "-help"::_ -> help ()
+	| files -> 
+		let findname file = 
+			let (base, ext) = Filename.split_extension file in
+			match ext with 
+			| Some ("brg" | "burg") ->
+				base ^ ".sml"
+			| _ -> 
+				file ^ ".sml"
+		in
+		let names = List.map ~f:(fun n -> (n, findname n)) files in
+		let emit (inname, outname) = 
+			let s_in = In_channel.create inname in
+			try
+				Burg.emit (s_in, (fun () -> (Out_channel.create outname)))
+			with
+			| err -> 
+				Out_channel.(output_string stderr ((Exn.to_string err) ^ "\n"));
+				raise err
+		in
+		
+		List.iter ~f:emit names;
+		exit 0
 
   (*
    * This is the function to call in an interactive session.
    * Takes a filename (something.burg) as argument, and produces something.sml
    *)
-    fun doit s = main ("", [s])
-end
+(*    fun doit s = main ("", [s]) *)

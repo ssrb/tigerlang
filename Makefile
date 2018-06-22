@@ -2,7 +2,7 @@ OCAMLMAKEFILE = OCamlMakefile
 
 export BCSUFFIX = ".byte"
 export OCAMLYACC = menhir
-export PACKS = core ppx_sexp_conv ppx_compare glpk
+export PACKS = base core ppx_sexp_conv ppx_compare glpk
 export THREADS = yes
 
 define PROJ_lexer_tester
@@ -144,7 +144,8 @@ define PROJ_burg
 	ml-burg/burgparse.mly \
 	ml-burg/burglex.mll \
 	ml-burg/parse.ml \
-	ml-burg/burg.ml
+	ml-burg/burg.ml \
+	ml-burg/main.ml
 endef
 export PROJ_burg
 
