@@ -4,6 +4,7 @@ export BCSUFFIX = ".byte"
 export OCAMLYACC = menhir
 export PACKS = base core ppx_sexp_conv ppx_compare glpk
 export THREADS = yes
+export OCAMLFLAGS = -open Base
 
 define PROJ_lexer_tester
 	RESULT = lexer/lexer_tester
@@ -146,6 +147,7 @@ define PROJ_burg
 	ml-burg/parse.ml \
 	ml-burg/burg.ml \
 	ml-burg/main.ml
+	YFLAGS = --explain --trace --dump
 endef
 export PROJ_burg
 
