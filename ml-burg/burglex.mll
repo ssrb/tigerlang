@@ -75,30 +75,30 @@ let line			= _*
 
 rule read =
 	parse
-	| '\n' { (inc lineNum; read lexbuf) }
-	| "%{" { (incVerbLvl(); (* YYBEGIN DUMP; *) read lexbuf) }
-	| "%%" { (inc percentCount; 
+	| '\n' { inc lineNum; read lexbuf }
+	| "%{" { incVerbLvl(); dump lexbuf }
+	| "%%" { inc percentCount; 
 			    if !percentCount = 2 then 
 					( (* YYBEGIN POSTLUDE; *) read lexbuf)
 			    else (
 					let t = T.PPERCENT( List.rev(!raw)) in
 					raw := [];
 					t
-				) ) }
-	| ws { (read lexbuf) }
-	| '\n' { (inc lineNum; read lexbuf) }
-	| "(" { (T.K_LPAREN) }
-	| ")" { (T.K_RPAREN) }
-	| "," {(T.K_COMMA) }
-	| ":" { (T.K_COLON) }
-	| ";" { (T.K_SEMICOLON) }
-	| "=" { (T.K_EQUAL) }
-	| "|" { (T.K_PIPE) }
-	| "%term" { (T.K_TERM) }
-	| "%start" { (T.K_START) }
-	| "%termprefix" { (T.K_TERMPREFIX) }
-	| "%ruleprefix"	{ (T.K_RULEPREFIX) }
-	| "%sig" { (T.K_SIG) }
+				) }
+	| ws { read lexbuf }
+	| '\n' { inc lineNum; read lexbuf }
+	| "(" { T.K_LPAREN }
+	| ")" { T.K_RPAREN }
+	| "," { T.K_COMMA }
+	| ":" { T.K_COLON }
+	| ";" { T.K_SEMICOLON }
+	| "=" { T.K_EQUAL }
+	| "|" { T.K_PIPE }
+	| "%term" { T.K_TERM }
+	| "%start" { T.K_START }
+	| "%termprefix" { T.K_TERMPREFIX }
+	| "%ruleprefix"	{ T.K_RULEPREFIX }
+	| "%sig" { T.K_SIG }
 	| "(*" { ( (*YYBEGIN COMMENT;*) comLevel:=1; read lexbuf) }
 	| num { (T.INT( (*valOf*) (Int.of_string (Lexing.lexeme lexbuf)))) }
 	| id { (T.ID((Lexing.lexeme lexbuf))) }
@@ -112,11 +112,12 @@ and read_comment =
 					read lexbuf) }
 	| _	{ (read lexbuf) }
 
-(*<DUMP> "%}"		=> (rawStop(); dec verbatimLevel;
-			    YYBEGIN INITIAL; read lexbuf);
-<DUMP> "\n"		=> (rawNextLine (); inc lineNum; read lexbuf);
-<DUMP> {line}		=> (outputRaw yytext; read lexbuf);
+and dump = 
+	parse 
+	| "%}" { rawStop(); dec verbatimLevel; (* YYBEGIN INITIAL; *) read lexbuf }
+	| "\n" { rawNextLine (); inc lineNum; read lexbuf }
+	| _	{ outputRaw (Lexing.lexeme lexbuf); read lexbuf }
 
 
-<POSTLUDE> "\n"		=> (rawNextLine (); inc lineNum; read lexbuf);
+(* <POSTLUDE> "\n"		=> (rawNextLine (); inc lineNum; read lexbuf);
 <POSTLUDE> {line}	=> (outputRaw yytext; read lexbuf); *)
