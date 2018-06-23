@@ -76,7 +76,7 @@ let line			= _*
 rule read =
 	parse
 	| '\n' { inc lineNum; read lexbuf }
-	| "%{" { incVerbLvl(); dump lexbuf }
+	| "%{" { incVerbLvl(); Out_channel.print_endline "Dump"; dump lexbuf }
 	| "%%" { inc percentCount; 
 			    if !percentCount = 2 then 
 					( (* YYBEGIN POSTLUDE; *) read lexbuf)
@@ -114,9 +114,9 @@ and read_comment =
 
 and dump = 
 	parse 
-	| "%}" { rawStop(); dec verbatimLevel; (* YYBEGIN INITIAL; *) read lexbuf }
-	| "\n" { rawNextLine (); inc lineNum; read lexbuf }
-	| _	{ outputRaw (Lexing.lexeme lexbuf); read lexbuf }
+	| "%}" { rawStop(); dec verbatimLevel; (* YYBEGIN INITIAL; *) Out_channel.print_endline "End dump"; read lexbuf }
+	| "\n" { rawNextLine (); inc lineNum; dump lexbuf }
+	| _	{ outputRaw (Lexing.lexeme lexbuf); dump lexbuf }
 
 
 (* <POSTLUDE> "\n"		=> (rawNextLine (); inc lineNum; read lexbuf);
