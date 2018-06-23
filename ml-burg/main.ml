@@ -76,7 +76,9 @@ let main (cmdName, argv) =
 		in
 		
 		List.iter ~f:emit names;
-		exit 0
+		exit 0;;
+
+main (Sys.argv.(0), List.tl_exn (Array.to_list Sys.argv))
 
   (*
    * This is the function to call in an interactive session.
