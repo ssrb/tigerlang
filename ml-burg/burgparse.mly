@@ -64,8 +64,8 @@ full		: ds = decls p1 = PPERCENT rs = rules p2 = PPERCENT
 						rules=List.rev rs;
 						tail=p2} }
 
-decls		: (* empty *)		{ [] }
-		| ds = decls d = decl		{ d :: ds }
+decls		: K_EOF (* empty *)		{ [] }
+		| ds = decls d = decl K_EOF	{ d :: ds }
 
 decl		: K_TERM bs = bindinglist	{ A.TERM (List.rev bs) }
 		| K_START id = ID		{ A.START id }

@@ -47,21 +47,22 @@ let outputRaw (s:string) = (rawLine := !rawLine^s; rawNoNewLine := true)
 let rawNextLine ()	= (raw := (!rawLine ^ "\n")::!raw;
 			   rawLine := ""; rawNoNewLine := false)
 
-let rawStop ()		= if !rawNoNewLine then rawNextLine () else ()
+let rawStop ()		= if !rawNoNewLine then rawNextLine ()
 
-let eof ()		= (if !comLevel > 0 then raise (SyntaxError "unclosed comment")
-			   else if !verbatimLevel <> 0 then
-				   raise (SyntaxError  "unclosed user input")
-			        else ();
-			   if !reachedEop 
-			   then T.K_EOF
-			   else	(
-					rawStop ();
-					let t = T.PPERCENT( List.rev(!raw) ) in
-					raw := [];
-				    reachedEop := true;
-					t
-			   ))
+let eof ()		=
+	if !comLevel > 0 then 
+		raise (SyntaxError "unclosed comment")
+	else if !verbatimLevel <> 0 then
+		raise (SyntaxError  "unclosed user input");
+	if !reachedEop then 
+		T.K_EOF
+	else (
+		rawStop ();
+		let t = T.PPERCENT( List.rev(!raw) ) in
+		raw := [];
+		reachedEop := true;
+		t
+	)
 }
 
 (* %s 			COMMENT DUMP POSTLUDE; *)
@@ -102,6 +103,7 @@ rule read =
 	| "(*" { ( (*YYBEGIN COMMENT;*) comLevel:=1; read lexbuf) }
 	| num { (T.INT( (*valOf*) (Int.of_string (Lexing.lexeme lexbuf)))) }
 	| id { (T.ID((Lexing.lexeme lexbuf))) }
+	| eof { lexbuf.lex_eof_reached <- true; eof () }
 
 and read_comment =
 	parse
