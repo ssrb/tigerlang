@@ -77,12 +77,12 @@ rule read =
   | ':' { _COLON ((ls lexbuf), (le lexbuf))}
   | ',' { _COMMA ((ls lexbuf), (le lexbuf))}
   | ';' { _SEMICOLON ((ls lexbuf), (le lexbuf))}
-  | "/*" { read_comment lexbuf}
-  | _ { raise (SyntaxError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }
+  | "/*" { read_comment  (ls lexbuf) lexbuf; read lexbuf }
   | eof { 
     lexbuf.lex_eof_reached <- true;
     _EOF ((ls lexbuf), (le lexbuf))
   }
+  | _ { raise (SyntaxError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }
 
 and read_string buf =
   parse
@@ -98,16 +98,16 @@ and read_string buf =
     { Buffer.add_string buf (Lexing.lexeme lexbuf);
       read_string buf lexbuf
     }
-  | _ { raise (SyntaxError ("Illegal string character: " ^ Lexing.lexeme lexbuf)) }
   | eof { raise (SyntaxError ("String is not terminated")) }
+  | _ { raise (SyntaxError ("Illegal string character: " ^ Lexing.lexeme lexbuf)) }
 
-and read_comment =
+and read_comment start =
 	parse
 	(* Tiger supports nested comments *)
-	| "/*" { ignore(read_comment lexbuf); read_comment lexbuf }
-	| "*/" { _COMMENT ((ls lexbuf), (le lexbuf)); read lexbuf}
-	| _ { read_comment lexbuf }
-  | eof { raise (SyntaxError ("String is not terminated")) }
+	| "/*" { read_comment (ls lexbuf) lexbuf;  read_comment start lexbuf}
+	| "*/" { _COMMENT (start, (le lexbuf)) }
+	| eof { raise (SyntaxError ("Comment is not terminated")) }
+  | _ { read_comment start lexbuf }
 
 {
   end;;
