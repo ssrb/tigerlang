@@ -17,7 +17,6 @@ type svalue		= int
 type token	 	= T.token
 type lexresult		= token
 
-let comLevel		= ref 0
 let lineNum		= ref 0
 let verbatimLevel	= ref 0
 let percentCount	= ref 0
@@ -26,14 +25,15 @@ let rawNoNewLine	= ref false
 let raw:string list ref = ref []
 let reachedEop		= ref false
 
-let resetState ()	= (comLevel      := 0;
-			   lineNum       := 0;
-			   verbatimLevel := 0;
-			   percentCount  := 0;
-			   rawLine	 := "";
-			   rawNoNewLine	 := false;
-			   raw		 := [];
-			   reachedEop	 := false)
+let resetState ()	= (
+		lineNum       := 0;
+		verbatimLevel := 0;
+		percentCount  := 0;
+		rawLine	 := "";
+		rawNoNewLine	 := false;
+		raw		 := [];
+		reachedEop	 := false
+	)
 			   
 let inc ri = ri := !ri + 1
 let dec ri = ri := !ri - 1
@@ -50,9 +50,7 @@ let rawNextLine ()	= (raw := (!rawLine ^ "\n")::!raw;
 let rawStop ()		= if !rawNoNewLine then rawNextLine ()
 
 let eof ()		=
-	if !comLevel > 0 then 
-		raise (SyntaxError "unclosed comment")
-	else if !verbatimLevel <> 0 then
+	if !verbatimLevel <> 0 then
 		raise (SyntaxError  "unclosed user input");
 	if !reachedEop then 
 		T.K_EOF
@@ -67,59 +65,61 @@ let eof ()		=
 
 (* %s 			COMMENT DUMP POSTLUDE; *)
 
-let idchars			= ['A'-'Z' 'a'-'z' '0'-'9' '_']
+let idchars		= ['A'-'Z' 'a'-'z' '0'-'9' '_']
 let id			= ['A'-'Z' 'a'-'z'] idchars*
 let ws			= ['\t' ' ']*
 let num			= ['0'-'9']+
-let line			= _*
-
+let line		= _*
 
 rule read =
 	parse
 	| '\n' { inc lineNum; read lexbuf }
-	| "%{" { incVerbLvl(); Out_channel.print_endline "Dump"; dump lexbuf }
-	| "%%" { inc percentCount; 
-			    if !percentCount = 2 then 
-					( (* YYBEGIN POSTLUDE; *) read lexbuf)
-			    else (
-					let t = T.PPERCENT( List.rev(!raw)) in
-					raw := [];
-					t
-				) }
+	| "%{" { incVerbLvl (); dump lexbuf }
+	| "%%" { 
+		inc percentCount; 
+		if !percentCount = 2 then ( 
+			postlude lexbuf;
+			read lexbuf
+		) else (
+			let t = T.PPERCENT (List.rev !raw) in
+			raw := [];
+			t
+		)
+	}
 	| ws { read lexbuf }
 	| '\n' { inc lineNum; read lexbuf }
-	| "(" { T.K_LPAREN }
-	| ")" { T.K_RPAREN }
-	| "," { T.K_COMMA }
-	| ":" { T.K_COLON }
-	| ";" { T.K_SEMICOLON }
-	| "=" { T.K_EQUAL }
-	| "|" { T.K_PIPE }
+	| '(' { T.K_LPAREN }
+	| ')' { T.K_RPAREN }
+	| ',' { T.K_COMMA }
+	| ':' { T.K_COLON }
+	| ';' { T.K_SEMICOLON }
+	| '=' { T.K_EQUAL }
+	| '|' { T.K_PIPE }
 	| "%term" { T.K_TERM }
 	| "%start" { T.K_START }
 	| "%termprefix" { T.K_TERMPREFIX }
 	| "%ruleprefix"	{ T.K_RULEPREFIX }
 	| "%sig" { T.K_SIG }
-	| "(*" { ( (*YYBEGIN COMMENT;*) comLevel:=1; read lexbuf) }
-	| num { (T.INT( (*valOf*) (Int.of_string (Lexing.lexeme lexbuf)))) }
-	| id { (T.ID((Lexing.lexeme lexbuf))) }
-	| eof { lexbuf.lex_eof_reached <- true; eof () }
+	| "(*" { comment lexbuf; read lexbuf }
+	| num { T.INT( (*valOf*) (Int.of_string (Lexing.lexeme lexbuf))) }
+	| id { T.ID (Lexing.lexeme lexbuf) }
+	| eof { lexbuf.lex_eof_reached <- true; T.K_EOF }
 
-and read_comment =
+and comment =
 	parse
-	| "(*" { (inc comLevel; read lexbuf) }
-	| '\n' { (inc lineNum; read lexbuf) }
-	| "*)" { (dec comLevel;
-					(* if !comLevel=0 then YYBEGIN INITIAL else (); *)
-					read lexbuf) }
-	| _	{ (read lexbuf) }
+	| "(*" { comment lexbuf; comment lexbuf }
+	| '\n' { inc lineNum; comment lexbuf }
+	| "*)" { () }
+	| eof { raise (SyntaxError "Unclosed comment") }
+	| _	{ comment lexbuf }
 
 and dump = 
 	parse 
-	| "%}" { rawStop(); dec verbatimLevel; (* YYBEGIN INITIAL; *) Out_channel.print_endline "End dump"; read lexbuf }
-	| "\n" { rawNextLine (); inc lineNum; dump lexbuf }
+	| "%}" { rawStop (); dec verbatimLevel; read lexbuf }
+	| '\n' { rawNextLine (); inc lineNum; dump lexbuf }
 	| _	{ outputRaw (Lexing.lexeme lexbuf); dump lexbuf }
 
-
-(* <POSTLUDE> "\n"		=> (rawNextLine (); inc lineNum; read lexbuf);
-<POSTLUDE> {line}	=> (outputRaw yytext; read lexbuf); *)
+and postlude =
+	parse
+	| '\n' { rawNextLine (); inc lineNum; read lexbuf }
+	| _ { outputRaw (Lexing.lexeme lexbuf); read lexbuf }

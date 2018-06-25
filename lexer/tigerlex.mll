@@ -77,7 +77,7 @@ rule read =
   | ':' { _COLON ((ls lexbuf), (le lexbuf))}
   | ',' { _COMMA ((ls lexbuf), (le lexbuf))}
   | ';' { _SEMICOLON ((ls lexbuf), (le lexbuf))}
-  | "/*" { read_comment  (ls lexbuf) lexbuf; read lexbuf }
+  | "/*" { comment  (ls lexbuf) lexbuf; read lexbuf }
   | eof { 
     lexbuf.lex_eof_reached <- true;
     _EOF ((ls lexbuf), (le lexbuf))
@@ -101,13 +101,13 @@ and read_string buf =
   | eof { raise (SyntaxError ("String is not terminated")) }
   | _ { raise (SyntaxError ("Illegal string character: " ^ Lexing.lexeme lexbuf)) }
 
-and read_comment start =
+and comment start =
 	parse
 	(* Tiger supports nested comments *)
-	| "/*" { read_comment (ls lexbuf) lexbuf;  read_comment start lexbuf}
+	| "/*" { comment (ls lexbuf) lexbuf;  comment start lexbuf }
 	| "*/" { _COMMENT (start, (le lexbuf)) }
-	| eof { raise (SyntaxError ("Comment is not terminated")) }
-  | _ { read_comment start lexbuf }
+	| eof { raise (SyntaxError "Unclosed comment") }
+  | _ { comment start lexbuf }
 
 {
   end;;
