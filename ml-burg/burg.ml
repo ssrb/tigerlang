@@ -49,49 +49,17 @@ let debug s = Out_channel.(
 (* Output functions *)
 let s_out = ref Out_channel.stdout	   (* changed into the output stream *)
 let say s = Out_channel.output_string !s_out s
-let saynl s = say (s^"\n")
-let sayi s = say ("\t"^s)
-let sayinl s = say ("\t"^s^"\n")
-			
-let explode s =
-	let rec exp i l =
-		if i < 0 then l else exp (i - 1) (s.[i] :: l) 
-	in
-	exp (String.length s - 1) []
-
-let implode l =
-	let res = String.create (List.length l) in
-	let rec imp i = function
-	| [] -> res
-	| c :: l -> res.[i] <- c; imp (i + 1) l 
-	in
-	imp 0 l
-
-exception NotSameSize
-
-let exists2 (f, list1, list2) =
-	let rec loop = function
-	| ([],[]) -> false
-	| (e1::l1, e2::l2) ->
-		if f (e1,e2) then true else loop (l1, l2)
-	| _ -> raise NotSameSize
-	in
-	loop (list1, list2)
-
-let forall2 (f, l1, l2) = not (exists2 ((fun x -> not (f x)), l1, l2))
-
-let map2 (f, list1, list2) =
-	let rec loop = function
-	| ([], [], acc) -> List.rev acc
-	| (e1::l1, e2::l2, acc) -> loop (l1,l2,(f (e1,e2))::acc)
-	| _ -> raise NotSameSize
-	in
-	loop (list1, list2, [])
+let saynl s = say (s ^ "\n")
+let sayi s = say ("\t" ^ s)
+let sayinl s = say ("\t" ^ s ^ "\n")
 
 let tofirstupper s =
-	match explode s with
-	| [] -> ""
-	| c::r -> implode((Char.uppercase c)::(List.map r Char.lowercase))
+	if String.is_empty s then
+		s
+	else
+		let s = String.lowercase s in
+		String.set s 0 (Char.uppercase (String.get s 0));
+		s
 
 let emit (s_in, oustreamgen) =
 	(*
@@ -453,21 +421,21 @@ let emit (s_in, oustreamgen) =
 
 		let exception NotSamePat in
 
-		let rec samepattern = function 
+		let rec samepattern l r = match (l, r) with
 			| (NT _, NT _) -> true
 			| (T (t1,spat1), T (t2, spat2)) ->
-				if t1=t2
+				if t1 = t2
 					then samepatternsons (spat1,spat2)
 					else raise NotSamePat
 			| _ -> raise NotSamePat
 		and samepatternsons (l1, l2) =
-			if (try (forall2 (samepattern, l1, l2)) with NotSameSize -> raise NotSamePat) then 
+			if (try (List.for_all2_exn  ~f:samepattern l1 l2) with Invalid_argument _ -> raise NotSamePat) then 
 				true
 			else 
 				raise NotSamePat
 		in
 
-		let samepat ab = try samepattern ab with NotSamePat -> false in
+		let samepat (a, b) = try samepattern a b with NotSamePat -> false in
 
 		let clustersamepat rg ((({pat; _} : rule), _) as zap) =
 			let rec loop = function 
@@ -524,13 +492,13 @@ let emit (s_in, oustreamgen) =
 			exception Forced of utype
 		end in let open F in
 		
-		let rec uniftype = function 
+		let rec uniftype s1 s2 = match (s1, s2) with
 			| (NT _, NT _) -> SameG
 			| (NT _, T _) -> FirstMG
 			| (T _, NT _) -> SecondMG
 			| (T (t1,spat1), T (t2,spat2)) ->
 				if t1 <> t2 then raise (Forced NotUnif) else (
-					let sonsg = map2 (uniftype, spat1, spat2) in
+					let sonsg = List.map2_exn ~f:uniftype spat1 spat2 in
 					let addson b a = 
 						match (a, b) with 
 						| (NotUnif,_) -> raise (Forced NotUnif)
@@ -543,11 +511,11 @@ let emit (s_in, oustreamgen) =
 						| (SecondMG, SecondMG) -> SecondMG
 						| _ -> NoMG
 					in
-					try List.fold ~init:SameG ~f:addson sonsg with NotSameSize -> error "bug : uniftype"
+					try List.fold ~init:SameG ~f:addson sonsg with Invalid_argument s -> error ("bug: " ^ s)
 				)
 		in
 
-		let unify (p1,p2) = try (uniftype (p1,p2)) with Forced x -> x in
+		let unify (p1,p2) = try (uniftype p1 p2) with Forced x -> x in
 
 
 		(* "matches" is a list.  Each elem is a list of (pat,...)
