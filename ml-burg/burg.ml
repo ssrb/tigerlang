@@ -52,36 +52,7 @@ let say s = Out_channel.output_string !s_out s
 let saynl s = say (s^"\n")
 let sayi s = say ("\t"^s)
 let sayinl s = say ("\t"^s^"\n")
-	
-let arrayiter (f, array) =
-	let len = Array.length array in
-	let rec loop pos =
-		if pos <> len then  (
-			f (pos, array.(pos));
-			loop (pos + 1)
-		)
-	in
-	loop 0
-
-let iter (f, n) =
-	let rec loop pos =
-		if pos <> n then (
-			f pos;
-			loop (pos + 1)
-		)
-	in
-	loop 0
-		
-let listiter (f, lis) =
-	let rec loop (pos, li) =
-		match li with
-		| [] -> ()
-		| l::ll -> 
-			f (pos, l); 
-			loop ((pos + 1), ll)
-	in
-	loop (0, lis)
-
+			
 let explode s =
 	let rec exp i l =
 		if i < 0 then l else exp (i - 1) (s.[i] :: l) 
@@ -404,11 +375,11 @@ let emit (s_in, oustreamgen) =
 	in
 
 	let print_intarray array =
-		let printit (pos, n) =
+		let printit pos n =
 			if pos > 0 then say ",";
 			say (Int.to_string n)
 		in
-			arrayiter (printit, array)
+		Array.iteri ~f:printit array
 	in
 
 	(*
@@ -735,12 +706,12 @@ let emit (s_in, oustreamgen) =
 		| NT nt -> if notseen.(nt) then explore_nt nt
 		| T (t, sons) -> List.iter ~f:reach sons
 		in
-		let test (nt, b) =
-				if b then
-					warning ("nonterminal "^(get_ntsym nt)^" is unreachable")
+		let test nt b =
+			if b then
+				warning ("nonterminal "^(get_ntsym nt)^" is unreachable")
 		in
 		explore_nt start;
-		arrayiter (test, notseen);
+		Array.iteri ~f:test notseen;
 		stop_if_error ()
 	in
 			
@@ -805,16 +776,16 @@ let emit (s_in, oustreamgen) =
 		in
 
 		let emit_debug rules =
-			let p_nterm (i, sym) = saynl ("nonterm " ^ (Int.to_string i) ^ " : " ^ sym) in
-			let p_rule (i, ({num; _} as rule : rule)) = (
+			let p_nterm i sym = saynl ("nonterm " ^ (Int.to_string i) ^ " : " ^ sym) in
+			let p_rule i ({num; _} as rule : rule) = (
 				say ("rule " ^ (Int.to_string num) ^ " : ");
 				print_rule rule
 			)
 			in
 			saynl "(***** debug info *****";
-			arrayiter (p_nterm, !sym_nonterminals);
+			Array.iteri ~f:p_nterm !sym_nonterminals;
 			say "\n";
-			arrayiter (p_rule, rules);
+			Array.iteri ~f:p_rule rules;
 			saynl "**********************)\n\n"
 		in
 
@@ -825,7 +796,7 @@ let emit (s_in, oustreamgen) =
 			in
 			saynl ("structure " ^ (!struct_name) ^ "Ops = struct");
 			say "  datatype ops = ";
-			iter (loop, !nb_t);
+			for i = 0 to !nb_t - 1 do loop i done;
 			saynl "end\n\n"
 		in
 
@@ -870,7 +841,7 @@ let emit (s_in, oustreamgen) =
 			saynl "    type s_cost = int Array.array";
 			saynl "    type s_rule = int Array.array";
 			saynl "    datatype s_node =";
-			iter (loop_node, !nb_t);
+			for i = 0 to !nb_t - 1 do loop_node i done;
 			saynl "    withtype s_tree = s_cost * s_rule * s_node * tree\n\n";
 			saynl "    val sub = Array.sub";
 			saynl "    val update = Array.update"
@@ -910,14 +881,14 @@ let emit (s_in, oustreamgen) =
 					end
 		in
 
-		let do_cstrules (t, ll) =
+		let do_cstrules t ll =
 			List.iter ~f:(List.iter ~f:(fun (rlntll,_,uniqstr,iscst,_) ->
 							do_cstrule (t, rlntll, uniqstr, iscst)))  ll
 		in
 
 		let n = Int.to_string (!nb_nt) in
 		let sinf = Int.to_string inf in
-		arrayiter (do_cstrules, rule_groups);
+		Array.iteri ~f:do_cstrules rule_groups;
 		saynl ("    val s_c_nothing = Array.array ("^n^","^sinf^")");
 		saynl ("    val s_r_nothing = Array.array ("^n^",0)");
 		say "\n\n"
@@ -925,7 +896,7 @@ let emit (s_in, oustreamgen) =
 
 	let emit_label_function (rules, arity, chains_for_rhs, rule_groups) =
 		let firstcl = ref true in
-		let emit_closure (nt, (rl : rule list)) =
+		let emit_closure nt (rl : rule list) =
 			let firstrule = ref true in
 			let emit_cl ({nt=lhs; cost; num; _} : rule) =
 				let c = Int.to_string cost in
@@ -971,7 +942,7 @@ let emit (s_in, oustreamgen) =
 
 			let listofsons () = (
 				say " ("; 
-				iter (inlistofsons, ar); 
+				for i = 0 to ar - 1 do inlistofsons i done; 
 				say ")"
 			)
 			in
@@ -1029,17 +1000,17 @@ let emit (s_in, oustreamgen) =
 
 						sayi "\t       if ";
 						
-						listiter ((fun (i, nt) -> (
+						List.iteri ~f:(fun i nt -> (
 							if i <> 0 then say "andalso ";
-							say ("sub (s"^(Int.to_string i)^"_r,"^(Int.to_string (nt:int))^")<>0 "))), ntl);
+							say ("sub (s"^(Int.to_string i)^"_r,"^(Int.to_string (nt:int))^")<>0 "))) ntl;
 						
 						saynl "then";
 						sayinl "\t\t let";
 						sayi ("\t\t   val c = ");
 
-						listiter ((fun (i, nt) -> (
+						List.iteri ~f:(fun i nt -> (
 							if i <> 0 then say " + ";
-							say ("sub (s"^(Int.to_string i)^"_c,"^(Int.to_string (nt:int))^")"))), ntl);
+							say ("sub (s"^(Int.to_string i)^"_c,"^(Int.to_string (nt:int))^")"))) ntl;
 						
 						saynl "\n\t\t\t in";
 						List.iter ~f:dorule rl;
@@ -1080,7 +1051,7 @@ let emit (s_in, oustreamgen) =
 				in
 				sayinl "    let";
 				sayi "      val [";
-				iter (inlistofsons, ar);
+				for i = 0 to ar - 1 do inlistofsons i done;
 				saynl "] = map rec_label children";
 				sayinl "    in";
 				
@@ -1117,10 +1088,10 @@ let emit (s_in, oustreamgen) =
 		(* ")" fun emit_match *)
 		saynl "    fun rec_label (tree : In.tree) =";
 		saynl "      let";
-		arrayiter (emit_closure, chains_for_rhs);
+		Array.iteri ~f:emit_closure chains_for_rhs;
 		sayinl "val (term, children) = In.opchildren tree";
 		sayinl "val (s_c, s_r, t) = case term of";
-		iter (emit_match, !nb_t);
+		for i = 0 to !nb_t - 1 do emit_match i done;
 		saynl "      in";
 		saynl "        (s_c, s_r, t, tree)";
 		saynl "      end\n"
@@ -1172,14 +1143,13 @@ let emit (s_in, oustreamgen) =
 					| 0 -> ()
 					| _ -> (
 						say " (";
-						listiter ((fun (i,nt) -> (
+						List.iteri ~f:(fun i nt -> (
 							if i <> 0 then
 								say ", ";
-				
-							say ("doreduce (t"^(Int.to_string i)^","^(Int.to_string nt)^")"))), ntl);
-							say ")"
-						)
-					);
+							say ("doreduce (t"^(Int.to_string i)^","^(Int.to_string nt)^")"))) ntl;
+						say ")"
+					)
+				);
 					
 					saynl ")"
 			in
