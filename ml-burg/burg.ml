@@ -52,16 +52,6 @@ let say s = Out_channel.output_string !s_out s
 let saynl s = say (s^"\n")
 let sayi s = say ("\t"^s)
 let sayinl s = say ("\t"^s^"\n")
-
-let arrayapp (f, array) =
-	let len = Array.length array in
-	let rec loop pos =
-		if pos <> len then  (
-			f array.(pos);
-			loop (pos + 1)
-		)
-	in
-	loop 0
 	
 let arrayiter (f, array) =
 	let len = Array.length array in
@@ -704,7 +694,7 @@ let emit (s_in, oustreamgen) =
 			| NT _ -> ()
 		in
 
-		arrayapp (addt,rules);
+		Array.iter ~f:addt rules;
 
 		let eacht t =
 			let v1 = tgroup.(t) in
@@ -726,7 +716,7 @@ let emit (s_in, oustreamgen) =
 		in
 
 		let rule_groups = Array.init !nb_t eacht in
-		arrayapp (add_lhs_rhs, rules);
+		Array.iter ~f:add_lhs_rhs rules;
 		(rules_for_lhs, chains_for_rhs, rule_groups)
 	
 	in
@@ -784,7 +774,7 @@ let emit (s_in, oustreamgen) =
 				| Some _ -> ()
 			in
 			say "  datatype rule = ";
-			arrayapp (onerule, rules)
+			Array.iter ~f:onerule rules
 		in
 
 		let emit_ruleToString rules = 
@@ -811,7 +801,7 @@ let emit (s_in, oustreamgen) =
 				| Some _ -> ()
 			in
 			say "    fun ruleToString ";
-			arrayapp (onerule,rules)
+			Array.iter ~f:onerule rules
 		in
 
 		let emit_debug rules =
@@ -1223,7 +1213,7 @@ let emit (s_in, oustreamgen) =
 			sayinl "  let";
 			sayinl "    val rulensons =";
 			sayinl "      case (sub (s_r, nt), stree) of";
-			arrayapp (domatch, rules);
+			Array.iter ~f:domatch rules;
 			sayinl "      | _ => raise NoMatch (* bug in iburg *)";
 			sayinl "  in";
 			sayinl "    (rulensons, tree)";
