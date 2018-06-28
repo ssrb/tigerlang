@@ -60,9 +60,9 @@ let main (cmdName, argv) =
 			let (base, ext) = Filename.split_extension file in
 			match ext with 
 			| Some ("brg" | "burg") ->
-				base ^ ".sml"
+				base ^ ".ml"
 			| _ -> 
-				file ^ ".sml"
+				file ^ ".ml"
 		in
 		let names = List.map ~f:(fun n -> (n, findname n)) files in
 		let emit (inname, outname) = 
