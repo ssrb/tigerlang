@@ -595,13 +595,13 @@ let emit (s_in, oustreamgen) =
 			let rec do_pat = function 
 				| (NT nt, cnt, iswot) ->
 					let s = Int.to_string cnt in
-					("(s"^s^"_c,s"^s^"_r,_,_)", cnt+1, iswot)
+					("(s" ^ s ^ "_c,s" ^ s ^ "_r,_,_)", cnt+1, iswot)
 				| (T (t,sons), cnt, _) ->
 					let (s,cnt',_) = do_sons (sons, cnt) in
-					("(_,_,"^(prep_node_cons t)
-					^(if List.is_empty sons then "" else
+					("(_,_," ^ (prep_node_cons t)
+					^ (if List.is_empty sons then "" else
 					if List.is_empty (List.tl_exn sons) then s else
-						"("^s^")")
+						"(" ^ s ^ ")")
 					^",_)"
 					, cnt', false)
 			and do_sons (sons, cnt) =
@@ -712,7 +712,7 @@ let emit (s_in, oustreamgen) =
 					saynl constructor
 				| Some _ -> ()
 			in
-			say "  datatype rule = ";
+			say "  type rule = ";
 			Array.iter ~f:onerule rules
 		in
 
@@ -734,12 +734,12 @@ let emit (s_in, oustreamgen) =
 					in
 					let constructor = "("^ name ^ (pr patarity) ^ ")" in
 					BurgHash.set h name ();
-					if !first then first:=false else say "      | ruleToString";
+					if !first then first := false else say "      | ruleToString";
 					say constructor;
 					saynl (" = " ^ "\"" ^ name ^ "\"")
 				| Some _ -> ()
 			in
-			say "    fun ruleToString ";
+			say "    let ruleToString ";
 			Array.iter ~f:onerule rules
 		in
 
@@ -762,14 +762,14 @@ let emit (s_in, oustreamgen) =
 				if t <> 0 then say "\t       | ";
 				saynl (prep_term_cons t)
 			in
-			saynl ("structure " ^ (!struct_name) ^ "Ops = struct");
-			say "  datatype ops = ";
+			saynl ("module " ^ (!struct_name) ^ "Ops = struct");
+			say "  type ops = ";
 			for i = 0 to !nb_t - 1 do loop i done;
 			saynl "end\n\n"
 		in
 
 		let emit_sig_burmgen () =
-			saynl ("signature " ^ (!sig_name) ^ "_INPUT_SPEC = sig");
+			saynl ("module type " ^ (!sig_name) ^ "_INPUT_SPEC = sig");
 			saynl "  type tree";
 			saynl ("  val opchildren : tree -> " ^ (!struct_name)
 			^"Ops.ops * (tree list)");
@@ -777,7 +777,7 @@ let emit (s_in, oustreamgen) =
 		in
 
 		let emit_sig_burm rules = 
-			saynl ("signature " ^ (!sig_name) ^ " = sig");
+			saynl ("module type" ^ (!sig_name) ^ " = sig");
 			saynl "  exception NoMatch";
 			saynl "  type tree";
 			emit_type_rule rules;
@@ -808,11 +808,9 @@ let emit (s_in, oustreamgen) =
 			emit_ruleToString rules; say "\n\n";
 			saynl "    type s_cost = int Array.array";
 			saynl "    type s_rule = int Array.array";
-			saynl "    datatype s_node =";
+			saynl "    type s_node =";
 			for i = 0 to !nb_t - 1 do loop_node i done;
-			saynl "    withtype s_tree = s_cost * s_rule * s_node * tree\n\n";
-			saynl "    val sub = Array.sub";
-			saynl "    val update = Array.update"
+			saynl "    type s_tree = s_cost * s_rule * s_node * tree\n\n";
 		in
 
 		let emit_val_cst (rules, arity, chains_for_rhs, rule_groups) =
@@ -832,17 +830,17 @@ let emit (s_in, oustreamgen) =
 					begin
 						List.iter ~f:(fun (rules, _) -> List.iter ~f:(fun rule -> record (rule, 0)) rules) rlntll;
 						if ar = 0 then (
-							saynl ("    val leaf_" ^ (prep_node_cons t) ^ " =");
-							say "      (Array.fromList [";
+							saynl ("    let leaf_" ^ (prep_node_cons t) ^ " =");
+							say "      (Array.of_list [";
 							print_intarray a_cost;
-							say "],\n       Array.fromList [";
+							say "],\n       Array.of_list [";
 							print_intarray a_rule;
 							saynl ("],\n       " ^ (prep_node_cons t) ^ ")")
 						) else (
-							say ("    val cst_cost_" ^ uniqstr ^ " = Array.fromList [");
+							say ("    let cst_cost_" ^ uniqstr ^ " = Array.of_list [");
 							print_intarray a_cost;
 							saynl "]";
-							say ("    val cst_rule_" ^ uniqstr ^ " = Array.fromList [");
+							say ("    let cst_rule_" ^ uniqstr ^ " = Array.of_list [");
 							print_intarray a_rule;
 							saynl "]"
 						)
@@ -857,8 +855,8 @@ let emit (s_in, oustreamgen) =
 		let n = Int.to_string (!nb_nt) in
 		let sinf = Int.to_string inf in
 		Array.iteri ~f:do_cstrules rule_groups;
-		saynl ("    val s_c_nothing = Array.array ("^n^","^sinf^")");
-		saynl ("    val s_r_nothing = Array.array ("^n^",0)");
+		saynl ("    let s_c_nothing = Array.create " ^ n ^ " " ^ sinf);
+		saynl ("    let s_r_nothing = Array.create " ^ n ^ " 0");
 		say "\n\n"
 	in
 
@@ -873,19 +871,17 @@ let emit (s_in, oustreamgen) =
 					firstrule := false
 				else 
 					say ";\n\t   ";
-				saynl ("if c + "^c^" < sub (s_c,"^slhs^") then");
-				sayinl ("     (update (s_c,"^slhs^",c + "^c^");");
-				sayi ("      update (s_r,"^slhs^","^(Int.to_string num)^")");
+				saynl ("if c + "^ c ^ " < s_c.(" ^ slhs ^ ") then");
+				sayinl ("     (s_c.(" ^ slhs ^ ") <- c + " ^ c ^ ";");
+				sayi ("      s_r.(" ^ slhs ^ ") <- " ^ (Int.to_string num));
 				if not (List.is_empty chains_for_rhs.(lhs)) then 
-					say (";\n\t      closure_"^(get_ntsym lhs)^" (s_c, s_r, c + "^c^")");
+					say (";\n\t      closure_" ^ (get_ntsym lhs) ^ " (s_c, s_r, c + " ^ c ^ ")");
 				saynl "\n\t     )";
-				sayinl "   else";
-				sayi "     ()"
 			in
 			if not (List.is_empty rl) then (
 				if !firstcl then (
 					firstcl := false; 
-					say "\tfun"
+					say "\tlet"
 				) 
 				else 
 					say "\tand";
@@ -921,7 +917,7 @@ let emit (s_in, oustreamgen) =
 					(if !firstcst
 						then (say "\t    "; firstcst := false)
 						else say "\t  | ";
-					saynl ("("^str^") =>");
+					saynl ("(" ^ str ^ ") ->");
 					sayinl ("\t      (cst_cost_"^uniq^", cst_rule_"^uniq^")")
 					)
 			in
@@ -933,11 +929,9 @@ let emit (s_in, oustreamgen) =
 
 					if !firstcase then (
 						firstcase := false;
-						saynl "z =>";
-						sayinl "\tlet";
-						sayinl ("\t  val s_c = Array.array ("^nbnt^","^sinf^")");
-						sayinl ("\t  val s_r = Array.array ("^nbnt^",0)");
-						sayinl "\tin"
+						saynl "z ->";
+						sayinl ("let s_c = Array.create " ^ nbnt ^ " " ^ sinf ^ " in");
+						sayinl ("let s_r = Array.create " ^ nbnt ^ " 0 in");
 					);
 
 					if !firstcaseelem then (
