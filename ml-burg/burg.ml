@@ -220,7 +220,7 @@ let emit (s_in, oustreamgen) =
 		
 		rule_prefix :=
 			(match !r_prefix with
-			| None -> ""
+			| None -> "R_"
 			| Some rp -> rp);
 		
 		sig_name :=
@@ -344,7 +344,7 @@ let emit (s_in, oustreamgen) =
 
 	let print_intarray array =
 		let printit pos n =
-			if pos > 0 then say ",";
+			if pos > 0 then say "; ";
 			say (Int.to_string n)
 		in
 		Array.iteri ~f:printit array
@@ -691,173 +691,167 @@ let emit (s_in, oustreamgen) =
 	let emit_type_rule rules =
 		(* I just want a map, really, not a hashtable. *)
 		let h : unit BurgHash.t = BurgHash.create () in
-		let first = ref true in
 		let onerule ({ern = ern; _} as rule : rule) =
 			let name = prep_rule_cons rule in
-				match BurgHash.find h name with
-				| None ->
-					let patarity =
-					match BurgHash.find hr ern with
-					|	None -> error "emit_type_rule, no rule name ?"
-					| Some ar -> ar
-					in
-					let rec pr = function
-					| 0 -> ""
-					| 1 -> " of (rule * tree)"
-					| n -> ((pr (n - 1))^" * (rule * tree)")
-					in
-					let constructor = name ^ (pr patarity) in
-					BurgHash.set h name ();
-					if !first then first := false else say "\t\t| ";
-					saynl constructor
-				| Some _ -> ()
-			in
-			say "  type rule = ";
-			Array.iter ~f:onerule rules
-		in
-
-		let emit_ruleToString rules = 
-			let h : unit BurgHash.t = BurgHash.create () in
-			let first = ref true in
-			let onerule ({ern; _} as rule : rule) = 
-				let name = prep_rule_cons rule in
-				match BurgHash.find h name with
-				| None -> 
-					let patarity = 
-						match BurgHash.find hr ern with
-						| None -> error "emit_ruleToString.onerule"
-						| Some ar -> ar
-					in
-					let pr = function 
-						| 0 -> ""
-						| _ -> " _"
-					in
-					let constructor = "("^ name ^ (pr patarity) ^ ")" in
-					BurgHash.set h name ();
-					if !first then first := false else say "      | ruleToString";
-					say constructor;
-					saynl (" = " ^ "\"" ^ name ^ "\"")
-				| Some _ -> ()
-			in
-			say "    let ruleToString ";
-			Array.iter ~f:onerule rules
-		in
-
-		let emit_debug rules =
-			let p_nterm i sym = saynl ("nonterm " ^ (Int.to_string i) ^ " : " ^ sym) in
-			let p_rule i ({num; _} as rule : rule) = (
-				say ("rule " ^ (Int.to_string num) ^ " : ");
-				print_rule rule
-			)
-			in
-			saynl "(***** debug info *****";
-			Array.iteri ~f:p_nterm !sym_nonterminals;
-			say "\n";
-			Array.iteri ~f:p_rule rules;
-			saynl "**********************)\n\n"
-		in
-
-		let emit_struct_burmterm () =
-			let loop t =
-				if t <> 0 then say "\t       | ";
-				saynl (prep_term_cons t)
-			in
-			saynl ("module " ^ (!struct_name) ^ "Ops = struct");
-			say "  type ops = ";
-			for i = 0 to !nb_t - 1 do loop i done;
-			saynl "end\n\n"
-		in
-
-		let emit_sig_burmgen () =
-			saynl ("module type " ^ (!sig_name) ^ "_INPUT_SPEC = sig");
-			saynl "  type tree";
-			saynl ("  val opchildren : tree -> " ^ (!struct_name)
-			^"Ops.ops * (tree list)");
-			saynl "end\n\n"
-		in
-
-		let emit_sig_burm rules = 
-			saynl ("module type" ^ (!sig_name) ^ " = sig");
-			saynl "  exception NoMatch";
-			saynl "  type tree";
-			emit_type_rule rules;
-			saynl "  val reduce : tree -> rule * tree";
-			saynl "  val ruleToString : rule -> string";
-			saynl "end\n\n"
-		in
-
-		let emit_beg_functor (rules, arity) =
-			let loop_node t =
-				let ar = arity.(t) in
-				let rec loop_sons i =
-					say "s_tree";
-					if i <> ar then (say " * "; loop_sons (i+1))
+			match BurgHash.find h name with
+			| None ->
+				let patarity =
+				match BurgHash.find hr ern with
+				| None -> error "emit_type_rule, no rule name ?"
+				| Some ar -> ar
 				in
-				say (if t=0 then "      " else "    | ");
-				say (prep_node_cons t);
-				if ar>0 then (say "\t\tof "; loop_sons 1);
-				say "\n"
+				let rec pr = function
+				| 0 -> ""
+				| 1 -> " of (rule * tree)"
+				| n -> ((pr (n - 1))^" * (rule * tree)")
+				in
+				let constructor = name ^ (pr patarity) in
+				BurgHash.set h name ();
+				sayinl ("\t| " ^ constructor)
+			| Some _ -> ()
+		in
+		saynl "  type rule = ";
+		Array.iter ~f:onerule rules
+	in
+
+	let emit_ruleToString rules = 
+		let h : unit BurgHash.t = BurgHash.create () in
+		let onerule ({ern; _} as rule : rule) = 
+			let name = prep_rule_cons rule in
+			match BurgHash.find h name with
+			| None -> 
+				let patarity = 
+					match BurgHash.find hr ern with
+					| None -> error "emit_ruleToString.onerule"
+					| Some ar -> ar
+				in
+				let pr = function 
+					| 0 -> ""
+					| _ -> " _"
+				in
+				let constructor = name ^ (pr patarity) in
+				BurgHash.set h name ();
+				sayinl ("\t| " ^ constructor ^ " -> \"" ^ name ^ "\"")
+			| Some _ -> ()
+		in
+		sayinl "let ruleToString = function";
+		Array.iter ~f:onerule rules
+	in
+
+	let emit_debug rules =
+		let p_nterm i sym = saynl ("nonterm " ^ (Int.to_string i) ^ " : " ^ sym) in
+		let p_rule i ({num; _} as rule : rule) = (
+			say ("rule " ^ (Int.to_string num) ^ " : ");
+			print_rule rule
+		)
+		in
+		saynl "(***** debug info *****";
+		Array.iteri ~f:p_nterm !sym_nonterminals;
+		say "\n";
+		Array.iteri ~f:p_rule rules;
+		saynl "**********************)\n\n"
+	in
+
+	let emit_struct_burmterm () =
+		saynl ("module " ^ !struct_name ^ "Ops = struct");
+		sayinl "type ops = ";
+		for t = 0 to !nb_t - 1 do sayinl ("\t| " ^ (prep_term_cons t)) done;
+		saynl "end\n\n"
+	in
+
+	let emit_sig_burmgen () =
+		saynl ("module type " ^ (!sig_name) ^ "_INPUT_SPEC = sig");
+		sayinl "type tree";
+		sayinl ("val opchildren : tree -> " ^ (!struct_name) ^ "Ops.ops * (tree list)");
+		saynl "end\n\n"
+	in
+
+	let emit_sig_burm rules = 
+		saynl ("module type " ^ (!sig_name) ^ " = sig");
+		sayinl "exception NoMatch";
+		sayinl "type tree";
+		emit_type_rule rules;
+		sayinl "val reduce : tree -> rule * tree";
+		sayinl "val ruleToString : rule -> string";
+		saynl "end\n\n"
+	in
+
+	let emit_beg_functor (rules, arity) =
+		let loop_node t =
+			let ar = arity.(t) in
+			let rec loop_sons i =
+				say "s_tree";
+				if i < ar then (say " * "; loop_sons (i+1))
 			in
-			saynl ("functor " ^ (!struct_name) ^ "Gen (In : "
-				^ (!sig_name) ^ "_INPUT_SPEC) : " ^ (!sig_name) ^ " =");
-			saynl "  struct\n";
-			saynl "    type tree = In.tree\n";
-			saynl "    exception NoMatch";
-			emit_type_rule rules;
-			say "\n\n";
-			emit_ruleToString rules; say "\n\n";
-			saynl "    type s_cost = int Array.t";
-			saynl "    type s_rule = int Array.t";
-			saynl "    type s_node =";
-			for i = 0 to !nb_t - 1 do loop_node i done;
-			saynl "    type s_tree = s_cost * s_rule * s_node * tree\n\n";
+			sayi ("\t| " ^ (prep_node_cons t));
+			if ar > 0 then (say " of "; loop_sons 1);
+			say "\n"
 		in
+		saynl ("module " ^ (!struct_name) ^ "Gen : " ^ (!sig_name) ^ " = functor (In : "
+			^ (!sig_name) ^ "_INPUT_SPEC) -> struct");
+		sayinl "type tree = In.tree";
+		sayinl "exception NoMatch";
+		emit_type_rule rules;
+		say "\n\n";
+		emit_ruleToString rules; 
+		say "\n\n";
+		sayinl "type s_cost = int Array.t";
+		sayinl "type s_rule = int Array.t";
+		sayinl "type s_node =";
+		for i = 0 to !nb_t - 1 do loop_node i done;
+		sayinl "type s_tree = s_cost * s_rule * s_node * tree\n\n";
+	in
 
-		let emit_val_cst (rules, arity, chains_for_rhs, rule_groups) =
-			let do_cstrule (t, (rlntll: (rule list * int list) list), uniqstr, iscst) =
-				if iscst then
-					let ar = arity.(t) in
-					let a_cost = Array.create !nb_nt inf in
-					let a_rule = Array.create !nb_nt 0 in
-					let rec record (({nt=lhs; cost; num; _} : rule), c) =
-						let cc = c + cost in
-						if cc < a_cost.(lhs) then (
-							a_cost.(lhs) <- cc;
-							a_rule.(lhs) <- num;
-							List.iter ~f:(fun rule -> record (rule, cc)) chains_for_rhs.(lhs)
-						)
-					in
-					begin
-						List.iter ~f:(fun (rules, _) -> List.iter ~f:(fun rule -> record (rule, 0)) rules) rlntll;
-						if ar = 0 then (
-							saynl ("    let leaf_" ^ (prep_node_cons t) ^ " =");
-							say "      (Array.of_list [";
-							print_intarray a_cost;
-							say "],\n       Array.of_list [";
-							print_intarray a_rule;
-							saynl ("],\n       " ^ (prep_node_cons t) ^ ")")
-						) else (
-							say ("    let cst_cost_" ^ uniqstr ^ " = Array.of_list [");
-							print_intarray a_cost;
-							saynl "]";
-							say ("    let cst_rule_" ^ uniqstr ^ " = Array.of_list [");
-							print_intarray a_rule;
-							saynl "]"
-						)
-					end
-		in
+	let emit_val_cst (rules, arity, chains_for_rhs, rule_groups) =
+		let do_cstrule (t, (rlntll: (rule list * int list) list), uniqstr, iscst) =
+			if iscst then
+				let ar = arity.(t) in
+				let a_cost = Array.create !nb_nt inf in
+				let a_rule = Array.create !nb_nt 0 in
+				let rec record (({nt=lhs; cost; num; _} : rule), c) =
+					let cc = c + cost in
+					if cc < a_cost.(lhs) then (
+						a_cost.(lhs) <- cc;
+						a_rule.(lhs) <- num;
+						List.iter ~f:(fun rule -> record (rule, cc)) chains_for_rhs.(lhs)
+					)
+				in
+				begin
+					List.iter ~f:(fun (rules, _) -> List.iter ~f:(fun rule -> record (rule, 0)) rules) rlntll;
+					if ar = 0 then (
+						sayinl ("let leaf_" ^ (prep_node_cons t) ^ " = (");
+						sayi "\t[|";
+						print_intarray a_cost;
+						saynl "|],";
+						sayi "\t[|";
+						print_intarray a_rule;
+						saynl "|],";
+						sayinl ("\t" ^ (prep_node_cons t));
+						sayinl ")"
+					) else (
+						sayinl ("let cst_cost_" ^ uniqstr ^ " =");
+						sayi "\t[|";
+						print_intarray a_cost;
+						saynl "|]";
+						sayinl ("let cst_rule_" ^ uniqstr ^ " =");
+						sayi "\t[|";
+						print_intarray a_rule;
+						saynl "|]"
+					)
+				end
+	in
 
-		let do_cstrules t ll =
-			List.iter ~f:(List.iter ~f:(fun (rlntll,_,uniqstr,iscst,_) ->
-							do_cstrule (t, rlntll, uniqstr, iscst)))  ll
-		in
+	let do_cstrules t ll =
+		List.iter ~f:(List.iter ~f:(fun (rlntll,_,uniqstr,iscst,_) ->
+						do_cstrule (t, rlntll, uniqstr, iscst)))  ll
+	in
 
-		let n = Int.to_string (!nb_nt) in
-		let sinf = Int.to_string inf in
-		Array.iteri ~f:do_cstrules rule_groups;
-		saynl ("    let s_c_nothing = Array.create " ^ n ^ " " ^ sinf);
-		saynl ("    let s_r_nothing = Array.create " ^ n ^ " 0");
-		say "\n\n"
+	let n = Int.to_string (!nb_nt) in
+	let sinf = Int.to_string inf in
+	Array.iteri ~f:do_cstrules rule_groups;
+	sayinl ("let s_c_nothing = Array.create " ^ n ^ " " ^ sinf);
+	sayinl ("let s_r_nothing = Array.create " ^ n ^ " 0");
+	say "\n\n"
 	in
 
 	let emit_label_function (rules, arity, chains_for_rhs, rule_groups) =
@@ -870,25 +864,24 @@ let emit (s_in, oustreamgen) =
 				if !firstrule then 
 					firstrule := false
 				else 
-					say ";\n\t   ";
-				saynl ("if c + "^ c ^ " < s_c.(" ^ slhs ^ ") then");
-				sayinl ("     (s_c.(" ^ slhs ^ ") <- c + " ^ c ^ ";");
+					saynl ";";
+				saynl ("if c + "^ c ^ " < s_c.(" ^ slhs ^ ") then (");
+				sayinl ("     s_c.(" ^ slhs ^ ") <- c + " ^ c ^ ";");
 				sayi ("      s_r.(" ^ slhs ^ ") <- " ^ (Int.to_string num));
 				if not (List.is_empty chains_for_rhs.(lhs)) then 
 					say (";\n\t      closure_" ^ (get_ntsym lhs) ^ " (s_c, s_r, c + " ^ c ^ ")");
-				saynl "\n\t     )";
+				say "\n\t\t)";
 			in
 			if not (List.is_empty rl) then (
 				if !firstcl then (
 					firstcl := false; 
-					say "\tlet"
+					say "\tlet rec"
 				) 
 				else 
 					say "\tand";
-				saynl (" closure_"^(get_ntsym nt)^" (s_c, s_r, c) =");
-				sayi "  (";
+				saynl (" closure_" ^ (get_ntsym nt) ^ " (s_c, s_r, c) = (");
 				List.iter ~f:emit_cl rl;
-				saynl "\n\t  )"
+				saynl "\n\t)"
 			)
 		in
 		let nbnt = Int.to_string (!nb_nt) in
@@ -990,7 +983,7 @@ let emit (s_in, oustreamgen) =
 				sayi "| ";
 			
 			say ((!struct_name)^"Ops.");
-			saynl ((prep_term_cons t)^" =>");
+			saynl ((prep_term_cons t)^" ->");
 
 			if ar=0 then (* leaf term *)
 				if List.is_empty rule_groups.(t) then 
@@ -1002,14 +995,14 @@ let emit (s_in, oustreamgen) =
 					firstcaseelem := true;
 					List.iter ~f:emit_match_case eleml;
 					if (not (!firstcaseelem) && not (List.exists ~f:(fun (_,_,_,_,iswot) -> iswot) eleml)) then 
-						sayinl "\t  | _ => ()";
+						sayinl "\t  | _ -> ()";
 					if (not (!firstcaseelem)) then 
 						sayinl "\t  ;"
 				)
 				in
 				sayi "      let [";
 				for i = 0 to ar - 1 do inlistofsons i done;
-				saynl "] = map rec_label children";
+				saynl "] = List.map ~f:rec_label children";
 				sayinl "    in";
 				
 				if List.is_empty group then (		   
@@ -1043,15 +1036,15 @@ let emit (s_in, oustreamgen) =
 				sayinl "    end"
 		in
 		(* ")" fun emit_match *)
-		saynl "    let rec_label (tree : In.tree) =";
-		saynl "      let";
+		sayinl "let rec_label (tree : In.tree) =";
 		Array.iteri ~f:emit_closure chains_for_rhs;
-		sayinl "let (term, children) = In.opchildren tree";
-		sayinl "let (s_c, s_r, t) = case term of";
+		sayinl "\tin";
+		sayinl "\tlet (term, children) = In.opchildren tree in";
+		sayinl "\tlet (s_c, s_r, t) =";
+		sayinl "\t\tmatch term with";
 		for i = 0 to !nb_t - 1 do emit_match i done;
-		saynl "      in";
-		saynl "        (s_c, s_r, t, tree)";
-		saynl "      end\n"
+		sayinl "\tin";
+		sayinl "\t(s_c, s_r, t, tree)";
 	in
 
 	let emit_reduce_function (rules) =
@@ -1090,7 +1083,7 @@ let emit (s_in, oustreamgen) =
 				else
 					say "\t      | (";
 
-				saynl ((Int.to_string num)^", "^s^") =>");
+				saynl ((Int.to_string num)^", "^s^") ->");
 				sayi ("\t  ("^(prep_rule_cons rule));
 				
 				match pat with
@@ -1110,25 +1103,25 @@ let emit (s_in, oustreamgen) =
 					
 					saynl ")"
 			in
-			saynl "    let doreduce (stree : s_tree, nt) =";
-			sayinl "let (s_c, s_r, _, tree) = stree in";
-			sayinl "let cost = sub (s_c, nt) in";
+			sayinl "let doreduce (stree : s_tree, nt) =";
+			sayinl "\tlet (s_c, s_r, _, tree) = stree in";
+			sayinl "\tlet cost = sub (s_c, nt) in";
 
-			sayinl ("if cost=" ^ (Int.to_string inf) ^ " then");
-			sayinl ("  (print (\"No Match on nonterminal \"^(Int.toString nt)^\"\\n\");");
-			sayinl ("   print \"Possibilities were :\\n\";");
-			sayinl ("     let loop n =");
-			sayinl ("         let c = Array.sub (s_c, n) in");
-			sayinl ("         let r = Array.sub (s_r, n) in");
-			sayinl ("         if c <>16383 then");
-			sayinl ("           print (\"rule \" ^ (Int.toString r) ^ \" with cost \"");
-			sayinl ("                  ^ (Int.toString c) ^ \"\\n\");");
-			sayinl ("         loop (n+1)");
-			sayinl ("       end");
-			sayinl ("   in");
-			sayinl ("     try (loop 0) with General.Subscript -> ()");
-			sayinl ("   end;");
-			sayinl ("   raise NoMatch)");
+			sayinl ("\tif cost=" ^ (Int.to_string inf) ^ " then (");
+			sayinl ("\t\tprint (\"No Match on nonterminal \"^(Int.toString nt)^\"\\n\");");
+			sayinl ("\t\tprint \"Possibilities were :\\n\";");
+			sayinl ("\t\tlet loop n =");
+			sayinl ("\t\t\tlet c = Array.sub (s_c, n) in");
+			sayinl ("\t\t\tlet r = Array.sub (s_r, n) in");
+			sayinl ("\t\t\tif c <>16383 then");
+			sayinl ("\t\t\t\tprint (\"rule \" ^ (Int.toString r) ^ \" with cost \"");
+			sayinl ("\t\t\t\t^ (Int.toString c) ^ \"\\n\");");
+			sayinl ("\t\t\tloop (n+1)");
+			sayinl ("\t\t\tend");
+			sayinl ("\t\t\tin");
+			sayinl ("\t\t\ttry (loop 0) with General.Subscript -> ()");
+			sayinl ("\t\tend;");
+			sayinl ("\traise NoMatch)");
 			sayinl ("else");
 
 
