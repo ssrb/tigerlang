@@ -66,115 +66,85 @@ end
 
 
 
-structure Example = struct 
+module Example = struct 
 
-  structure Burm = BurmGen (In)
+  module Burm = BurmGen (In)
   open In
 
-  fun say s = print s
+  let say s = Core.Out_channel.print_string s
+
+	let num = ref 1
+	let inc iref = iref := !iref + 1
+  let new s =  let t = !num in inc num; s ^ (Int.toString t)
+
+  let walk = function
+	| (Burm.stmt_ASGNI_disp_reg (disp,reg), _) ->
+		let (disp',reg') = (walk disp, walk reg) in
+		let val stmt = new "stmt" in
+	  say (stmt^" <- ASGNI ("^disp'^" + "^reg'^")\n"); 
+		stmt
+  | (Burm.stmt_reg reg, _) ->
+		let reg' = walk reg in
+	  let stmt = new "stmt" in
+	  say (stmt^" <- "^reg'^"\n"); 
+		stmt
+  | (Burm.reg_ADDI_reg_rc (reg,rc), _) ->
+		let (reg',rc') = (walk reg, walk rc) in
+	  let reg2 = new "reg" in
+	  say (reg2^" <- ADDI ("^reg'^","^rc'^")\n"); 
+		reg2
+  | (Burm.reg_CVCI_INDIRC_disp disp, _) ->
+		let disp' = walk disp in
+	  let reg = new "reg" in
+	  say (reg^" <- CVCI (INDIRC ("^disp'^"))\n"); 
+		reg
+  | (Burm.reg_I0I, _) ->
+		let reg = new "reg" in
+	  say (reg^" <- ZERO\n"); 
+		reg
+  | (Burm.reg_disp disp, _) ->
+		let disp' = walk disp in
+	  let reg = new "reg" in
+	  say (reg^" <- "^disp'^"\n"); 
+		reg
+  | (Burm.disp_ADDI_reg_con (reg,con), _) ->
+		let (reg',con') = (walk reg, walk con) in
+	  let disp = new "disp" in
+	  say (disp^" <- ADDI ("^reg'^","^con'^")\n"); 
+		disp
+  | (Burm.disp_ADDRLP, ADDRLP addr) ->
+		let disp = new "disp" in
+	  say (disp^" <- ADDRLP "^addr^"\n"); 
+		disp
+  | (Burm.rc_con con, _) ->
+		let con' = walk con in
+	  let rc = new "rc" in
+	  say (rc^" <- "^con'^"\n"); 
+		rc
+  | walk (Burm.rc_reg reg, _) ->
+		let reg' = walk reg in
+	  let rc = new "rc" in
+	  say (rc^" <- "^reg'^"\n"); 
+		rc
+  | (Burm.con_CNSTI, CNSTI i) ->
+		let con = new "con" in
+	  say (con^" <- CNSTI "^(Int.toString i)^"\n"); 
+		con
+  | (Burm.con_I0I, _) ->
+		let con = new "con" in
+	  say (con^" <- CNSTI ZERO\n"); 
+		con
+  | _ -> (print "Error, bad match in walk\n"; raise Match)
 
 
-  local
-    val num = ref 1
-    fun inc iref = iref := (!iref + 1)
-  in
-    fun new s = (s^(Int.toString (!num)) before inc num)
-  end
-
-
-  fun walk (Burm.stmt_ASGNI_disp_reg (disp,reg), _) =
-	let
-	  val (disp',reg') = (walk disp, walk reg)
-	  val stmt = new "stmt"
-	in
-	  say (stmt^" <- ASGNI ("^disp'^" + "^reg'^")\n"); stmt
-	end
-    | walk (Burm.stmt_reg reg, _) =
-	let
-	  val reg' = walk reg
-	  val stmt = new "stmt"
-	in
-	  say (stmt^" <- "^reg'^"\n"); stmt
-	end
-    | walk (Burm.reg_ADDI_reg_rc (reg,rc), _) =
-	let
-	  val (reg',rc') = (walk reg, walk rc)
-	  val reg2 = new "reg"
-	in
-	  say (reg2^" <- ADDI ("^reg'^","^rc'^")\n"); reg2
-	end
-    | walk (Burm.reg_CVCI_INDIRC_disp disp, _) =
-	let
-	  val disp' = walk disp
-	  val reg = new "reg"
-	in
-	  say (reg^" <- CVCI (INDIRC ("^disp'^"))\n"); reg
-	end
-    | walk (Burm.reg_I0I, _) =
-	let
-	  val reg = new "reg"
-	in
-	  say (reg^" <- ZERO\n"); reg
-	end
-    | walk (Burm.reg_disp disp, _) =
-	let
-	  val disp' = walk disp
-	  val reg = new "reg"
-	in
-	  say (reg^" <- "^disp'^"\n"); reg
-	end
-    | walk (Burm.disp_ADDI_reg_con (reg,con), _) =
-	let
-	  val (reg',con') = (walk reg, walk con)
-	  val disp = new "disp"
-	in
-	  say (disp^" <- ADDI ("^reg'^","^con'^")\n"); disp
-	end
-    | walk (Burm.disp_ADDRLP, ADDRLP addr) =
-	let
-	  val disp = new "disp"
-	in
-	  say (disp^" <- ADDRLP "^addr^"\n"); disp
-	end
-    | walk (Burm.rc_con con, _) =
-	let
-	  val con' = walk con
-	  val rc = new "rc"
-	in
-	  say (rc^" <- "^con'^"\n"); rc
-	end
-    | walk (Burm.rc_reg reg, _) =
-	let
-	  val reg' = walk reg
-	  val rc = new "rc"
-	in
-	  say (rc^" <- "^reg'^"\n"); rc
-	end
-    | walk (Burm.con_CNSTI, CNSTI i) =
-	let
-	  val con = new "con"
-	in
-	  say (con^" <- CNSTI "^(Int.toString i)^"\n"); con
-	end
-    | walk (Burm.con_I0I, _) =
-	let
-	  val con = new "con"
-	in
-	  say (con^" <- CNSTI ZERO\n"); con
-	end
-    | walk _ = (print "Error, bad match in walk\n"; raise Match)
-
-
-
-  fun doit t = walk (Burm.reduce t)
-
+  let doit t = walk (Burm.reduce t)
 
   (*
    * int p;
    * char c;
    * p = c+4;
    *)
-  val a = ASGNI (ADDRLP "p",
+  let a = ASGNI (ADDRLP "p",
 		 ADDI (CVCI (INDIRC (ADDRLP "c")),
 		       CNSTI 4))
 
