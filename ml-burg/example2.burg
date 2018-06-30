@@ -74,12 +74,12 @@ sreg:	NEG(sreg)	= r_NEG_r		(1); (* 0-r *)
 
 %%
 
-structure In = struct
+module In = struct
 
   open BurmOps
 
-  datatype tree =
-    INT of int
+  type tree =
+  | INT of int
   | VAR of string
   | ADD of tree * tree
   | SUB of tree * tree
@@ -87,15 +87,14 @@ structure In = struct
   | DIV of tree * tree
   | NEG of tree
 
-  fun opchildren t =
-    case t of
-      INT _ =>       (T_INT, [])
-    | VAR _ =>       (T_VAR, [])
-    | ADD (t1,t2) => (T_ADD, [t1,t2])
-    | SUB (t1,t2) => (T_SUB, [t1,t2])
-    | MUL (t1,t2) => (T_MUL, [t1,t2])
-    | DIV (t1,t2) => (T_DIV, [t1,t2])
-    | NEG (t1) =>    (T_NEG, [t1])
+  let opchildren = function
+    | INT _ ->       (T_INT, [])
+    | VAR _ ->       (T_VAR, [])
+    | ADD (t1,t2) -> (T_ADD, [t1,t2])
+    | SUB (t1,t2) -> (T_SUB, [t1,t2])
+    | MUL (t1,t2) -> (T_MUL, [t1,t2])
+    | DIV (t1,t2) -> (T_DIV, [t1,t2])
+    | NEG (t1) ->    (T_NEG, [t1])
 
 end
 
@@ -114,7 +113,7 @@ module Example = struct
     let resetreg () = num := 1
     let newreg () = let t = !num in inc num; "r" ^ (Int.toString t)
 
-    let walk = function
+    let rec walk = function
     | (Burm.R_reg_INT, INT n) ->
         let reg = newreg () in
 	    say ("ldi "^reg^","^(Int.toString (n+n+1))^"\n"); 

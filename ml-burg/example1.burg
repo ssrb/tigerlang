@@ -38,12 +38,12 @@ con:    I0I			= con_I0I;
 
 %%
 
-structure In = struct
+module In = struct
 
   open BurmOps
 
-  datatype tree =
-    ASGNI of tree * tree
+  type tree =
+  | ASGNI of tree * tree
   | ADDI of tree * tree
   | CVCI of tree
   | INDIRC of tree
@@ -51,15 +51,14 @@ structure In = struct
   | ADDRLP of string
   | CNSTI of int
 
-  fun opchildren t =
-    case t of
-      ASGNI (t1,t2) => (T_ASGNI, [t1,t2])
-    | ADDI (t1,t2) =>  (T_ADDI, [t1,t2])
-    | CVCI (t1) =>     (T_CVCI, [t1])
-    | INDIRC (t1) =>   (T_INDIRC, [t1])
-    | I0I =>           (T_I0I, [])
-    | ADDRLP _ =>      (T_ADDRLP, [])
-    | CNSTI _ =>       (T_CNSTI, [])
+  let opchildren = function
+    | ASGNI (t1,t2) -> (T_ASGNI, [t1,t2])
+    | ADDI (t1,t2) ->  (T_ADDI, [t1,t2])
+    | CVCI (t1) ->     (T_CVCI, [t1])
+    | INDIRC (t1) ->   (T_INDIRC, [t1])
+    | I0I ->           (T_I0I, [])
+    | ADDRLP _ ->      (T_ADDRLP, [])
+    | CNSTI _ ->       (T_CNSTI, [])
 
 end
 
@@ -77,7 +76,7 @@ module Example = struct
 	let inc iref = iref := !iref + 1
   let new s =  let t = !num in inc num; s ^ (Int.toString t)
 
-  let walk = function
+  let rec walk = function
 	| (Burm.stmt_ASGNI_disp_reg (disp,reg), _) ->
 		let (disp',reg') = (walk disp, walk reg) in
 		let val stmt = new "stmt" in
