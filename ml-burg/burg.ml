@@ -1103,11 +1103,11 @@ let emit (s_in, oustreamgen) =
 					
 					sayinl 0 ")"
 			in
-			sayinl 1 "let doreduce (stree : s_tree, nt) =";
+			sayinl 1 "let doreduce ((stree : s_tree), nt) =";
 			sayinl 2 "let (s_c, s_r, _, tree) = stree in";
 			sayinl 2 "let cost = sub (s_c, nt) in";
 
-			sayinl 2 ("if cost=" ^ (Int.to_string inf) ^ " then (");
+			sayinl 2 ("if cost =" ^ (Int.to_string inf) ^ " then (");
 			sayinl 3 ("print (\"No Match on nonterminal \" ^ (Int.to_string nt) ^ \"\\n\");");
 			sayinl 3 ("print \"Possibilities were :\\n\";");
 			sayinl 3 ("let loop n =");
