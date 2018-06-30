@@ -23,3 +23,5 @@ ml-burg/burglex.ml
 ml-burg/burgparse.ml
 ml-burg/burgparse.mli
 ml-burg/burg
+ml-burg/example1.ml
+ml-burg/example2.ml
