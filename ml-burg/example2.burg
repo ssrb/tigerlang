@@ -90,10 +90,10 @@ module In = struct
   let opchildren = function
     | INT _ ->       (T_INT, [])
     | VAR _ ->       (T_VAR, [])
-    | ADD (t1,t2) -> (T_ADD, [t1,t2])
-    | SUB (t1,t2) -> (T_SUB, [t1,t2])
-    | MUL (t1,t2) -> (T_MUL, [t1,t2])
-    | DIV (t1,t2) -> (T_DIV, [t1,t2])
+    | ADD (t1,t2) -> (T_ADD, [t1; t2])
+    | SUB (t1,t2) -> (T_SUB, [t1; t2])
+    | MUL (t1,t2) -> (T_MUL, [t1; t2])
+    | DIV (t1,t2) -> (T_DIV, [t1; t2])
     | NEG (t1) ->    (T_NEG, [t1])
 
 end
@@ -106,25 +106,25 @@ module Example = struct
     module Burm = BurmGen (In)
     open In
 
-    let say s = Core.Out_channel.print_string s
+    let say s = Core.Out_channel.(output_string stdout s)
 
     let num = ref 1
     let inc iref = iref := !iref + 1
     let resetreg () = num := 1
-    let newreg () = let t = !num in inc num; "r" ^ (Int.toString t)
+    let newreg () = let t = !num in inc num; "r" ^ (Int.to_string t)
 
     let rec walk = function
     | (Burm.R_reg_INT, INT n) ->
         let reg = newreg () in
-	    say ("ldi "^reg^","^(Int.toString (n+n+1))^"\n"); 
+	    say ("ldi "^reg^","^(Int.to_string (n+n+1))^"\n"); 
         reg
     | (Burm.R_sreg_INT, INT n) ->
 	    let reg = newreg () in
-	    say ("ldi "^reg^","^(Int.toString (n+n))^"\n"); 
+	    say ("ldi "^reg^","^(Int.to_string (n+n))^"\n"); 
         reg
     | (Burm.R_ureg_INT, INT n) ->
 	    let reg = newreg () in
-	    say ("ldi "^reg^","^(Int.toString n)^"\n"); 
+	    say ("ldi "^reg^","^(Int.to_string n)^"\n"); 
         reg
     | (Burm.R_reg_VAR, VAR v) ->
 	    let reg = newreg () in
@@ -152,27 +152,27 @@ module Example = struct
         r1'
     | (Burm.R_r_ADD_2i_r reg, ADD (INT n,_)) ->
         let reg' = walk reg in
-	    say ("addi "^reg'^","^(Int.toString (n+n))^"\n"); 
+	    say ("addi "^reg'^","^(Int.to_string (n+n))^"\n"); 
         reg'
     | (Burm.R_r_ADD_r_2i reg, ADD (_,INT n)) ->
         let reg' = walk reg in
-	    say ("addi "^reg'^","^(Int.toString (n+n))^"\n"); 
+	    say ("addi "^reg'^","^(Int.to_string (n+n))^"\n"); 
         reg'
     | (Burm.R_r_ADD_2ip_r reg, ADD (INT n,_)) ->
         let reg' = walk reg in
-	    say ("addi "^reg'^","^(Int.toString (n+n+1))^"\n"); 
+	    say ("addi "^reg'^","^(Int.to_string (n+n+1))^"\n"); 
         reg'
     | (Burm.R_r_ADD_r_2ip reg, ADD (_,INT n)) ->
         let reg' = walk reg in
-	    say ("addi "^reg'^","^(Int.toString (n+n+1))^"\n"); 
+	    say ("addi "^reg'^","^(Int.to_string (n+n+1))^"\n"); 
         reg'
     | (Burm.R_r_ADD_2im_r reg, ADD (INT n,_)) ->
         let reg' = walk reg in
-	    say ("addi "^reg'^","^(Int.toString (n+n-1))^"\n"); 
+	    say ("addi "^reg'^","^(Int.to_string (n+n-1))^"\n"); 
         reg'
     | (Burm.R_r_ADD_r_2im reg, ADD (_,INT n)) ->
         let reg' = walk reg in
-	    say ("addi "^reg'^","^(Int.toString (n+n-1))^"\n"); 
+	    say ("addi "^reg'^","^(Int.to_string (n+n-1))^"\n"); 
         reg'
     | (Burm.R_r_SUB_r_r (r1,r2), _) ->
 	    let (r1',r2') = (walk r1, walk r2) in
@@ -181,45 +181,45 @@ module Example = struct
     | (Burm.R_r_SUB_2ipp_r reg, SUB (INT n,_)) ->
         let reg' = walk reg in
         let r = newreg () in
-	    say ("ldi "^r^","^(Int.toString (n+n+1))^"\n");
+	    say ("ldi "^r^","^(Int.to_string (n+n+1))^"\n");
 	    say ("sub "^r^","^reg'^"\n");
 	    r
     | (Burm.R_r_SUB_r_2i reg, SUB (_,INT n)) ->
         let reg' = walk reg in
-	    say ("subi "^reg'^","^(Int.toString (n+n))^"\n"); 
+	    say ("subi "^reg'^","^(Int.to_string (n+n))^"\n"); 
         reg'
     | (Burm.R_r_SUB_r_2im reg, SUB (_,INT n)) ->
         let reg' = walk reg in
-	    say ("subi "^reg'^","^(Int.toString (n+n-1))^"\n"); 
+	    say ("subi "^reg'^","^(Int.to_string (n+n-1))^"\n"); 
         reg'
     | (Burm.R_r_SUB_r_2ip reg, SUB (_,INT n)) ->
         let reg' = walk reg in
-	    say ("subi "^reg'^","^(Int.toString (n+n+1))^"\n"); 
+	    say ("subi "^reg'^","^(Int.to_string (n+n+1))^"\n"); 
         reg'
     | (Burm.R_r_MUL_r_r (r1,r2), _) ->
 	    let (r1',r2') = (walk r1, walk r2) in
 	    say ("mul "^r1'^","^r2'^"\n"); r1'
     | (Burm.R_r_MUL_i_r reg, MUL (INT n,_)) ->
         let reg' = walk reg in
-	    say ("muli "^reg'^","^(Int.toString (n))^"\n"); 
+	    say ("muli "^reg'^","^(Int.to_string (n))^"\n"); 
         reg'
     | (Burm.R_r_MUL_r_i reg, MUL (_,INT n)) ->
-        let val reg' = walk reg in
-	  say ("muli "^reg'^","^(Int.toString (n))^"\n"); reg'
+        let reg' = walk reg in
+	  say ("muli "^reg'^","^(Int.to_string (n))^"\n"); reg'
     | (Burm.R_r_MUL_2i_r reg, MUL (INT n,_)) ->
-        let val reg' = walk reg in
-	    say ("muli "^reg'^","^(Int.toString (n+n))^"\n"); 
+        let reg' = walk reg in
+	    say ("muli "^reg'^","^(Int.to_string (n+n))^"\n"); 
         reg'
     | (Burm.R_r_MUL_r_2i reg, MUL (_,INT n)) ->
         let reg' = walk reg in
-	    say ("muli "^reg'^","^(Int.toString (n+n))^"\n"); 
+	    say ("muli "^reg'^","^(Int.to_string (n+n))^"\n"); 
         reg'
     | (Burm.R_r_DIV_r_r (r1,r2), _) ->
 	    let (r1',r2') = (walk r1, walk r2) in
 	    say ("div "^r1'^","^r2'^"\n"); r1'
     | (Burm.R_r_DIV_r_i reg, DIV (_,INT n)) ->
         let reg' = walk reg in
-	    say ("divi "^reg'^","^(Int.toString (n))^"\n"); 
+	    say ("divi "^reg'^","^(Int.to_string (n))^"\n"); 
         reg'
     | (Burm.R_r_NEG_r reg, _) ->
         let reg' = walk reg in
@@ -230,7 +230,7 @@ module Example = struct
 	    say ("neg "^reg'^"\n");
 	    say ("addi "^reg'^",\n");
 	    reg'
-    | _ -> (print "Error, bad match in walk\n"; raise Match)
+    | _ -> (Out_channel.print_endline "Error, bad match in walk"; raise Burm.NoMatch)
 
 
   let doit t = walk (Burm.reduce t)
