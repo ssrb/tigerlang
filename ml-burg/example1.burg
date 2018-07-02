@@ -67,70 +67,70 @@ end
 
 module Example = struct 
 
-  module Burm = BurmGen (In)
-  open In
+	module Burm = BurmGen (In)
+	open In
 
-  let say s = Core.Out_channel.print_string s
+	let say s = Core.Out_channel.print_string s
 
 	let num = ref 1
 	let inc iref = iref := !iref + 1
-  let new s =  let t = !num in inc num; s ^ (Int.toString t)
+	let tmp s =  let t = !num in inc num; s ^ (Int.to_string t)
 
-  let rec walk = function
-	| (Burm.stmt_ASGNI_disp_reg (disp,reg), _) ->
+	let rec walk = function
+	| (Burm.R_stmt_ASGNI_disp_reg (disp,reg), _) ->
 		let (disp',reg') = (walk disp, walk reg) in
-		let val stmt = new "stmt" in
+		let stmt = tmp "stmt" in
 	  say (stmt^" <- ASGNI ("^disp'^" + "^reg'^")\n"); 
 		stmt
-  | (Burm.stmt_reg reg, _) ->
+  | (Burm.R_stmt_reg reg, _) ->
 		let reg' = walk reg in
-	  let stmt = new "stmt" in
+	  let stmt = tmp "stmt" in
 	  say (stmt^" <- "^reg'^"\n"); 
 		stmt
-  | (Burm.reg_ADDI_reg_rc (reg,rc), _) ->
+  | (Burm.R_reg_ADDI_reg_rc (reg,rc), _) ->
 		let (reg',rc') = (walk reg, walk rc) in
-	  let reg2 = new "reg" in
+	  let reg2 = tmp "reg" in
 	  say (reg2^" <- ADDI ("^reg'^","^rc'^")\n"); 
 		reg2
-  | (Burm.reg_CVCI_INDIRC_disp disp, _) ->
+  | (Burm.R_reg_CVCI_INDIRC_disp disp, _) ->
 		let disp' = walk disp in
-	  let reg = new "reg" in
+	  let reg = tmp "reg" in
 	  say (reg^" <- CVCI (INDIRC ("^disp'^"))\n"); 
 		reg
-  | (Burm.reg_I0I, _) ->
-		let reg = new "reg" in
+  | (Burm.R_reg_I0I, _) ->
+		let reg = tmp "reg" in
 	  say (reg^" <- ZERO\n"); 
 		reg
-  | (Burm.reg_disp disp, _) ->
+  | (Burm.R_reg_disp disp, _) ->
 		let disp' = walk disp in
-	  let reg = new "reg" in
+	  let reg = tmp "reg" in
 	  say (reg^" <- "^disp'^"\n"); 
 		reg
-  | (Burm.disp_ADDI_reg_con (reg,con), _) ->
+  | (Burm.R_disp_ADDI_reg_con (reg,con), _) ->
 		let (reg',con') = (walk reg, walk con) in
-	  let disp = new "disp" in
+	  let disp = tmp "disp" in
 	  say (disp^" <- ADDI ("^reg'^","^con'^")\n"); 
 		disp
-  | (Burm.disp_ADDRLP, ADDRLP addr) ->
-		let disp = new "disp" in
+  | (Burm.R_disp_ADDRLP, ADDRLP addr) ->
+		let disp = tmp "disp" in
 	  say (disp^" <- ADDRLP "^addr^"\n"); 
 		disp
-  | (Burm.rc_con con, _) ->
+  | (Burm.R_rc_con con, _) ->
 		let con' = walk con in
-	  let rc = new "rc" in
+	  let rc = tmp "rc" in
 	  say (rc^" <- "^con'^"\n"); 
 		rc
-  | walk (Burm.rc_reg reg, _) ->
+  | (Burm.R_rc_reg reg, _) ->
 		let reg' = walk reg in
-	  let rc = new "rc" in
+	  let rc = tmp "rc" in
 	  say (rc^" <- "^reg'^"\n"); 
 		rc
-  | (Burm.con_CNSTI, CNSTI i) ->
-		let con = new "con" in
-	  say (con^" <- CNSTI "^(Int.toString i)^"\n"); 
+  | (Burm.R_con_CNSTI, CNSTI i) ->
+		let con = tmp "con" in
+	  say (con^" <- CNSTI "^(Int.to_string i)^"\n"); 
 		con
-  | (Burm.con_I0I, _) ->
-		let con = new "con" in
+  | (Burm.R_con_I0I, _) ->
+		let con = tmp "con" in
 	  say (con^" <- CNSTI ZERO\n"); 
 		con
   | _ -> (print "Error, bad match in walk\n"; raise Match)
