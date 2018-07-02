@@ -52,8 +52,8 @@ module In = struct
   | CNSTI of int
 
   let opchildren = function
-    | ASGNI (t1,t2) -> (T_ASGNI, [t1,t2])
-    | ADDI (t1,t2) ->  (T_ADDI, [t1,t2])
+    | ASGNI (t1,t2) -> (T_ASGNI, [t1; t2])
+    | ADDI (t1,t2) ->  (T_ADDI, [t1; t2])
     | CVCI (t1) ->     (T_CVCI, [t1])
     | INDIRC (t1) ->   (T_INDIRC, [t1])
     | I0I ->           (T_I0I, [])
@@ -70,7 +70,7 @@ module Example = struct
 	module Burm = BurmGen (In)
 	open In
 
-	let say s = Core.Out_channel.print_string s
+	let say s = Core.Out_channel.(output_string stdout s)
 
 	let num = ref 1
 	let inc iref = iref := !iref + 1
@@ -133,7 +133,7 @@ module Example = struct
 		let con = tmp "con" in
 	  say (con^" <- CNSTI ZERO\n"); 
 		con
-  | _ -> (print "Error, bad match in walk\n"; raise Match)
+  | _ -> (Out_channel.print_endline "Error, bad match in walk\n"; raise Burm.NoMatch)
 
 
   let doit t = walk (Burm.reduce t)

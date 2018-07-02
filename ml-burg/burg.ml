@@ -791,8 +791,8 @@ let emit (s_in, oustreamgen) =
 			if ar > 0 then (say " of "; loop_sons 1);
 			nl ()
 		in
-		sayinl 0 ("module " ^ (!struct_name) ^ "Gen : " ^ (!sig_name) ^ " = functor (In : "
-			^ (!sig_name) ^ "_INPUT_SPEC) -> struct");
+		sayinl 0 ("module " ^ !struct_name ^ "Gen : " ^ "functor (In : " ^ !sig_name ^ "_INPUT_SPEC) -> " ^ !sig_name ^ " with type tree = In.tree = functor (In : "
+			^ !sig_name ^ "_INPUT_SPEC) -> struct");
 		sayinl 1 "type tree = In.tree";
 		sayinl 1 "exception NoMatch";
 		emit_type_rule 1 rules;
@@ -993,10 +993,10 @@ let emit (s_in, oustreamgen) =
 				let dosamecase idnt eleml = (
 					firstcaseelem := true;
 					List.iter ~f:(emit_match_case idnt) eleml;
-					if (not (!firstcaseelem) && not (List.exists ~f:(fun (_,_,_,_,iswot) -> iswot) eleml)) then 
+					(*if (not (!firstcaseelem) && not (List.exists ~f:(fun (_,_,_,_,iswot) -> iswot) eleml)) then 
 						sayinl idnt "| _ -> ()";
 					if (not (!firstcaseelem)) then 
-						sayinl idnt ";"
+						sayinl idnt ";" *)
 				)
 				in
 				sayi idnt "let [";
@@ -1098,21 +1098,21 @@ let emit (s_in, oustreamgen) =
 					
 				nl ()
 			in
-			sayinl 1 "let doreduce ((stree : s_tree), nt) =";
+			sayinl 1 "let rec doreduce ((stree : s_tree), nt) =";
 				sayinl 2 "let (s_c, s_r, _, tree) = stree in";
-				sayinl 2 "let cost = sub (s_c, nt) in";
+				sayinl 2 "let cost = s_c.(nt) in";
 				sayinl 2 ("if cost =" ^ (Int.to_string inf) ^ " then (");
-					sayinl 3 ("print (\"No Match on nonterminal \" ^ (Int.to_string nt) ^ \"\\n\");");
-					sayinl 3 ("print \"Possibilities were :\\n\";");
+					sayinl 3 ("Out_channel.print_endline (\"No Match on nonterminal \" ^ (Int.to_string nt));");
+					sayinl 3 ("Out_channel.print_endline \"Possibilities were :\";");
 					sayinl 3 ("let rec loop n =");
 						sayinl 4 ("let c = s_c.(n) in");
 						sayinl 4 ("let r = s_r.(n) in");
 						sayinl 4 ("if c <> 16383 then");
-							sayinl 5 ("print (\"rule \" ^ (Int.to_string r) ^ \" with cost \"");
-							sayinl 5 ("^ (Int.to_string c) ^ \"\\n\");");
+							sayinl 5 ("Out_channel.print_endline (\"rule \" ^ (Int.to_string r) ^ \" with cost \"");
+							sayinl 5 ("^ (Int.to_string c));");
 						sayinl 4 ("loop (n+1)");
 					sayinl 3 ("in");
-					sayinl 3 ("try loop 0 with General.Subscript -> ();");
+					sayinl 3 ("try loop 0 with Invalid_argument _ -> ();");
 					sayinl 3 ("raise NoMatch)");
 				sayinl 2 ("else");
 					sayinl 3 "let rulensons =";
