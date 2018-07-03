@@ -101,6 +101,7 @@ define PROJ_iselect_tester
 	canon/canon.ml \
 	iselect/codegen.ml \
 	iselect/m68kCodegen.ml \
+	ml-burg/m68000.ml \
 	iselect/iselect_tester.ml
 endef
 export PROJ_iselect_tester
@@ -128,6 +129,7 @@ define PROJ_regalloc_tester
 	canon/canon.ml \
 	iselect/codegen.ml \
 	iselect/m68kCodegen.ml \
+	ml-burg/m68000.ml \
 	regalloc/graph.ml \
 	regalloc/flowgraph.ml \
 	regalloc/makegraph.ml \
