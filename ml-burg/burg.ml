@@ -872,13 +872,10 @@ let emit (s_in, oustreamgen) =
 				);
 				sayinl idnt ("if c + "^ c ^ " < s_c.(" ^ slhs ^ ") then (");
 				sayinl (idnt + 1) ("s_c.(" ^ slhs ^ ") <- c + " ^ c ^ ";");
-				sayi (idnt + 1) ("s_r.(" ^ slhs ^ ") <- " ^ (Int.to_string num));
+				sayinl (idnt + 1) ("s_r.(" ^ slhs ^ ") <- " ^ (Int.to_string num) ^ ";");
 				if not (List.is_empty chains_for_rhs.(lhs)) then (
-					say ";";
-					nl ();
-					sayi (idnt + 1) ("closure_" ^ (get_ntsym lhs) ^ " (s_c, s_r, c + " ^ c ^ ")");
+					sayinl (idnt + 1) ("closure_" ^ (get_ntsym lhs) ^ " (s_c, s_r, c + " ^ c ^ ")");
 				);
-				nl ();
 				sayi idnt ")"
 			in
 			if not (List.is_empty rl) then (
@@ -946,12 +943,13 @@ let emit (s_in, oustreamgen) =
 						let dorule idnt ({nt=lhs; num; cost; _} : rule) =
 							let slhs = Int.to_string lhs in
 							let c = Int.to_string cost in
-							sayinl idnt ("if c + "^c^" < s_c.(" ^ slhs ^ ") then");
+							sayinl idnt ("if c + " ^ c ^ " < s_c.(" ^ slhs ^ ") then (");
 							sayinl (idnt + 1) ("s_c.(" ^ slhs ^ ") <- c + " ^ c ^ ";");
-							sayinl idnt ("s_r.(" ^ slhs ^ ") <- " ^ (Int.to_string num) ^ ";");
-						
-							if not (List.is_empty chains_for_rhs.(lhs)) then
-								sayinl idnt ("closure_" ^ (get_ntsym lhs) ^ " (s_c, s_r, c + " ^ c ^ ");");
+							sayinl (idnt + 1) ("s_r.(" ^ slhs ^ ") <- " ^ (Int.to_string num) ^ ";");
+							if not (List.is_empty chains_for_rhs.(lhs)) then (
+								sayinl (idnt + 1) ("closure_" ^ (get_ntsym lhs) ^ " (s_c, s_r, c + " ^ c ^ ")")
+							);
+							sayinl idnt ");";
 						in
 
 						sayi idnt "if ";
@@ -969,13 +967,14 @@ let emit (s_in, oustreamgen) =
 							if i <> 0 then say " + ";
 							say ("s" ^ (Int.to_string i) ^ "_c.(" ^ (Int.to_string (nt:int)) ^ ")"))) ntl;
 						
-						say " in";
+						say " in (";
 						nl();
 
-						List.iter ~f:(dorule (idnt + 1)) rl;
+						List.iter ~f:(dorule (idnt + 2)) rl;
+
+						sayinl (idnt + 1) (");");
 					in
 					List.iter ~f:(dorules (idnt + 2)) rlntll;
-					sayinl (idnt + 1) ");"
 				) (* fun emit_match_case *)
 			in
 			(* ")(" fun emit_match *)
@@ -993,10 +992,12 @@ let emit (s_in, oustreamgen) =
 				let dosamecase idnt eleml = (
 					firstcaseelem := true;
 					List.iter ~f:(emit_match_case idnt) eleml;
-					(*if (not (!firstcaseelem) && not (List.exists ~f:(fun (_,_,_,_,iswot) -> iswot) eleml)) then 
-						sayinl idnt "| _ -> ()";
-					if (not (!firstcaseelem)) then 
-						sayinl idnt ";" *)
+					if (not (!firstcaseelem)) then (
+						if not (List.exists ~f:(fun (_,_,_,_,iswot) -> iswot) eleml) then 
+							sayinl (idnt + 1) "| _ -> ());"
+						else
+							sayinl (idnt + 1) ");"
+					)
 				)
 				in
 				sayi idnt "let [";
