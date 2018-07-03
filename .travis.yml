@@ -10,6 +10,11 @@ before_install:
 - opam install ocamlfind core menhir ppx_deriving glpk
 script:
 - eval $(opam config env)
+- make -f Makefile.burg
+- pushd ml-burg
+- burg example1.burg
+- burg example2.burg
+- popd
 - make
 - export VBCC=${HOME}/vbcc
 - mkdir -p ${VBCC}/bin

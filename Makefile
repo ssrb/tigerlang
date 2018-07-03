@@ -138,21 +138,8 @@ define PROJ_regalloc_tester
 endef
 export PROJ_regalloc_tester
 
-
-define PROJ_burg
-	RESULT = ml-burg/burg
-	SOURCES = ml-burg/burgAST.ml \
-	ml-burg/burgparse.mly \
-	ml-burg/burglex.mll \
-	ml-burg/parse.ml \
-	ml-burg/burg.ml \
-	ml-burg/main.ml
-	YFLAGS = --explain --trace --dump
-endef
-export PROJ_burg
-
 ifndef SUBPROJS
-  export SUBPROJS = lexer_tester parser_tester absyn_tester semant_tester canon_tester iselect_tester regalloc_tester burg
+  export SUBPROJS = lexer_tester parser_tester absyn_tester semant_tester canon_tester iselect_tester regalloc_tester
 endif
 
 all: debug-code native-code

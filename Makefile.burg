@@ -1,0 +1,28 @@
+OCAMLMAKEFILE = OCamlMakefile
+
+export BCSUFFIX = ".byte"
+export OCAMLYACC = menhir
+export PACKS = base core
+export THREADS = yes
+export OCAMLFLAGS = -open Base
+
+define PROJ_burg
+	RESULT = ml-burg/burg
+	SOURCES = ml-burg/burgAST.ml \
+	ml-burg/burgparse.mly \
+	ml-burg/burglex.mll \
+	ml-burg/parse.ml \
+	ml-burg/burg.ml \
+	ml-burg/main.ml
+	YFLAGS = --explain --trace --dump
+endef
+export PROJ_burg
+
+ifndef SUBPROJS
+  export SUBPROJS = burg
+endif
+
+all: debug-code native-code
+
+%:
+	@$(MAKE) -f $(OCAMLMAKEFILE) subprojs SUBTARGET=$@
