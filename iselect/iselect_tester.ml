@@ -6,8 +6,6 @@ module M68K = M68kCodegen
 
 open Core
 
-let test = M68000.Example.doit M68000.Example.a
-
 let _ = 
 
 let open Out_channel in
@@ -25,7 +23,7 @@ let f frag =
 			|> Canon.linearize 
 			|> Canon.basicBlocks 
 			|> Canon.traceSchedule 
-			|> List.map ~f:(M68K.codegen proc.frame)
+			|> List.map ~f:(M68000.Example.codegen proc.frame)
 			|> List.concat
 		in
 		let asm = M68kFrame.procEntryExit2 (proc.frame, asm) in

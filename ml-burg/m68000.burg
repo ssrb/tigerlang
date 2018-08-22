@@ -101,8 +101,19 @@ end
 
 
 
-module Example = struct 
+module Example  : Codegen.T with module Frame = M68kFrame = struct 
 
+    module Frame = M68kFrame
+	module Tree = Frame.Tree
+	module Assem = Frame.Assem
+	module Temp = Frame.Temp
+	module Var = Assem.Variable
+
+	open Core
+	open Tree
+
+	let codegen frame stm = []
+    
     module Burm = BurmGen (In)
     open In
 
