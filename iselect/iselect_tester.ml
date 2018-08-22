@@ -6,6 +6,8 @@ module M68K = M68kCodegen
 
 open Core
 
+let test = M68000.Example.doit M68000.Example.a
+
 let _ = 
 
 let open Out_channel in
