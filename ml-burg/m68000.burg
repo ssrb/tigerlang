@@ -78,32 +78,33 @@ module In = struct
 
   open BurmOps
 
-  type tree =
-  | INT of int
-  | VAR of string
-  | ADD of tree * tree
-  | SUB of tree * tree
-  | MUL of tree * tree
-  | DIV of tree * tree
-  | NEG of tree
+  type tree = M68kFrame.Tree.stm
 
   let opchildren = function
-    | INT _ ->       (T_INT, [])
+  	| M68kFrame.Tree.SEQ _ -> assert(false)
+	| M68kFrame.Tree.LABEL label -> (T_INT, [])
+	| M68kFrame.Tree.JUMP (exp, labels) -> (T_INT, [])
+	| M68kFrame.Tree.CJUMP (relop, exp1, exp2, label1, label2) -> (T_INT, [])
+	| M68kFrame.Tree.MOVE (exp1, exp2) -> (T_INT, [])
+	| M68kFrame.Tree.EXP exp -> (T_INT, [])
+	| M68kFrame.Tree.NOP -> (T_INT, [])
+
+    (*| INT _ ->       (T_INT, [])
     | VAR _ ->       (T_VAR, [])
     | ADD (t1,t2) -> (T_ADD, [t1; t2])
     | SUB (t1,t2) -> (T_SUB, [t1; t2])
     | MUL (t1,t2) -> (T_MUL, [t1; t2])
     | DIV (t1,t2) -> (T_DIV, [t1; t2])
-    | NEG (t1) ->    (T_NEG, [t1])
+    | NEG (t1) ->    (T_NEG, [t1])*)
 
 end
 
 
 
 
-module Example  : Codegen.T with module Frame = M68kFrame = struct 
+module Example : Codegen.T with module Frame = M68kFrame = struct 
 
-    module Frame = M68kFrame
+	module Frame = M68kFrame
 	module Tree = Frame.Tree
 	module Assem = Frame.Assem
 	module Temp = Frame.Temp
@@ -113,7 +114,7 @@ module Example  : Codegen.T with module Frame = M68kFrame = struct
 	open Tree
 
 	let codegen frame stm = []
-    
+
     module Burm = BurmGen (In)
     open In
 
@@ -125,11 +126,11 @@ module Example  : Codegen.T with module Frame = M68kFrame = struct
     let newreg () = let t = !num in inc num; "r" ^ (Int.to_string t)
 
     let rec walk = function
-    | (Burm.R_reg_INT, INT n) ->
+    | (Burm.R_reg_INT, EXP {t = CONST n}) ->
         let reg = newreg () in
 	    say ("ldi "^reg^","^(Int.to_string (n+n+1))^"\n"); 
         reg
-    | (Burm.R_sreg_INT, INT n) ->
+    (*| (Burm.R_sreg_INT, INT n) ->
 	    let reg = newreg () in
 	    say ("ldi "^reg^","^(Int.to_string (n+n))^"\n"); 
         reg
@@ -241,14 +242,10 @@ module Example  : Codegen.T with module Frame = M68kFrame = struct
 	    say ("neg "^reg'^"\n");
 	    say ("addi "^reg'^",\n");
 	    reg'
-    | _ -> (Out_channel.print_endline "Error, bad match in walk"; raise Burm.NoMatch)
+    | _ -> (Out_channel.print_endline "Error, bad match in walk"; raise Burm.NoMatch) *)
 
 
   let doit t = walk (Burm.reduce t)
-
-  let a = SUB (ADD (VAR "a", INT 2), INT 5)
-  let b = ADD (DIV (SUB (VAR "a", INT 1), VAR "b"), INT 1)
-  let c = ADD (VAR "a", INT 1)
 
 end
 
