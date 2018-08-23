@@ -8,11 +8,33 @@
 
 %term INT
     | VAR
+(* Integer arithmetic *)
     | ADD
-    | SUB
-    | MUL
-    | DIV
+	| ADDA
+	| ADDI
+	| ADDQ
+	| ADDX
+	| CLR
+	| CMP
+	| CMPA
+	| CMPI
+	| CMPM
+	| CMP2
+	| DIVS
+	| DIVU
+	| DIVSL
+	| DIVUL
+	| EXT
+	| EXTB
+	| MULS
+	| MULU
     | NEG
+	| NEGX
+	| SUB
+	| SUBA
+	| SUBI
+	| SUBQ
+	| SUBX
 
 %termprefix T_
 %ruleprefix R_
@@ -78,13 +100,38 @@ module In = struct
 
   type tree = M68kFrame.Tree.stm
 
-  let opchildren = function
-  	| M68kFrame.Tree.SEQ _ -> assert(false)
-	| M68kFrame.Tree.LABEL label -> (T_INT, [])
-	| M68kFrame.Tree.JUMP (exp, labels) -> (T_INT, [])
-	| M68kFrame.Tree.CJUMP (relop, exp1, exp2, label1, label2) -> (T_INT, [])
-	| M68kFrame.Tree.MOVE (exp1, exp2) -> (T_INT, [])
-	| M68kFrame.Tree.EXP exp -> (T_INT, [])
+  let opchildren stm = 
+  	let open M68kFrame.Tree in
+	match stm with
+  	| SEQ _ -> assert(false)
+	| LABEL label -> (T_INT, [])
+	| JUMP (exp, labels) -> (T_INT, [])
+	| CJUMP (relop, exp1, exp2, label1, label2) -> (T_INT, [])
+	| MOVE (exp1, exp2) -> (T_INT, [])
+	| EXP exp -> 
+	begin
+		match exp.t with
+		| BINOP (binop, exp1, exp2) ->
+		begin
+			match binop with
+			| PLUS -> (T_INT, [])
+			| MINUS -> (T_INT, [])
+			| MUL -> (T_INT, [])
+			| DIV -> (T_INT, [])
+			| AND -> (T_INT, [])
+			| OR -> (T_INT, [])
+			| LSHIFT -> (T_INT, [])
+			| RSHIFT -> (T_INT, [])
+			| ARSHIFT -> (T_INT, [])
+			| XOR -> (T_INT, [])
+		end
+		| MEM exp -> (T_INT, [])
+		| TEMP temp -> (T_INT, [])
+		| ESEQ (stm, exp) -> (T_INT, [])
+		| NAME label -> (T_INT, [])
+		| CONST int -> (T_INT, [])
+		| CALL (exp, exps) -> (T_INT, [])
+	end
 	| M68kFrame.Tree.NOP -> (T_INT, [])
 end
 
@@ -125,4 +172,3 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 		List.rev(!ilist)
 
 end
-
