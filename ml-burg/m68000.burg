@@ -8,7 +8,6 @@
 
 %term INT
     | VAR
-(* Integer arithmetic *)
     | ADD
 	| ADDA
 	| ADDI
@@ -77,16 +76,38 @@ sreg:	SUB(reg,reg)	= r_SUB_r_r		(1); (* sub *)
 sreg:	SUB(sreg,INT)	= r_SUB_r_2i		(1); (* sub x,2*imm *)
 sreg:	SUB(reg,INT)	= r_SUB_r_2ip		(1); (* sub x,2*imm+1 *)
 
-sreg:	MUL(sreg,ureg)	= r_MUL_r_r		(1); (* mul *)
-sreg:	MUL(ureg,sreg)	= r_MUL_r_r		(1); (* mul *)
-sreg:	MUL(INT,sreg)	= r_MUL_i_r		(1); (* mul *)
-sreg:	MUL(sreg,INT)	= r_MUL_r_i		(1); (* mul *)
-sreg:	MUL(INT,ureg)	= r_MUL_2i_r		(1); (* mul 2*imm,x *)
-sreg:	MUL(ureg,INT)	= r_MUL_r_2i		(1); (* mul x,2*imm *)
+sreg:	MULU(sreg,ureg)	= r_MUL_r_r		(1); (* mul *)
+sreg:	MULU(ureg,sreg)	= r_MUL_r_r		(1); (* mul *)
+sreg:	MULU(INT,sreg)	= r_MUL_i_r		(1); (* mul *)
+sreg:	MULU(sreg,INT)	= r_MUL_r_i		(1); (* mul *)
+sreg:	MULU(INT,ureg)	= r_MUL_2i_r		(1); (* mul 2*imm,x *)
+sreg:	MULU(ureg,INT)	= r_MUL_r_2i		(1); (* mul x,2*imm *)
 
-ureg:	DIV(sreg,sreg)	= r_DIV_r_r		(1); (* div *)
-ureg:	DIV(ureg,ureg)	= r_DIV_r_r		(1); (* div *)
-ureg:	DIV(ureg,INT)	= r_DIV_r_i		(1); (* div *)
+reg: ADDA(reg,sreg)	= r_SUB_r_r		(1); (* sub *)
+reg: ADDI(reg,sreg)	= r_SUB_r_r		(1); (* sub *)
+reg: ADDQ(reg,sreg)	= r_SUB_r_r		(1); (* sub *)
+reg: ADDX(reg,sreg)	= r_SUB_r_r		(1); (* sub *)
+reg: CLR(reg,sreg)	= r_SUB_r_r		(1); (* sub *)
+reg: CMP(reg,sreg)	= r_SUB_r_r		(1); (* sub *)
+reg: CMPA(reg,sreg)	= r_SUB_r_r		(1); (* sub *)
+reg: CMPI(reg,sreg)	= r_SUB_r_r		(1); (* sub *)
+reg: CMPM(reg,sreg)	= r_SUB_r_r		(1); (* sub *)
+reg: CMP2(reg,sreg)	= r_SUB_r_r		(1); (* sub *)
+reg: DIVS(reg,sreg)	= r_SUB_r_r		(1); (* sub *)
+reg: DIVSL(reg,sreg) = r_SUB_r_r	(1); (* sub *)
+reg: DIVUL(reg,sreg) = r_SUB_r_r	(1); (* sub *)
+reg: EXT(reg,sreg)	= r_SUB_r_r		(1); (* sub *)
+reg: EXTB(reg,sreg)	= r_SUB_r_r		(1); (* sub *)
+reg: MULS(reg,sreg)	= r_SUB_r_r		(1); (* sub *)
+reg: NEGX(reg,sreg)	= r_SUB_r_r		(1); (* sub *)
+reg: SUBA(reg,sreg)	= r_SUB_r_r		(1); (* sub *)
+reg: SUBI(reg,sreg)	= r_SUB_r_r		(1); (* sub *)
+reg: SUBQ(reg,sreg)	= r_SUB_r_r		(1); (* sub *)
+reg: SUBX(reg,sreg)	= r_SUB_r_r		(1); (* sub *)
+
+ureg:	DIVU(sreg,sreg)	= r_DIV_r_r		(1); (* div *)
+ureg:	DIVU(ureg,ureg)	= r_DIV_r_r		(1); (* div *)
+ureg:	DIVU(ureg,INT)	= r_DIV_r_i		(1); (* div *)
 
 reg:	NEG(reg)	= r_NEG_r_p_2		(2); (* 2-r *)
 ureg:	NEG(ureg)	= r_NEG_r		(1); (* 0-r *)
