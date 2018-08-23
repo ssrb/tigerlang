@@ -2,8 +2,8 @@ module Lexer = Tigerlex.F(Parsertokens)
 module Translate = Translate.F(M68kFrame)
 module Semant = Semant.F(Translate)
 module Canon = Canon.F(M68kFrame.Tree)
-module M68K = M68kCodegen
-
+(*module M68K = M68kCodegen*)
+module M68K = M68000.Generator
 open Core
 
 let _ = 
@@ -23,7 +23,7 @@ let f frag =
 			|> Canon.linearize 
 			|> Canon.basicBlocks 
 			|> Canon.traceSchedule 
-			|> List.map ~f:(M68000.Example.codegen proc.frame)
+			|> List.map ~f:(M68K.codegen proc.frame)
 			|> List.concat
 		in
 		let asm = M68kFrame.procEntryExit2 (proc.frame, asm) in
