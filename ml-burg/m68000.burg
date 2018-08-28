@@ -185,10 +185,12 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 		let rec walk t =
 			let module A = Assem in
 			match t with
-			| (Burm.r_ADD_r_r (r1,r2), _) ->
-				emit(A.OPER {assem = "adda.l #" ^ (Int.to_string (132)) ^ ",sp"; dst = []; src = []; jump = None})
-			| (Burm.R_reg_INT, EXP {t = CONST n}) ->
-				emit(A.OPER {assem = "adda.l #" ^ (Int.to_string (132)) ^ ",sp"; dst = []; src = []; jump = None})
+			| (Burm.R_r_ADD_r_r (r0,r1), _) ->
+			 	let s0 = walk r0 in
+				let s1 = walk r1 in
+				data(fun r -> 
+					emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = s0});
+					emit(A.OPER {assem = "add.l `s0,`d0"; dst = [r]; src = [s1; r]; jump = None}))   
 			| _ -> (Out_channel.print_endline "Error, bad match in walk"; raise Burm.NoMatch)
 		in
 		walk (Burm.reduce stm);
