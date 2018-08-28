@@ -135,10 +135,10 @@ module In = struct
 		| BINOP (binop, exp1, exp2) ->
 		begin
 			match binop with
-			| PLUS -> (T_INT, [])
-			| MINUS -> (T_INT, [])
-			| MUL -> (T_INT, [])
-			| DIV -> (T_INT, [])
+			| PLUS -> (T_ADD, [(EXP exp1); (EXP exp2)])
+			| MINUS -> (T_SUB,[(EXP exp1); (EXP exp2)])
+			| MUL -> (T_MULU, [(EXP exp1); (EXP exp2)])
+			| DIV -> (T_DIVU, [(EXP exp1); (EXP exp2)])
 			| AND -> (T_INT, [])
 			| OR -> (T_INT, [])
 			| LSHIFT -> (T_INT, [])
