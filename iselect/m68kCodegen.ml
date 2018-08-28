@@ -211,7 +211,7 @@ let codegen frame stm =
                 emit(A.OPER {assem = "bge " ^ (Symbol.name t); dst = []; src = []; jump = Some [t; f]})
         end
 
-        | EXP e -> ignore(munchDataExp e)
+        | EXP e -> ignore(if e.addr then munchAddrExp e else munchDataExp e)
 
         | stm -> 
             stm
