@@ -6,7 +6,8 @@
 
 
 
-%term INT
+%term LABEL 
+	| INT
     | VAR
     | ADD
 	| ADDA
@@ -38,10 +39,12 @@
 %termprefix T_
 %ruleprefix R_
 
-%start reg
+%start stm
 
 %%
 
+stm: LABEL = stm_label (0);
+stm: reg = stm_reg (0);
 
 reg:	INT		= reg_INT		(1);
 sreg:	INT		= sreg_INT		(1);
@@ -125,7 +128,7 @@ module In = struct
   	let open M68kFrame.Tree in
 	match stm with
   	| SEQ _ -> assert(false)
-	| LABEL label -> (T_INT, [])
+	| LABEL label -> (T_LABEL, [])
 	| JUMP (exp, labels) -> (T_INT, [])
 	| CJUMP (relop, exp1, exp2, label1, label2) -> (T_INT, [])
 	| MOVE (exp1, exp2) -> (T_INT, [])
@@ -182,6 +185,13 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 			gen v; 
 			v
 		in
+		let walk_stm t =
+			let module A = Assem in
+			match t with
+			| (Burm.R_stm_label, LABEL label) -> 
+            	emit(A.LABEL {assem = (Symbol.name label) ^ ":"; lab = label});
+			| _ -> (Out_channel.print_endline "Error, bad match in walk"; raise Burm.NoMatch)
+		in
 		let rec walk t =
 			let module A = Assem in
 			match t with
@@ -193,7 +203,7 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 					emit(A.OPER {assem = "add.l `s0,`d0"; dst = [r]; src = [s1; r]; jump = None}))   
 			| _ -> (Out_channel.print_endline "Error, bad match in walk"; raise Burm.NoMatch)
 		in
-		walk (Burm.reduce stm);
+		walk_stm (Burm.reduce stm);
 		List.rev(!ilist)
 
 end
