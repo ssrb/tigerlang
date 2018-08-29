@@ -100,7 +100,7 @@ let unCx exp =
         match ex.t with
         | CONST 0 -> (fun (t, f) -> JUMP ({ t = NAME f; addr = true }, [f]))
         | CONST _ -> (fun (t, f) -> JUMP ({ t = NAME t; addr = true }, [t]))
-        | _ -> (fun (t, f) -> CJUMP (EQ, { t = CONST 0; addr = true }, ex, f, t))
+        | _ -> (fun (t, f) -> CJUMP (EQ, { t = CONST 0; addr = false }, ex, f, t))
     end
     | Nx nx -> assert false
     | Cx cx -> cx

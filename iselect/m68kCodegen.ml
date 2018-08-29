@@ -176,26 +176,34 @@ let codegen frame stm =
 
         | CJUMP (relop, e0, e1, t, f) ->
         begin
+
             let relop = 
-                match (e0, e1) with
-                | ({ t = CONST i }, e0) ->
-                    if i <> 0 then
-                        emit(A.OPER {assem = "cmpi.l #" ^ Int.to_string i ^ ",`s0"; dst = []; src = [munchDataExp e0]; jump = None})
+                assert(e0.addr = e1.addr);
+                match (e0.t, e1.t) with
+                | (CONST i, _) ->
+                    if e0.addr then
+                        emit(A.OPER {assem = "cmpa.l #" ^ Int.to_string i ^ ",`s0"; dst = []; src = [munchDataExp e1]; jump = None})
+                    else if i <> 0 then
+                        emit(A.OPER {assem = "cmpi.l #" ^ Int.to_string i ^ ",`s0"; dst = []; src = [munchDataExp e1]; jump = None})
                     else
-                        emit(A.OPER {assem = "tst.l `s0"; dst = []; src = [munchDataExp e0]; jump = None});
+                        emit(A.OPER {assem = "tst.l `s0"; dst = []; src = [munchDataExp e1]; jump = None});
                     Tree.commute relop
-                | (e0, { t = CONST i }) ->
-                    if i <> 0 then
+                | (_, CONST i) ->
+                    if e0.addr then
+                        emit(A.OPER {assem = "cmpa.l #" ^ Int.to_string i ^ ",`s0"; dst = []; src = [munchDataExp e0]; jump = None})
+                    else if i <> 0 then
                         emit(A.OPER {assem = "cmpi.l #" ^ Int.to_string i ^ ",`s0"; dst = []; src = [munchDataExp e0]; jump = None})
                     else
                         emit(A.OPER {assem = "tst.l `s0"; dst = []; src = [munchDataExp e0]; jump = None});
                     relop
                 | _ ->
-                    emit(A.OPER {assem = "cmp.l `s1,`s0"; dst = []; src = [munchDataExp e0; munchDataExp e1]; jump = None});
+                    if e0.addr then
+                        emit(A.OPER {assem = "cmpa.l `s1,`s0"; dst = []; src = [munchDataExp e0; munchDataExp e1]; jump = None})
+                    else
+                        emit(A.OPER {assem = "cmp.l `s1,`s0"; dst = []; src = [munchDataExp e0; munchDataExp e1]; jump = None});
                     relop
             in
 
-            (* TODO cmpa *)
             match relop with 
             | EQ -> 
                 emit(A.OPER {assem = "beq " ^ (Symbol.name t); dst = []; src = []; jump = Some [t; f]})

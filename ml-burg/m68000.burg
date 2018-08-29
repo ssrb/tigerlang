@@ -4,11 +4,10 @@
 (* M68000 Code generator *)
 %}
 
-
-
 %term LABEL 
-	| INT
-    | VAR
+	| JUMP
+	| CJUMP
+	| CONST
     | ADD
 	| ADDA
 	| ADDI
@@ -44,77 +43,63 @@
 %%
 
 stm: LABEL = stm_label (0);
-stm: reg = stm_reg (0);
+stm: JUMP = stm_jump (0);
 
-reg:	INT		= reg_INT		(1);
-sreg:	INT		= sreg_INT		(1);
-ureg:	INT		= ureg_INT		(1);
+stm: CJUMP(dreg, dreg) = stm_cjump_d_d;
+stm: CJUMP(areg, areg) = stm_cjump_a_a;
 
-reg:	VAR		= reg_VAR		(1); (* fetch *)
+stm: dreg = stm_reg (0);
+stm: areg = stm_areg (0);
 
-reg:	sreg		= reg_sreg		(1); (* inc *)
-sreg:	reg		= sreg_reg		(1); (* dec *)
-sreg:	ureg		= sreg_ureg		(1); (* shl *)
-ureg:	sreg		= ureg_sreg_or_reg	(1); (* shr *)
-ureg:	reg		= ureg_sreg_or_reg	(1); (* shr *)
+dreg: CONST	= CONST_d (1);
+areg: CONST	= CONST_a (1);
 
-reg:	ADD(reg,sreg)	= r_ADD_r_r		(1); (* add *)
-reg:	ADD(sreg,reg)	= r_ADD_r_r		(1); (* add *)
-reg:	ADD(INT,reg)	= r_ADD_2i_r		(1); (* add 2*imm *)
-reg:	ADD(reg,INT)	= r_ADD_r_2i		(1); (* add 2*imm *)
-reg:	ADD(INT,sreg)	= r_ADD_2ip_r		(1); (* add 2*imm+1 *)
-reg:	ADD(sreg,INT)	= r_ADD_r_2ip		(1); (* add 2*imm+1 *)
-sreg:	ADD(sreg,sreg)	= r_ADD_r_r		(1); (* add *)
-sreg:	ADD(INT,sreg)	= r_ADD_2i_r		(1); (* add 2*imm *)
-sreg:	ADD(sreg,INT)	= r_ADD_r_2i		(1); (* add 2*imm *)
-sreg:	ADD(INT,reg)	= r_ADD_2im_r		(1); (* add 2*imm-1 *)
-sreg:	ADD(reg,INT)	= r_ADD_r_2im		(1); (* add 2*imm-1 *)
+dreg: ADD(dreg, dreg)	= ADD_d_d	(1);
+dreg: ADD(CONST, dreg)	= ADD_k_d	(1);
+dreg: ADD(dreg, CONST)	= ADD_d_k	(1);
 
-reg:	SUB(reg,sreg)	= r_SUB_r_r		(1); (* sub *)
-reg:	SUB(INT,reg)	= r_SUB_2ipp_r		(2); (* sub 2*imm+2,x *)
-reg:	SUB(reg,INT)	= r_SUB_r_2i		(1); (* sub x,2*imm *)
-reg:	SUB(sreg,INT)	= r_SUB_r_2im		(1); (* sub x,2*imm-1 *)
-sreg:	SUB(sreg,sreg)	= r_SUB_r_r		(1); (* sub *)
-sreg:	SUB(reg,reg)	= r_SUB_r_r		(1); (* sub *)
-sreg:	SUB(sreg,INT)	= r_SUB_r_2i		(1); (* sub x,2*imm *)
-sreg:	SUB(reg,INT)	= r_SUB_r_2ip		(1); (* sub x,2*imm+1 *)
+areg: ADDA(areg,dreg)	= ADDA_a_d	(1);
+dreg: ADDI(dreg,dreg)	= ADDI_d_d	(1);
+dreg: ADDQ(dreg,dreg)	= ADDQ_d_d	(1);
+dreg: ADDX(dreg,dreg)	= ADDX_d_d	(1);
 
-sreg:	MULU(sreg,ureg)	= r_MUL_r_r		(1); (* mul *)
-sreg:	MULU(ureg,sreg)	= r_MUL_r_r		(1); (* mul *)
-sreg:	MULU(INT,sreg)	= r_MUL_i_r		(1); (* mul *)
-sreg:	MULU(sreg,INT)	= r_MUL_r_i		(1); (* mul *)
-sreg:	MULU(INT,ureg)	= r_MUL_2i_r		(1); (* mul 2*imm,x *)
-sreg:	MULU(ureg,INT)	= r_MUL_r_2i		(1); (* mul x,2*imm *)
+dreg: CLR(dreg,dreg)	= CLR_d_d	(1);
 
-reg: ADDA(reg,sreg)	= r_ADDA_r_r		(1); (* sub *)
-reg: ADDI(reg,sreg)	= r_ADDI_r_r		(1); (* sub *)
-reg: ADDQ(reg,sreg)	= r_ADDQ_r_r		(1); (* sub *)
-reg: ADDX(reg,sreg)	= r_ADDX_r_r		(1); (* sub *)
-reg: CLR(reg,sreg)	= r_CLR_r_r		(1); (* sub *)
-reg: CMP(reg,sreg)	= r_CMP_r_r		(1); (* sub *)
-reg: CMPA(reg,sreg)	= r_CMPA_r_r		(1); (* sub *)
-reg: CMPI(reg,sreg)	= r_CMPI_r_r		(1); (* sub *)
-reg: CMPM(reg,sreg)	= r_CMPN_r_r		(1); (* sub *)
-reg: CMP2(reg,sreg)	= r_CMP2_r_r		(1); (* sub *)
-reg: DIVS(reg,sreg)	= r_DIVS_r_r		(1); (* sub *)
-reg: DIVSL(reg,sreg) = r_DIVSL_r_r	(1); (* sub *)
-reg: DIVUL(reg,sreg) = r_DIVUL_r_r	(1); (* sub *)
-reg: EXT(reg,sreg)	= r_EXT_r_r		(1); (* sub *)
-reg: EXTB(reg,sreg)	= r_EXTB_r_r		(1); (* sub *)
-reg: MULS(reg,sreg)	= r_MULS_r_r		(1); (* sub *)
-reg: NEGX(reg,sreg)	= r_NEGX_r_r		(1); (* sub *)
-reg: SUBA(reg,sreg)	= r_SUBA_r_r		(1); (* sub *)
-reg: SUBI(reg,sreg)	= r_SUBI_r_r		(1); (* sub *)
-reg: SUBQ(reg,sreg)	= r_SUBQ_r_r		(1); (* sub *)
-reg: SUBX(reg,sreg)	= r_SUBX_r_r		(1); (* sub *)
+dreg: CMP(dreg,dreg)	= CMP_d_d	(1);
+dreg: CMPA(dreg,dreg)	= CMPA_d_d	(1);
+dreg: CMPI(dreg,dreg)	= CMPI_d_d	(1);
+dreg: CMPM(dreg,dreg)	= CMPN_d_d	(1);
+dreg: CMP2(dreg,dreg)	= CMP2_d_d	(1);
 
-ureg:	DIVU(sreg,sreg)	= r_DIV_r_r		(1); (* div *)
-ureg:	DIVU(ureg,ureg)	= r_DIV_r_r		(1); (* div *)
-ureg:	DIVU(ureg,INT)	= r_DIV_r_i		(1); (* div *)
+dreg: DIVU(dreg, dreg)	= DIVU_d_d	(1);
+dreg: DIVU(CONST, dreg)	= DIVU_k_d	(1);
+dreg: DIVU(dreg, CONST)	= DIVU_d_k	(1);
 
-reg:	NEG(reg)	= r_NEG_r_p_2		(2); (* 2-r *)
-ureg:	NEG(ureg)	= r_NEG_r		(1); (* 0-r *)
-sreg:	NEG(sreg)	= r_NEG_r		(1); (* 0-r *)
+dreg: DIVS(dreg,dreg)	= DIVS_d_d	(1);
+dreg: DIVSL(dreg,dreg) 	= DIVSL_d_d	(1);
+dreg: DIVUL(dreg,dreg) 	= DIVUL_d_d	(1);
+
+dreg: EXT(dreg,dreg)	= EXT_d_d	(1);
+dreg: EXTB(dreg,dreg)	= EXTB_d_d	(1);
+
+dreg: MULU(dreg, dreg)	= MULU_d_d	(1);
+dreg: MULU(CONST, dreg)	= MULU_k_d	(1);
+dreg: MULU(dreg, CONST)	= MULU_d_k	(1);
+
+dreg: MULS(dreg,dreg)	= MULS_d_d	(1);
+dreg: NEGX(dreg,dreg)	= NEGX_d_d	(1);
+
+dreg: SUB(dreg, dreg)	= ADD_d_d	(1);
+dreg: SUB(CONST, dreg)	= ADD_k_d	(1);
+dreg: SUB(dreg, CONST)	= ADD_d_k	(1);
+
+dreg: SUBA(dreg,dreg)	= SUBA_d_d	(1);
+dreg: SUBI(dreg,dreg)	= SUBI_d_d	(1);
+dreg: SUBQ(dreg,dreg)	= SUBQ_d_d	(1);
+dreg: SUBX(dreg,dreg)	= SUBX_d_d	(1);
+
+dreg: NEG(dreg)	= NEG_r		(2);
+
 
 %%
 
@@ -128,10 +113,11 @@ module In = struct
   	let open M68kFrame.Tree in
 	match stm with
   	| SEQ _ -> assert(false)
-	| LABEL label -> (T_LABEL, [])
-	| JUMP (exp, labels) -> (T_INT, [])
-	| CJUMP (relop, exp1, exp2, label1, label2) -> (T_INT, [])
-	| MOVE (exp1, exp2) -> (T_INT, [])
+	| LABEL _ -> (T_LABEL, [])
+	| JUMP _ -> (T_JUMP, [])
+	| CJUMP (relop, exp1, exp2, label1, label2) ->
+		 (T_CJUMP, [(EXP exp1); (EXP exp2)])
+	| MOVE (exp1, exp2) -> (T_CONST, [])
 	| EXP exp -> 
 	begin
 		match exp.t with
@@ -142,21 +128,21 @@ module In = struct
 			| MINUS -> (T_SUB,[(EXP exp1); (EXP exp2)])
 			| MUL -> (T_MULU, [(EXP exp1); (EXP exp2)])
 			| DIV -> (T_DIVU, [(EXP exp1); (EXP exp2)])
-			| AND -> (T_INT, [])
-			| OR -> (T_INT, [])
-			| LSHIFT -> (T_INT, [])
-			| RSHIFT -> (T_INT, [])
-			| ARSHIFT -> (T_INT, [])
-			| XOR -> (T_INT, [])
+			| AND -> (T_CONST, [])
+			| OR -> (T_CONST, [])
+			| LSHIFT -> (T_CONST, [])
+			| RSHIFT -> (T_CONST, [])
+			| ARSHIFT -> (T_CONST, [])
+			| XOR -> (T_CONST, [])
 		end
-		| MEM exp -> (T_INT, [])
-		| TEMP temp -> (T_INT, [])
-		| ESEQ (stm, exp) -> (T_INT, [])
-		| NAME label -> (T_INT, [])
-		| CONST int -> (T_INT, [])
-		| CALL (exp, exps) -> (T_INT, [])
+		| MEM exp -> (T_CONST, [])
+		| TEMP temp -> (T_CONST, [])
+		| ESEQ (stm, exp) -> (T_CONST, [])
+		| NAME label -> (T_CONST, [])
+		| CONST int -> (T_CONST, [])
+		| CALL (exp, exps) -> (T_CONST, [])
 	end
-	| M68kFrame.Tree.NOP -> (T_INT, [])
+	| M68kFrame.Tree.NOP -> (T_CONST, [])
 end
 
 module Generator : Codegen.T with module Frame = M68kFrame = struct 
@@ -173,6 +159,7 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
  	open In
 
 	let codegen frame stm =
+		let module A = Assem in
 		let ilist = ref [] in
 		let emit x = ilist := x::!ilist in
 		let data gen = 
@@ -185,17 +172,9 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 			gen v; 
 			v
 		in
-		let walk_stm t =
-			let module A = Assem in
-			match t with
-			| (Burm.R_stm_label, LABEL label) -> 
-            	emit(A.LABEL {assem = (Symbol.name label) ^ ":"; lab = label});
-			| _ -> (Out_channel.print_endline "Error, bad match in walk"; raise Burm.NoMatch)
-		in
 		let rec walk t =
-			let module A = Assem in
 			match t with
-			| (Burm.R_r_ADD_r_r (r0,r1), _) ->
+			| (Burm.R_ADD_d_d (r0,r1), _) ->
 			 	let s0 = walk r0 in
 				let s1 = walk r1 in
 				data(fun r -> 
@@ -203,6 +182,37 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 					emit(A.OPER {assem = "add.l `s0,`d0"; dst = [r]; src = [s1; r]; jump = None}))   
 			| _ -> (Out_channel.print_endline "Error, bad match in walk"; raise Burm.NoMatch)
 		in
+		let emit_relop relop t f =
+			match relop with 
+			| EQ -> 
+				emit(A.OPER {assem = "beq " ^ (Symbol.name t); dst = []; src = []; jump = Some [t; f]})
+			| NE ->
+				emit(A.OPER {assem = "bne " ^ (Symbol.name t); dst = []; src = []; jump = Some [t; f]})
+			| LT | ULT ->
+				emit(A.OPER {assem = "blt " ^ (Symbol.name t); dst = []; src = []; jump = Some [t; f]})
+			| GT | UGT ->
+				emit(A.OPER {assem = "bgt " ^ (Symbol.name t); dst = []; src = []; jump = Some [t; f]})
+			| LE | ULE ->
+				emit(A.OPER {assem = "ble " ^ (Symbol.name t); dst = []; src = []; jump = Some [t; f]})
+			| GE | UGE ->
+				emit(A.OPER {assem = "bge " ^ (Symbol.name t); dst = []; src = []; jump = Some [t; f]})
+		in
+		let walk_stm t =
+			let module A = Assem in
+			match t with
+			| (Burm.R_stm_label, LABEL label) -> 
+            	emit(A.LABEL {assem = (Symbol.name label) ^ ":"; lab = label});
+			| (Burm.R_stm_jump, JUMP ({ t = NAME l }, lbls)) ->
+				emit(A.OPER {assem = "jmp " ^ (Symbol.name l); dst = []; src = []; jump = Some lbls})
+			| (Burm.R_stm_cjump_d_d (e0, e1), CJUMP (relop, _, _, t, f)) ->
+				emit(A.OPER {assem = "cmp.l `s1,`s0"; dst = []; src = [walk e0; walk e1]; jump = None});
+				emit_relop relop t f
+			| (Burm.R_stm_cjump_a_a (e0, e1), CJUMP (relop, _, _, t, f)) ->
+				emit(A.OPER {assem = "cmpa.l `s1,`s0"; dst = []; src = [walk e0; walk e1]; jump = None});
+				emit_relop relop t f
+			| _ -> (Out_channel.print_endline "Error, bad match in walk_stm"; raise Burm.NoMatch)
+		in
+		
 		walk_stm (Burm.reduce stm);
 		List.rev(!ilist)
 
