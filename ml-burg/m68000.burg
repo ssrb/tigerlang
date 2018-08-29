@@ -45,8 +45,13 @@
 stm: LABEL = stm_label (0);
 stm: JUMP = stm_jump (0);
 
-stm: CJUMP(dreg, dreg) = stm_cjump_d_d;
-stm: CJUMP(areg, areg) = stm_cjump_a_a;
+stm: CJUMP(dreg, dreg) = stm_cjump_d_d	(1);
+stm: CJUMP(CONST, dreg) = stm_cjump_k_d	(1);
+stm: CJUMP(dreg, CONST) = stm_cjump_d_k	(1);
+
+stm: CJUMP(areg, areg) = stm_cjump_a_a	(1);
+stm: CJUMP(CONST, areg) = stm_cjump_k_a (1);
+stm: CJUMP(areg, CONST) = stm_cjump_a_k (1);
 
 stm: dreg = stm_reg (0);
 stm: areg = stm_areg (0);
@@ -207,8 +212,26 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 			| (Burm.R_stm_cjump_d_d (e0, e1), CJUMP (relop, _, _, t, f)) ->
 				emit(A.OPER {assem = "cmp.l `s1,`s0"; dst = []; src = [walk e0; walk e1]; jump = None});
 				emit_relop relop t f
+			| (Burm.R_stm_cjump_k_d e, CJUMP (relop, {t = CONST i}, _, t, f)) ->
+				if i <> 0 then
+					emit(A.OPER {assem = "cmpi.l #" ^ (Int.to_string i) ^ ",`s0"; dst = []; src = [walk e]; jump = None})
+				else
+					 emit(A.OPER {assem = "tst.l `s0"; dst = []; src = [walk e]; jump = None});
+				emit_relop (Tree.commute relop) t f
+			| (Burm.R_stm_cjump_d_k e, CJUMP (relop, _, {t = CONST i}, t, f)) ->
+				if i <> 0 then
+					emit(A.OPER {assem = "cmpi.l #" ^ (Int.to_string i) ^ ",`s0"; dst = []; src = [walk e]; jump = None})
+				else
+					 emit(A.OPER {assem = "tst.l `s0"; dst = []; src = [walk e]; jump = None});
+				emit_relop relop t f
 			| (Burm.R_stm_cjump_a_a (e0, e1), CJUMP (relop, _, _, t, f)) ->
 				emit(A.OPER {assem = "cmpa.l `s1,`s0"; dst = []; src = [walk e0; walk e1]; jump = None});
+				emit_relop relop t f
+			| (Burm.R_stm_cjump_k_a e, CJUMP (relop, {t = CONST i}, _, t, f)) ->
+				emit(A.OPER {assem = "cmpa.l #" ^ (Int.to_string i) ^ ",`s0"; dst = []; src = [walk e]; jump = None});
+				emit_relop  (Tree.commute relop) t f
+			| (Burm.R_stm_cjump_a_k e, CJUMP (relop, _, {t = CONST i}, t, f)) ->
+				emit(A.OPER {assem = "cmpa.l #" ^ (Int.to_string i) ^ ",`s0"; dst = []; src = [walk e]; jump = None});
 				emit_relop relop t f
 			| _ -> (Out_channel.print_endline "Error, bad match in walk_stm"; raise Burm.NoMatch)
 		in
