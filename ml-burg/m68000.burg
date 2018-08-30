@@ -7,6 +7,7 @@
 %term LABEL 
 	| JUMP
 	| CJUMP
+	| MOVE
 	| CONST
     | ADD
 	| ADDA
@@ -42,6 +43,9 @@
 
 %%
 
+stm: dreg = stm_reg (0);
+stm: areg = stm_areg (0);
+
 stm: LABEL = stm_label (0);
 stm: JUMP = stm_jump (0);
 
@@ -53,8 +57,8 @@ stm: CJUMP(areg, areg) = stm_cjump_a_a	(1);
 stm: CJUMP(CONST, areg) = stm_cjump_k_a (1);
 stm: CJUMP(areg, CONST) = stm_cjump_a_k (1);
 
-stm: dreg = stm_reg (0);
-stm: areg = stm_areg (0);
+stm: MOVE(dreg, dreg) = stm_move_d_d (1);
+stm: MOVE(areg, dreg) = stm_move_a_d (1);
 
 dreg: CONST	= CONST_d (1);
 areg: CONST	= CONST_a (1);
@@ -122,7 +126,7 @@ module In = struct
 	| JUMP _ -> (T_JUMP, [])
 	| CJUMP (relop, exp1, exp2, label1, label2) ->
 		 (T_CJUMP, [(EXP exp1); (EXP exp2)])
-	| MOVE (exp1, exp2) -> (T_CONST, [])
+	| MOVE (exp1, exp2) -> (T_MOVE, [(EXP exp1); (EXP exp2)])
 	| EXP exp -> 
 	begin
 		match exp.t with
@@ -179,14 +183,20 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 		in
 		let rec walk t =
 			match t with
-			| (Burm.R_ADD_d_d (r0,r1), _) ->
+			| (Burm.R_ADD_d_d (r0, r1), _) ->
 			 	let s0 = walk r0 in
 				let s1 = walk r1 in
 				data(fun r -> 
 					emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = s0});
-					emit(A.OPER {assem = "add.l `s0,`d0"; dst = [r]; src = [s1; r]; jump = None}))   
+					emit(A.OPER {assem = "add.l `s0,`d0"; dst = [r]; src = [s1; r]; jump = None}))
+			| (Burm.R_ADD_k_d e, EXP { t = BINOP (PLUS, { t = CONST i }, _) })
+			| (Burm.R_ADD_d_k e, EXP { t = BINOP (PLUS, _, { t = CONST i }) }) ->
+				data(fun r -> 
+					emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = walk e});
+					emit(A.OPER {assem = "addi.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = [r]; jump = None}))
 			| _ -> (Out_channel.print_endline "Error, bad match in walk"; raise Burm.NoMatch)
 		in
+
 		let emit_relop relop t f =
 			match relop with 
 			| EQ -> 
@@ -202,13 +212,17 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 			| GE | UGE ->
 				emit(A.OPER {assem = "bge " ^ (Symbol.name t); dst = []; src = []; jump = Some [t; f]})
 		in
+
 		let walk_stm t =
 			let module A = Assem in
 			match t with
+			
 			| (Burm.R_stm_label, LABEL label) -> 
             	emit(A.LABEL {assem = (Symbol.name label) ^ ":"; lab = label});
+
 			| (Burm.R_stm_jump, JUMP ({ t = NAME l }, lbls)) ->
 				emit(A.OPER {assem = "jmp " ^ (Symbol.name l); dst = []; src = []; jump = Some lbls})
+			
 			| (Burm.R_stm_cjump_d_d (e0, e1), CJUMP (relop, _, _, t, f)) ->
 				emit(A.OPER {assem = "cmp.l `s1,`s0"; dst = []; src = [walk e0; walk e1]; jump = None});
 				emit_relop relop t f
@@ -233,6 +247,13 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 			| (Burm.R_stm_cjump_a_k e, CJUMP (relop, _, {t = CONST i}, t, f)) ->
 				emit(A.OPER {assem = "cmpa.l #" ^ (Int.to_string i) ^ ",`s0"; dst = []; src = [walk e]; jump = None});
 				emit_relop relop t f
+
+		 	| (Burm.R_stm_move_d_d (e1, e2), _) ->
+                emit(A.MOVE {assem = "move.l `s0,`d0"; dst = walk e1; src = walk e2})
+
+			| (Burm.R_stm_move_a_d (e1, e2), _) ->
+                emit(A.MOVE {assem = "movea.l `s0,`d0"; dst = walk e1; src = walk e2})
+
 			| _ -> (Out_channel.print_endline "Error, bad match in walk_stm"; raise Burm.NoMatch)
 		in
 		
