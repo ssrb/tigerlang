@@ -307,7 +307,7 @@ let codegen frame stm =
                         let s0 = munchAddrExp e0 in
                         let s1 = munchDataExp e1 in
                         data(fun r -> 
-                            emit(A.OPER {assem = "move.l `s0,`d0"; dst = [r]; src = [s0]; jump = None});
+                            emit(A.OPER {assem = "move.l `(s0),`d0"; dst = [r]; src = [s0]; jump = None});
                             emit(A.OPER {assem = "sub.l `s0,`d0"; dst = [r]; src = [s1; r]; jump = None}))
                     | (e0, { t = MEM e1}) ->
                         let s0 = munchDataExp e0 in
