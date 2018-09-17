@@ -939,7 +939,7 @@ let emit (s_in, oustreamgen) =
 							if i <> 0 then say "&& ";
 							say ("s" ^ (Int.to_string i) ^ "_r.(" ^ (Int.to_string nt) ^ ") <> 0 "))) ntl;
 						
-						say "then";
+						say "then (";
 						nl();
 
 						sayi (idnt + 1) ("let c = ");
@@ -948,12 +948,12 @@ let emit (s_in, oustreamgen) =
 							if i <> 0 then say " + ";
 							say ("s" ^ (Int.to_string i) ^ "_c.(" ^ (Int.to_string nt) ^ ")"))) ntl;
 						
-						say " in (";
+						say " in";
 						nl();
 
-						List.iter ~f:(dorule (idnt + 2)) rl;
+						List.iter ~f:(dorule (idnt + 1)) rl;
 
-						sayinl (idnt + 1) (");");
+						sayinl idnt (");");
 					in
 					List.iter ~f:(dorules (idnt + 2)) rlntll;
 				) (* fun emit_match_case *)
