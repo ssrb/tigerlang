@@ -174,8 +174,8 @@ let emit (s_in, oustreamgen) =
 			
 		let newt (sym, etn') =
 			let etn = match etn' with
-								|	Some str -> str
-								| None -> sym
+				| Some str -> str
+				| None -> sym
 			in
 			match ((BurgHash.find ht sym) : ids option) with
 			| None -> BurgHash.set ht sym (TERMINAL (gen_tnum(), etn))
@@ -185,9 +185,9 @@ let emit (s_in, oustreamgen) =
 		let newdecl = function
 			| START s ->
 				begin
-						match !start_sym with
-						| None -> start_sym := Some s
-						| Some _ -> warning "%start redefined"
+					match !start_sym with
+					| None -> start_sym := Some s
+					| Some _ -> warning "%start redefined"
 				end
 			| TERM l -> List.iter l newt
 			| TERMPREFIX tp ->
@@ -298,7 +298,7 @@ let emit (s_in, oustreamgen) =
 						| None -> t_arity.(t) <- Some len
 						| Some len' -> 
 							if len <> len' then
-								warning ("bad arity for terminal "^sym));
+								warning ("bad arity for terminal " ^ sym));
 						T (t, List.map ~f:makepat sons)
 				in
 				makepat pattern
@@ -425,8 +425,8 @@ let emit (s_in, oustreamgen) =
 			| (NT _, NT _) -> true
 			| (T (t1,spat1), T (t2, spat2)) ->
 				if t1 = t2
-					then samepatternsons (spat1,spat2)
-					else raise NotSamePat
+				then samepatternsons (spat1,spat2)
+				else raise NotSamePat
 			| _ -> raise NotSamePat
 		and samepatternsons (l1, l2) =
 			if (try (List.for_all2_exn  ~f:samepattern l1 l2) with Invalid_argument _ -> raise NotSamePat) then 
@@ -501,12 +501,12 @@ let emit (s_in, oustreamgen) =
 					let sonsg = List.map2_exn ~f:uniftype spat1 spat2 in
 					let addson b a = 
 						match (a, b) with 
-						| (NotUnif,_) -> raise (Forced NotUnif)
-						| (_,NotUnif) -> raise (Forced NotUnif)
-						| (NoMG,_) -> NoMG
-						| (_,NoMG) -> NoMG
-						| (SameG,x) -> x
-						| (x,SameG) -> x
+						| (NotUnif, _) -> raise (Forced NotUnif)
+						| (_, NotUnif) -> raise (Forced NotUnif)
+						| (NoMG, _) -> NoMG
+						| (_, NoMG) -> NoMG
+						| (SameG, x) -> x
+						| (x, SameG) -> x
 						| (FirstMG, FirstMG) -> FirstMG
 						| (SecondMG, SecondMG) -> SecondMG
 						| _ -> NoMG
@@ -515,7 +515,7 @@ let emit (s_in, oustreamgen) =
 				)
 		in
 
-		let unify (p1,p2) = try (uniftype p1 p2) with Forced x -> x in
+		let unify (p1, p2) = try (uniftype p1 p2) with Forced x -> x in
 
 
 		(* "matches" is a list.  Each elem is a list of (pat,...)
@@ -530,7 +530,7 @@ let emit (s_in, oustreamgen) =
 			*)
 		let clustermatches matches ((pat, _, mincost, maxcost, lhss) as elem) =
 			(* works on already (increasing,unique) ordered lists *)
-			let rec subset = function 
+			let rec subset = function
 			| ([], _) -> true
 			| (_, []) -> false
 			| ((e1::l1) as a1, e2::l2) ->
@@ -595,7 +595,7 @@ let emit (s_in, oustreamgen) =
 			let rec do_pat = function 
 				| (NT nt, cnt, iswot) ->
 					let s = Int.to_string cnt in
-					("(s" ^ s ^ "_c,s" ^ s ^ "_r,_,_)", cnt+1, iswot)
+					("(s" ^ s ^ "_c,s" ^ s ^ "_r,_,_)", cnt + 1, iswot)
 				| (T (t,sons), cnt, _) ->
 					let (s,cnt',_) = do_sons (sons, cnt) in
 					("(_,_," ^ (prep_node_cons t)
@@ -606,7 +606,7 @@ let emit (s_in, oustreamgen) =
 					, cnt', false)
 			and do_sons (sons, cnt) =
 				let (s,cnt,_,iswot) = List.fold ~init:("", cnt, true, true) ~f:(fun (s,cnt,first,iswot) pat ->
-					let (s',cnt',iswot') = do_pat (pat,cnt,iswot) in
+					let (s', cnt', iswot') = do_pat (pat, cnt, iswot) in
 					((if first then s' else s ^ "," ^ s'), cnt', false, iswot')
 				) sons
 				in (s, cnt, iswot)
@@ -614,8 +614,8 @@ let emit (s_in, oustreamgen) =
 
 			let (string_for_match, iscst, iswot) =
 				match pat with
-				| T (_,sons) ->
-					let (s,c,iswot) = do_sons (sons,0) in (s,c=0,iswot)
+				| T (_, sons) ->
+					let (s, c, iswot) = do_sons (sons, 0) in (s, c = 0, iswot)
 				| NT _ -> error "bug : string_for_match"
 			in
 
@@ -952,6 +952,8 @@ let emit (s_in, oustreamgen) =
 							sayinl idnt ");";
 						in
 
+						let ntl = List.rev ntl in
+
 						sayi idnt "if ";
 						
 						List.iteri ~f:(fun i nt -> (
@@ -1039,7 +1041,7 @@ let emit (s_in, oustreamgen) =
 		in
 		(* ")" fun emit_match *)
 		sayinl 1 "let rec rec_label (tree : In.tree) =";
-		Array.iteri ~f:(emit_closure 2)chains_for_rhs;
+			Array.iteri ~f:(emit_closure 2) chains_for_rhs;
 			sayinl 2 "in";
 			sayinl 2 "let (term, children) = In.opchildren tree in";
 			sayinl 2 "let (s_c, s_r, t) =";
