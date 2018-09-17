@@ -36,8 +36,6 @@ module BurgHash = String.Table
 
 exception BurgError				      (* for error reporting *)
 
-let inf = 16383
-
 open BurgAST
 
 (* debugging *)
@@ -452,7 +450,7 @@ let emit (s_in, oustreamgen) =
 		let minmaxcostlhss (pat, zapl) =
 			let min b (({cost; _} : rule), _) = if cost <= b then cost else b in
 			let max b (({cost; _} : rule), _) = if cost >= b then cost else b in
-			let mincost = List.fold ~init:inf ~f:min zapl in
+			let mincost = List.fold ~init:Int.max_value ~f:min zapl in
 			let maxcost = List.fold ~init: (lnot 1) ~f:max zapl in
 			let addlhs lhss (({nt = lhs; _} : rule), _) =
 				let rec loop = function 
@@ -808,7 +806,7 @@ let emit (s_in, oustreamgen) =
 		let do_cstrule (t, (rlntll: (rule list * int list) list), uniqstr, iscst) =
 			if iscst then
 				let ar = arity.(t) in
-				let a_cost = Array.create !nb_nt inf in
+				let a_cost = Array.create !nb_nt Int.max_value in
 				let a_rule = Array.create !nb_nt 0 in
 				let rec record (({nt=lhs; cost; num; _} : rule), c) =
 					let cc = c + cost in
@@ -851,7 +849,7 @@ let emit (s_in, oustreamgen) =
 	in
 
 	let n = Int.to_string (!nb_nt) in
-	let sinf = Int.to_string inf in
+	let sinf = "Int.max_value" in
 	Array.iteri ~f:do_cstrules rule_groups;
 	sayinl 1 ("let s_c_nothing = Array.create " ^ n ^ " " ^ sinf);
 	sayinl 1 ("let s_r_nothing = Array.create " ^ n ^ " 0");
@@ -893,7 +891,7 @@ let emit (s_in, oustreamgen) =
 			)
 		in
 		let nbnt = Int.to_string (!nb_nt) in
-		let sinf = Int.to_string inf in
+		let sinf = "Int.max_value" in
 		let emit_match idnt t =
 			(* "(" *)
 			let ar = arity.(t) in
@@ -1104,7 +1102,7 @@ let emit (s_in, oustreamgen) =
 			sayinl 1 "let rec doreduce ((stree : s_tree), nt) =";
 				sayinl 2 "let (s_c, s_r, _, tree) = stree in";
 				sayinl 2 "let cost = s_c.(nt) in";
-				sayinl 2 ("if cost =" ^ (Int.to_string inf) ^ " then (");
+				sayinl 2 ("if cost = Int.max_value then (");
 					sayinl 3 "Out_channel.(";
 						sayinl 4 "output_string stderr (\"No Match on nonterminal \" ^ (Int.to_string nt));";
 						sayinl 4 "newline stderr;";
