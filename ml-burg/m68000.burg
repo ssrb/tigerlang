@@ -194,7 +194,13 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 				data(fun r -> 
 					emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = walk e});
 					emit(A.OPER {assem = "addi.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = [r]; jump = None}))
-			| _ -> (Out_channel.print_endline "Error, bad match in walk"; raise Burm.NoMatch)
+			| _ ->
+				Out_channel.(
+					output_string stderr ("Error, bad match in walk: " ^ (Burm.ruleToString (fst t)));
+					newline stderr;
+					raise Burm.NoMatch	
+				)
+				
 		in
 
 		let emit_relop relop t f =
@@ -254,10 +260,23 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 			| (Burm.R_stm_move_a_d (e1, e2), _) ->
                 emit(A.MOVE {assem = "movea.l `s0,`d0"; dst = walk e1; src = walk e2})
 
-			| _ -> (Out_channel.print_endline "Error, bad match in walk_stm"; raise Burm.NoMatch)
+			| _ ->
+				Out_channel.(
+					output_string stderr ("Error, bad match in walk_stm: " ^ (Burm.ruleToString (fst t)));
+					newline stderr;
+					raise Burm.NoMatch
+				)
 		in
 		
-		walk_stm (Burm.reduce stm);
+		(try walk_stm (Burm.reduce stm) with Burm.NoMatch as e ->
+			Out_channel.(
+				output_string stderr "Failed to generate instruction for statement: ";
+				Frame.Tree.sexp_of_stm stm |> Sexp.output_hum stderr;
+				newline stderr;
+				raise e
+			)
+		);
+
 		List.rev(!ilist)
 
 end
