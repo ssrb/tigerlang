@@ -4,7 +4,9 @@
 (* M68000 Code generator *)
 %}
 
-%term LABEL 
+%term DREG
+	| AREG
+	| LABEL 
 	| JUMP
 	| CJUMP
 	| MOVE
@@ -59,6 +61,9 @@ stm: CJUMP(areg, CONST) = stm_cjump_a_k (1);
 
 stm: MOVE(dreg, dreg) = stm_move_d_d (1);
 stm: MOVE(areg, dreg) = stm_move_a_d (1);
+
+dreg: DREG	= DREG (1);
+areg: AREG	= AREG (1);
 
 dreg: CONST	= CONST_d (1);
 areg: CONST	= CONST_a (1);
@@ -145,7 +150,7 @@ module In = struct
 			| XOR -> (T_CONST, [])
 		end
 		| MEM exp -> (T_CONST, [])
-		| TEMP temp -> (T_CONST, [])
+		| TEMP temp -> ((if exp.addr then T_AREG else T_DREG), [])
 		| ESEQ (stm, exp) -> (T_CONST, [])
 		| NAME label -> (T_CONST, [])
 		| CONST int -> (T_CONST, [])
