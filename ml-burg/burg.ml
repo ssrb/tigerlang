@@ -956,7 +956,7 @@ let emit (s_in, oustreamgen) =
 						
 						List.iteri ~f:(fun i nt -> (
 							if i <> 0 then say "&& ";
-							say ("s" ^ (Int.to_string i) ^ "_r.(" ^ (Int.to_string (nt:int)) ^ ") <> 0 "))) ntl;
+							say ("s" ^ (Int.to_string i) ^ "_r.(" ^ (Int.to_string nt) ^ ") <> 0 "))) ntl;
 						
 						say "then";
 						nl();
@@ -965,7 +965,7 @@ let emit (s_in, oustreamgen) =
 
 						List.iteri ~f:(fun i nt -> (
 							if i <> 0 then say " + ";
-							say ("s" ^ (Int.to_string i) ^ "_c.(" ^ (Int.to_string (nt:int)) ^ ")"))) ntl;
+							say ("s" ^ (Int.to_string i) ^ "_c.(" ^ (Int.to_string nt) ^ ")"))) ntl;
 						
 						say " in (";
 						nl();
