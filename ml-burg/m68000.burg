@@ -116,7 +116,7 @@ module In = struct
 
   open BurmOps
 
-  type tree = M68kFrame.Tree.stm
+  type tree = M68kFrame.Tree.stm  [@@deriving sexp]
 
   let opchildren stm = 
   	let open M68kFrame.Tree in

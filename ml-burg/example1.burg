@@ -49,7 +49,7 @@ module In = struct
   | INDIRC of tree
   | I0I
   | ADDRLP of string
-  | CNSTI of int
+  | CNSTI of int [@@deriving sexp]
 
   let opchildren = function
     | ASGNI (t1,t2) -> (T_ASGNI, [t1; t2])

@@ -709,31 +709,12 @@ let emit (s_in, oustreamgen) =
 			| Some _ -> ()
 		in
 		sayinl idnt "type rule = ";
-		Array.iter ~f:onerule rules
+		Array.iter ~f:onerule rules;
+		sayinl (idnt + 1) "[@@deriving sexp]";
 	in
 
 	let emit_ruleToString idnt rules =
-		let h : unit BurgHash.t = BurgHash.create () in
-		let onerule ({ern; _} as rule : rule) = 
-			let name = prep_rule_cons rule in
-			match BurgHash.find h name with
-			| None -> 
-				let patarity = 
-					match BurgHash.find hr ern with
-					| None -> error "emit_ruleToString.onerule"
-					| Some ar -> ar
-				in
-				let pr = function 
-					| 0 -> ""
-					| _ -> " _"
-				in
-				let constructor = name ^ (pr patarity) in
-				BurgHash.set h name ();
-				sayinl (idnt + 1) ("| " ^ constructor ^ " -> \"" ^ name ^ "\"")
-			| Some _ -> ()
-		in
-		sayinl idnt "let ruleToString = function";
-		Array.iter ~f:onerule rules
+		sayinl idnt "let ruleToString r = Sexp.to_string_hum (sexp_of_rule r)";
 	in
 
 	let emit_debug rules =
@@ -761,7 +742,7 @@ let emit (s_in, oustreamgen) =
 
 	let emit_sig_burmgen () =
 		sayinl 0 ("module type " ^ (!sig_name) ^ "_INPUT_SPEC = sig");
-		sayinl 1 "type tree";
+		sayinl 1 "type tree [@@deriving sexp]";
 		sayinl 1 ("val opchildren : tree -> " ^ (!struct_name) ^ "Ops.ops * (tree list)");
 		sayinl 0 "end";
 		nl ()
@@ -770,7 +751,7 @@ let emit (s_in, oustreamgen) =
 	let emit_sig_burm rules = 
 		sayinl 0 ("module type " ^ (!sig_name) ^ " = sig");
 		sayinl 1 "exception NoMatch";
-		sayinl 1 "type tree";
+		sayinl 1 "type tree [@@deriving sexp]";
 		emit_type_rule 1 rules;
 		sayinl 1 "val reduce : tree -> rule * tree";
 		sayinl 1 "val ruleToString : rule -> string";
@@ -791,7 +772,7 @@ let emit (s_in, oustreamgen) =
 		in
 		sayinl 0 ("module " ^ !struct_name ^ "Gen : " ^ "functor (In : " ^ !sig_name ^ "_INPUT_SPEC) -> " ^ !sig_name ^ " with type tree = In.tree = functor (In : "
 			^ !sig_name ^ "_INPUT_SPEC) -> struct");
-		sayinl 1 "type tree = In.tree";
+		sayinl 1 "type tree = In.tree [@@deriving sexp]";
 		sayinl 1 "exception NoMatch";
 		emit_type_rule 1 rules;
 		emit_ruleToString 1 rules; 

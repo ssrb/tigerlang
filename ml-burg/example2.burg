@@ -85,7 +85,7 @@ module In = struct
   | SUB of tree * tree
   | MUL of tree * tree
   | DIV of tree * tree
-  | NEG of tree
+  | NEG of tree [@@deriving sexp]
 
   let opchildren = function
     | INT _ ->       (T_INT, [])
