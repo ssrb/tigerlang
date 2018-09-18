@@ -6,6 +6,7 @@
 
 %term DREG
 	| AREG
+	| MEM
 	| LABEL 
 	| JUMP
 	| CJUMP
@@ -61,6 +62,9 @@ stm: CJUMP(areg, CONST) = stm_cjump_a_k (1);
 
 stm: MOVE(dreg, dreg) = stm_move_d_d (1);
 stm: MOVE(areg, dreg) = stm_move_a_d (1);
+stm: MOVE(mem, mem) = stm_move_m_m (1);
+
+mem: MEM = MEM (1);
 
 dreg: DREG	= DREG (1);
 areg: AREG	= AREG (1);
@@ -149,7 +153,7 @@ module In = struct
 			| ARSHIFT -> (T_CONST, [])
 			| XOR -> (T_CONST, [])
 		end
-		| MEM exp -> (T_CONST, [])
+		| MEM exp -> (T_MEM, [])
 		| TEMP temp -> ((if exp.addr then T_AREG else T_DREG), [])
 		| ESEQ (stm, exp) -> (T_CONST, [])
 		| NAME label -> (T_CONST, [])
@@ -199,6 +203,13 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 				data(fun r -> 
 					emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = walk e});
 					emit(A.OPER {assem = "addi.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = [r]; jump = None}))
+
+			| (Burm.R_DREG, EXP { t = TEMP t }) ->
+				Var.make (t, "d")
+
+			| (Burm.R_AREG, EXP { t = TEMP t }) ->
+				Var.make (t, "a")
+
 			| _ ->
 				Out_channel.(
 					output_string stderr ("Error, bad match in walk: " ^ (Burm.ruleToString (fst t)));
@@ -261,9 +272,10 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 
 		 	| (Burm.R_stm_move_d_d (e1, e2), _) ->
                 emit(A.MOVE {assem = "move.l `s0,`d0"; dst = walk e1; src = walk e2})
-
 			| (Burm.R_stm_move_a_d (e1, e2), _) ->
                 emit(A.MOVE {assem = "movea.l `s0,`d0"; dst = walk e1; src = walk e2})
+			| (Burm.R_stm_move_m_m (e1, e2), _) ->
+                emit(A.OPER {assem = "move.l m,m"; dst = []; src = []; jump = None})
 
 			| _ ->
 				Out_channel.(
