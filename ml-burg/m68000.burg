@@ -10,6 +10,7 @@
 	| LABEL 
 	| JUMP
 	| CJUMP
+	| CALL
 	| MOVE
 	| CONST
     | ADD
@@ -65,6 +66,8 @@ stm: MOVE(areg, dreg) = stm_move_a_d (1);
 stm: MOVE(mem, mem) = stm_move_m_m (1);
 
 mem: MEM = MEM (1);
+
+dreg: CALL = CALL (1);
 
 dreg: DREG	= DREG (1);
 areg: AREG	= AREG (1);
@@ -158,7 +161,7 @@ module In = struct
 		| ESEQ (stm, exp) -> (T_CONST, [])
 		| NAME label -> (T_CONST, [])
 		| CONST int -> (T_CONST, [])
-		| CALL (exp, exps) -> (T_CONST, [])
+		| CALL _ -> (T_CALL, [])
 	end
 	| M68kFrame.Tree.NOP -> (T_CONST, [])
 end
@@ -210,12 +213,26 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 			| (Burm.R_AREG, EXP { t = TEMP t }) ->
 				Var.make (t, "a")
 
-			| _ ->
+			| (Burm.R_CONST_d, EXP { t = CONST i }) -> 
+				data(fun r -> 
+					emit(A.OPER {assem = "move.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
+
+			| (Burm.R_CONST_a, EXP { t = CONST i }) -> 
+				data(fun r -> 
+					emit(A.OPER {assem = "move.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
+
+			| (Burm.R_CALL, EXP { t = CALL (l, args) }) ->
+				data(fun r -> 
+                	emit(A.OPER {assem = "jsr (l)"; dst = []; src = []; jump = None}))
+
+			| (r, stm) ->
 				Out_channel.(
-					output_string stderr ("Error, bad match in walk: " ^ (Burm.ruleToString (fst t)));
+					output_string stderr ("Error, bad match in walk: " ^ (Burm.ruleToString r));
 					newline stderr;
-					raise Burm.NoMatch	
-				)
+					Frame.Tree.sexp_of_stm stm |> Sexp.output_hum stderr;
+					newline stderr
+				);
+				raise Burm.NoMatch
 				
 		in
 
@@ -277,12 +294,17 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 			| (Burm.R_stm_move_m_m (e1, e2), _) ->
                 emit(A.OPER {assem = "move.l m,m"; dst = []; src = []; jump = None})
 
-			| _ ->
+			| (Burm.R_CALL, EXP { t = CALL (l, args) }) ->
+                emit(A.OPER {assem = "jsr (l)"; dst = []; src = []; jump = None})
+
+			| (r, stm) ->
 				Out_channel.(
-					output_string stderr ("Error, bad match in walk_stm: " ^ (Burm.ruleToString (fst t)));
+					output_string stderr ("Error, bad match in walk_stm: " ^ (Burm.ruleToString r));
 					newline stderr;
-					raise Burm.NoMatch
-				)
+					Frame.Tree.sexp_of_stm stm |> Sexp.output_hum stderr;
+					newline stderr
+				);
+				raise Burm.NoMatch
 		in
 		
 		(try walk_stm (Burm.reduce stm) with Burm.NoMatch as e ->
