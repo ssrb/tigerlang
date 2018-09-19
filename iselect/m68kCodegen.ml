@@ -439,7 +439,7 @@ let codegen frame stm =
         | exp -> 
             exp
             |> Tree.sexp_of_exp
-            |> Sexp.output_hum Out_channel.stdout;
+            |> Sexp.output_hum Out_channel.stderr;
             assert(false)
 
     in 
