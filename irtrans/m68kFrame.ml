@@ -107,25 +107,26 @@ let name {name; _} = name
 
 let formals {formals; _} = formals
 
-let exp (access, exp) =
+let exp (access, exp, addr) =
     let module T = Tree in
     match access with
-    | InFrame off -> { t = T.MEM ({ t = T.BINOP (T.PLUS, exp, { t = T.CONST off; addr = false }); addr = true } ); addr = false (* <= TODO *) }
-    | InReg tmp -> { t = T.TEMP tmp; addr = false }
+    | InFrame off -> { t = T.MEM ({ t = T.BINOP (T.PLUS, exp, { t = T.CONST off; addr = false }); addr = true } ); addr }
+    | InReg tmp -> { t = T.TEMP tmp; addr }
 
 let procEntryExit1 (frame, body) = 
     
     let saverestore = calleesaves |> List.map ~f:(fun (reg : Var.t) ->
-        let memory = exp ((allocLocal frame false), { t = TEMP fp; addr = true }) in
-        (MOVE (memory, { t = TEMP reg.temp; addr = false (* <= TODO ? *)}), MOVE ({ t = TEMP reg.temp; addr = reg.regclass = "a" }, memory))
+        let addr = reg.regclass = "a" in
+        let memory = exp ((allocLocal frame false), { t = TEMP fp; addr = true }, addr) in
+        (MOVE (memory, { t = TEMP reg.temp; addr }), MOVE ({ t = TEMP reg.temp; addr }, memory))
     )
     in
     
     let nargs = List.length frame.formals in
 
     let params = frame.formals |> List.mapi ~f:(fun i f -> 
-        let frame = exp (InFrame ((i + 2) * wordSize), { t = TEMP fp; addr = true }) in
-        let reg = exp (f, { t = TEMP fp; addr = true }) in
+        let frame = exp (InFrame ((i + 2) * wordSize), { t = TEMP fp; addr = true }, false (*<= TODO *)) in
+        let reg = exp (f, { t = TEMP fp; addr = true }, false (*<= TODO *)) in
         MOVE (reg, frame)
     )
     in

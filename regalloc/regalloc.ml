@@ -25,7 +25,7 @@ let rec alloc (asm, frame) =
 
         let rewriteProgram' asm (spill : Liveness.Assem.Variable.t) = 
 
-            let memory = Frame.exp ((Frame.allocLocal frame true), { t = TEMP Frame.fp; addr = true }) in
+            let memory = Frame.exp ((Frame.allocLocal frame true), { t = TEMP Frame.fp; addr = true }, spill.regclass = "a") in
             let fetch t = Codegen.codegen frame (MOVE (t, memory)) in
             let store t = Codegen.codegen frame (MOVE (memory, t)) in
 

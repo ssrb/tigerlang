@@ -225,9 +225,10 @@ let codegen frame stm =
     and emitCall (l, args) r = 
 
         let saverestore = Frame.callersaves |> List.map ~f:(fun(reg : Frame.Assem.Variable.t) ->
-            let memory = Frame.exp ((Frame.allocLocal frame false), { t = TEMP Frame.fp; addr = true } ) in
-                (MOVE (memory, { t = TEMP reg.temp; addr = false (* <= TODO *) } ) , MOVE ({ t = TEMP reg.temp; addr = false (* <= TODO *) }, memory))
-            )
+            let addr = reg.regclass = "a" in
+            let memory = Frame.exp ((Frame.allocLocal frame false), { t = TEMP Frame.fp; addr = true }, addr) in
+            (MOVE (memory, { t = TEMP reg.temp; addr } ) , MOVE ({ t = TEMP reg.temp; addr }, memory))
+        )
         in
 
         let nargs = List.length args in

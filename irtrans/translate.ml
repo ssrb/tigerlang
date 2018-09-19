@@ -180,7 +180,7 @@ let follow_static_link declvl uselvl =
             | Level (parent, _) ->
             begin
                 let sl = Frame.formals parent.frame |> List.hd_exn in
-                aux parent.level (Frame.exp (sl, fp))
+                aux parent.level (Frame.exp (sl, fp, true))
             end
     in
     aux uselvl { t = TEMP Frame.fp; addr = true }
@@ -212,7 +212,8 @@ let transAssign (left, right) =
     Nx (MOVE ((unEx left), (unEx right)))
 
 let transVar ((declvl ,  access), uselvl, ty) =
-    Ex  { (Frame.exp (access, (follow_static_link declvl uselvl))) with addr = Types.is_addr ty }
+    let addr = Types.is_addr ty in
+    Ex (Frame.exp (access, (follow_static_link declvl uselvl), addr))
 
 let transIf (test, then', else') =
     let t = Temp.newlabel () in
@@ -305,7 +306,7 @@ let transWhile (test, body, finish) =
         LABEL finish ])
  
 let transFor (var, lo, hi, body, finish) =
-    let var = Frame.exp (snd var, ({ t = TEMP Frame.fp; addr = true })) in
+    let var = Frame.exp (snd var, ({ t = TEMP Frame.fp; addr = true }), false) in
     let work = Temp.newlabel () in
     let increment = Temp.newlabel () in
     Nx (seq [

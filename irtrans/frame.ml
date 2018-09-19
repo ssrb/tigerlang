@@ -31,7 +31,7 @@ val newFrame: name:Temp.label -> formals:bool list -> frame
 val name: frame -> Temp.label
 val formals: frame -> access list
 val allocLocal: frame -> bool -> access
-val exp: access * Tree.exp -> Tree.exp
+val exp: access * Tree.exp * bool -> Tree.exp
 val procEntryExit1: frame * Tree.stm -> Tree.stm
 val procEntryExit2: frame * Assem.instr list -> Assem.instr list
 type procEntryExit3 = {prolog: string; body: Assem.instr list; epilog: string} [@@deriving sexp]
