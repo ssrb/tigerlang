@@ -7,7 +7,8 @@
 %term DREG
 	| AREG
 	| MEM
-	| LABEL 
+	| LABEL
+	| NAME
 	| JUMP
 	| CJUMP
 	| CALL
@@ -63,6 +64,7 @@ stm: CJUMP(areg, CONST) = stm_cjump_a_k (1);
 
 stm: MOVE(dreg, dreg) = stm_move_d_d (1);
 stm: MOVE(areg, dreg) = stm_move_a_d (1);
+stm: MOVE(dreg, areg) = stm_move_d_a (1);
 stm: MOVE(mem, mem) = stm_move_m_m (1);
 
 mem: MEM = MEM (1);
@@ -73,7 +75,8 @@ dreg: DREG	= DREG (1);
 areg: AREG	= AREG (1);
 
 dreg: CONST	= CONST_d (1);
-areg: CONST	= CONST_a (1);
+
+areg: NAME = NAME (1);
 
 dreg: ADD(dreg, dreg)	= ADD_d_d	(1);
 dreg: ADD(CONST, dreg)	= ADD_k_d	(1);
@@ -181,60 +184,22 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 
 	let codegen frame stm =
 		let module A = Assem in
+		
 		let ilist = ref [] in
-		let emit x = ilist := x::!ilist in
+
 		let data gen = 
 			let v = Var.make (Temp.newtemp(), "d") in 
 			gen v; 
 			v
 		in
+		
 		let address gen = 
 			let v = Var.make (Temp.newtemp(), "a") in 
 			gen v; 
 			v
 		in
-		let rec walk t =
-			match t with
-			| (Burm.R_ADD_d_d (r0, r1), _) ->
-			 	let s0 = walk r0 in
-				let s1 = walk r1 in
-				data(fun r -> 
-					emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = s0});
-					emit(A.OPER {assem = "add.l `s0,`d0"; dst = [r]; src = [s1; r]; jump = None}))
-			| (Burm.R_ADD_k_d e, EXP { t = BINOP (PLUS, { t = CONST i }, _) })
-			| (Burm.R_ADD_d_k e, EXP { t = BINOP (PLUS, _, { t = CONST i }) }) ->
-				data(fun r -> 
-					emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = walk e});
-					emit(A.OPER {assem = "addi.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = [r]; jump = None}))
 
-			| (Burm.R_DREG, EXP { t = TEMP t }) ->
-				Var.make (t, "d")
-
-			| (Burm.R_AREG, EXP { t = TEMP t }) ->
-				Var.make (t, "a")
-
-			| (Burm.R_CONST_d, EXP { t = CONST i }) -> 
-				data(fun r -> 
-					emit(A.OPER {assem = "move.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
-
-			| (Burm.R_CONST_a, EXP { t = CONST i }) -> 
-				data(fun r -> 
-					emit(A.OPER {assem = "move.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
-
-			| (Burm.R_CALL, EXP { t = CALL (l, args) }) ->
-				data(fun r -> 
-                	emit(A.OPER {assem = "jsr (l)"; dst = []; src = []; jump = None}))
-
-			| (r, stm) ->
-				Out_channel.(
-					output_string stderr ("Error, bad match in walk: " ^ (Burm.ruleToString r));
-					newline stderr;
-					Frame.Tree.sexp_of_stm stm |> Sexp.output_hum stderr;
-					newline stderr
-				);
-				raise Burm.NoMatch
-				
-		in
+		let emit x = ilist := x::!ilist in
 
 		let emit_relop relop t f =
 			match relop with 
@@ -252,7 +217,50 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 				emit(A.OPER {assem = "bge " ^ (Symbol.name t); dst = []; src = []; jump = Some [t; f]})
 		in
 
-		let walk_stm t =
+		let rec walk t =
+			match t with
+			| (Burm.R_ADD_d_d (r0, r1), _) ->
+			 	let s0 = walk r0 in
+				let s1 = walk r1 in
+				data(fun r -> 
+					emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = s0});
+					emit(A.OPER {assem = "add.l `s0,`d0"; dst = [r]; src = [s1; r]; jump = None}))
+			| (Burm.R_ADD_k_d e, EXP { t = BINOP (PLUS, { t = CONST i }, _) })
+			| (Burm.R_ADD_d_k e, EXP { t = BINOP (PLUS, _, { t = CONST i }) }) ->
+				data(fun r -> 
+					emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = walk e});
+					emit(A.OPER {assem = "addi.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = [r]; jump = None}))
+
+			| (Burm.R_stm_reg e, _) -> walk e
+			| (Burm.R_DREG, EXP { t = TEMP t }) ->
+				Var.make (t, "d")
+
+			| (Burm.R_AREG, EXP { t = TEMP t }) ->
+				Var.make (t, "a")
+
+			| (Burm.R_CONST_d, EXP { t = CONST i; addr = false }) -> 
+				data(fun r -> 
+					emit(A.OPER {assem = "move.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
+
+			| (Burm.R_CALL, EXP { t = CALL (l, args); addr }) ->
+				if addr then
+					address(fun r -> emitCall (l, args) { t = TEMP r.temp; addr })
+				else
+					data(fun r -> emitCall (l, args) { t = TEMP r.temp; addr })
+
+			| (Burm.R_NAME,  EXP { t = NAME l }) ->
+				address(fun r -> emit(A.OPER {assem = "lea.l " ^ (Symbol.name l) ^ ",`d0" ; dst = [r]; src = []; jump = None}))
+
+			| (r, stm) ->
+				Out_channel.(
+					output_string stderr ("Error, bad match in walk: " ^ (Burm.ruleToString r));
+					newline stderr;
+					Frame.Tree.sexp_of_stm stm |> Sexp.output_hum stderr;
+					newline stderr
+				);
+				raise Burm.NoMatch
+
+		and walk_stm t =
 			let module A = Assem in
 			match t with
 			
@@ -290,13 +298,20 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 		 	| (Burm.R_stm_move_d_d (e1, e2), _) ->
                 emit(A.MOVE {assem = "move.l `s0,`d0"; dst = walk e1; src = walk e2})
 			| (Burm.R_stm_move_a_d (e1, e2), _) ->
+                emit(A.MOVE {assem = "move.l `s0,`d0"; dst = walk e1; src = walk e2})
+			| (Burm.R_stm_move_d_a (e1, e2), _) ->
                 emit(A.MOVE {assem = "movea.l `s0,`d0"; dst = walk e1; src = walk e2})
 			| (Burm.R_stm_move_m_m (e1, e2), _) ->
                 emit(A.OPER {assem = "move.l m,m"; dst = []; src = []; jump = None})
 
-			| (Burm.R_CALL, EXP { t = CALL (l, args) }) ->
-                emit(A.OPER {assem = "jsr (l)"; dst = []; src = []; jump = None})
-
+			| (Burm.R_CALL, EXP { t = CALL (l, args); addr }) ->
+				ignore(
+					if addr then
+						address(fun r -> emitCall (l, args) { t = TEMP r.temp; addr })
+					else
+						data(fun r -> emitCall (l, args) { t = TEMP r.temp; addr })
+				)
+                
 			| (r, stm) ->
 				Out_channel.(
 					output_string stderr ("Error, bad match in walk_stm: " ^ (Burm.ruleToString r));
@@ -305,17 +320,58 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 					newline stderr
 				);
 				raise Burm.NoMatch
+		
+		and emitCall (l, args) r = 
+			let saverestore = Frame.callersaves |> List.map ~f:(fun reg ->
+				let memory = Frame.exp ((Frame.allocLocal frame false), { t = TEMP Frame.fp; addr = true } ) in
+					(MOVE (memory, { t = TEMP reg; addr = false (* <= TODO *) } ) , MOVE ({ t = TEMP reg; addr = false (* <= TODO *) }, memory))
+				)
+			in
+
+        	let nargs = List.length args in
+        
+			saverestore |> List.iter ~f:(fun (s, _) -> munchStm s);
+
+			(* We pass everything on the stack *)
+			if nargs > 0 then
+				emit(A.OPER {assem = "suba.l #" ^ (Int.to_string (4 * nargs)) ^ ",sp"; dst = []; src = []; jump = None});
+
+			args |> List.iteri ~f:(fun i a -> 
+				emit(A.OPER {assem = "move.l `s0,+" ^ (Int.to_string (4 * i)) ^ "(sp)"; dst = []; src = [ munchExp a ]; jump = None})
+			);
+
+			(match l with
+			| { t = NAME l } -> emit(A.OPER {assem = "jsr " ^ (Symbol.name l); dst = []; src = []; jump = None})
+			| _ -> emit(A.OPER {assem = "jsr (`s0)"; dst = []; src = [ munchExp l ]; jump = None}));
+
+			if nargs > 0 then
+				emit(A.OPER {assem = "adda.l #" ^ (Int.to_string (4 * nargs)) ^ ",sp"; dst = []; src = []; jump = None});
+
+			munchStm (MOVE (r , { t = TEMP Frame.rv; addr = false } ) );
+
+			saverestore |> List.iter ~f:(fun (_, r) -> munchStm r)
+		
+		and munchStm stm = 
+			try walk_stm (Burm.reduce stm) with Burm.NoMatch as e ->
+				Out_channel.(
+					output_string stderr "Failed to generate instruction for statement: ";
+					Frame.Tree.sexp_of_stm stm |> Sexp.output_hum stderr;
+					newline stderr;
+					raise e
+				)
+		
+		and munchExp exp =
+			try walk (Burm.reduce (EXP exp)) with Burm.NoMatch as e ->
+				Out_channel.(
+					output_string stderr "Failed to generate instruction for statement: ";
+					Frame.Tree.sexp_of_exp exp |> Sexp.output_hum stderr;
+					newline stderr;
+					raise e
+				)
+		
 		in
 		
-		(try walk_stm (Burm.reduce stm) with Burm.NoMatch as e ->
-			Out_channel.(
-				output_string stderr "Failed to generate instruction for statement: ";
-				Frame.Tree.sexp_of_stm stm |> Sexp.output_hum stderr;
-				newline stderr;
-				raise e
-			)
-		);
-
+		munchStm stm;
 		List.rev(!ilist)
 
 end
