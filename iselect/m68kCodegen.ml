@@ -224,9 +224,9 @@ let codegen frame stm =
 
     and emitCall (l, args) r = 
 
-        let saverestore = Frame.callersaves |> List.map ~f:(fun reg ->
+        let saverestore = Frame.callersaves |> List.map ~f:(fun(reg : Frame.Assem.Variable.t) ->
             let memory = Frame.exp ((Frame.allocLocal frame false), { t = TEMP Frame.fp; addr = true } ) in
-                (MOVE (memory, { t = TEMP reg; addr = false (* <= TODO *) } ) , MOVE ({ t = TEMP reg; addr = false (* <= TODO *) }, memory))
+                (MOVE (memory, { t = TEMP reg.temp; addr = false (* <= TODO *) } ) , MOVE ({ t = TEMP reg.temp; addr = false (* <= TODO *) }, memory))
             )
         in
 
@@ -382,11 +382,14 @@ let codegen frame stm =
         | exp -> 
             exp
             |> Tree.sexp_of_exp
-            |> Sexp.output_hum Out_channel.stdout;
+            |> Sexp.output_hum Out_channel.stderr;
             assert(false)
 
-    and munchAddrExp = function
-        
+    and munchAddrExp addrexp = 
+        if not addrexp.addr then
+             addrexp |> Tree.sexp_of_exp |> Sexp.output_hum Out_channel.stderr;
+
+        match addrexp with
         | { t = BINOP (op, e0, e1) } ->
         begin
             match op with 
@@ -433,26 +436,37 @@ let codegen frame stm =
  
         | { t = CALL (l, args) } -> address(fun r -> emitCall (l, args) { t = TEMP r.temp; addr = true })
 
-        | exp -> 
-            exp
+        | _ -> 
+            addrexp
             |> Tree.sexp_of_exp
             |> Sexp.output_hum Out_channel.stderr;
             assert(false)
         
-        and munchOperand = function
+        and munchOperand op dst =
+            match op with
             | { t = MEM { t = BINOP (PLUS, e, { t = CONST j } ) } }
             | { t = MEM { t = BINOP (PLUS, { t = CONST j }, e) } } ->
-                ((Int.to_string j) ^ "(`s1)", [munchAddrExp e])
+                ((Int.to_string j) ^ "(`s0)", [], [munchAddrExp e])
             | { t = MEM { t = BINOP (MINUS, e, { t = CONST j } ) } } ->
-                ((Int.to_string ~-j) ^ "(`s1)", [munchAddrExp e])
+                ((Int.to_string ~-j) ^ "(`s0)", [], [munchAddrExp e])
             | { t = MEM { t = CONST i } } ->
-                ((Int.to_string i), [])
+                ((Int.to_string i), [], [])
             | { t = MEM e } ->
-                "(`s1)", [munchAddrExp e]
+                "(`s0)", [], [munchAddrExp e]
             | { t = CONST j } ->
-                "#" ^ (Int.to_string j), []
+                "#" ^ (Int.to_string j), [], []
             | { t = NAME l } ->
-                 (Symbol.name l), []
+                (Symbol.name l), [], []
+            | _ ->
+                let e = if op.addr then munchAddrExp op else munchDataExp op in
+                if dst then
+                    "`d0", [ e ], []
+                else
+                    "`s0", [], [ e ]
+
+        and mergeOperands src dst = 
+            "", "", [], []
+
 
     in 
     munchStm stm;

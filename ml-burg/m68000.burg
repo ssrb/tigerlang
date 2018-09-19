@@ -322,9 +322,9 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 				raise Burm.NoMatch
 		
 		and emitCall (l, args) r = 
-			let saverestore = Frame.callersaves |> List.map ~f:(fun reg ->
+			let saverestore = Frame.callersaves |> List.map ~f:(fun (reg : Frame.Assem.Variable.t) ->
 				let memory = Frame.exp ((Frame.allocLocal frame false), { t = TEMP Frame.fp; addr = true } ) in
-					(MOVE (memory, { t = TEMP reg; addr = false (* <= TODO *) } ) , MOVE ({ t = TEMP reg; addr = false (* <= TODO *) }, memory))
+					(MOVE (memory, { t = TEMP reg.temp; addr = false (* <= TODO *) } ) , MOVE ({ t = TEMP reg.temp; addr = false (* <= TODO *) }, memory))
 				)
 			in
 

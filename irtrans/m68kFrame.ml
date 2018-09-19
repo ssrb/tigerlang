@@ -84,7 +84,8 @@ let specialregs = []
 let argregs = []
 let calleesaves = Var.(([ "d2"; "d3"; "d4"; "d5"; "d6"; "d7" ] |> List.map ~f:(fun r -> make ((SM.find_exn regMap r), "d")))
 @ (["a2"; "a3"; "a4"; (*"a5";*) "a6" ] |> List.map ~f:(fun r -> make ((SM.find_exn regMap r), "a"))))
-let callersaves = [ "d0"; "d1"; "a0"; "a1" ] |> List.map ~f:(SM.find_exn regMap)
+let callersaves = Var.(([ "d0"; "d1"] |> List.map ~f:(fun r -> make ((SM.find_exn regMap r), "d")))
+@ (["a0"; "a1"] |> List.map ~f:(fun r -> make ((SM.find_exn regMap r), "a"))))
 
 let externalCall (name, exps) = 
     { t = CALL ({ t = NAME (Temp.namedlabel ("_tiger_" ^ name)); addr = true}, exps); addr = false (* <= TODO *) }
