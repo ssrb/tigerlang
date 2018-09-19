@@ -7,6 +7,8 @@ module Var = Assem.Variable
 open Core
 open Tree
 
+type operand = { assem: string; dst: Var.t list; src: Var.t list }
+
 let codegen frame stm =
     let module A = Assem in
     let ilist = ref [] in
@@ -254,7 +256,6 @@ let codegen frame stm =
 
         saverestore |> List.iter ~f:(fun (_, r) -> munchStm r)
     
-
     and munchDataExp = function
 
         | { t = BINOP (op, e0, e1) } -> 
@@ -447,26 +448,38 @@ let codegen frame stm =
             match op with
             | { t = MEM { t = BINOP (PLUS, e, { t = CONST j } ) } }
             | { t = MEM { t = BINOP (PLUS, { t = CONST j }, e) } } ->
-                ((Int.to_string j) ^ "(`s0)", [], [munchAddrExp e])
+                { assem = (Int.to_string j) ^ "(`s0)"; dst = []; src = [munchAddrExp e] }
             | { t = MEM { t = BINOP (MINUS, e, { t = CONST j } ) } } ->
-                ((Int.to_string ~-j) ^ "(`s0)", [], [munchAddrExp e])
+                { assem = (Int.to_string ~-j) ^ "(`s0)"; dst = []; src = [munchAddrExp e] }
             | { t = MEM { t = CONST i } } ->
-                ((Int.to_string i), [], [])
+                { assem = (Int.to_string i); dst = []; src = [] }
             | { t = MEM e } ->
-                "(`s0)", [], [munchAddrExp e]
+                { assem = "(`s0)"; dst = []; src = [munchAddrExp e] }
             | { t = CONST j } ->
-                "#" ^ (Int.to_string j), [], []
+                { assem = "#" ^ (Int.to_string j); dst = []; src = [] }
             | { t = NAME l } ->
-                (Symbol.name l), [], []
+                { assem = (Symbol.name l); dst = []; src=  [] }
             | _ ->
                 let e = if op.addr then munchAddrExp op else munchDataExp op in
                 if dst then
-                    "`d0", [ e ], []
+                    { assem = "`d0"; dst = [ e ]; src = [] }
                 else
-                    "`s0", [], [ e ]
+                    { assem = "`s0"; dst = []; src = [ e ] }
 
         and mergeOperands src dst = 
-            "", "", [], []
+            let renumber assem s d =
+                let atoi c = (int_of_char c) - (int_of_char '0') in
+                let rec f = function
+                    | '`'::'s'::c::rest -> ("`s" ^ (Int.to_string ((atoi c) + s))) ^ (f rest)
+                    | '`'::'d'::c::rest -> ("`d" ^ (Int.to_string ((atoi c) + d))) ^ (f rest)
+                    | c::rest -> (String.of_char c) ^ (f rest)
+                    | [] -> ""
+                in
+                assem |> String.to_list |> f
+            in    
+            let src' = src.src @ dst.src in
+            let dst' = src.dst @ dst.dst in
+            src.assem, (renumber dst.assem (List.length src.src) (List.length src.dst)), src', dst'
 
 
     in 
