@@ -25,144 +25,34 @@ let codegen frame stm =
     in
     let rec munchStm = function
         | NOP -> ()
-        (* Data movememt *)
-        | MOVE ({ t = MEM { t = BINOP (PLUS, e0, { t = CONST i } ) } } as dst, e1)
-        | MOVE ({ t = MEM { t = BINOP (PLUS, { t = CONST i }, e0) } } as dst, e1) ->
-        begin
-            let s0 = munchAddrExp e0 in
-            match e1 with
-            | { t = MEM { t = BINOP (PLUS, e1, { t = CONST j } ) } }
-            | { t = MEM { t = BINOP (PLUS, { t = CONST j }, e1) } } ->
-                emit(A.OPER {assem = "move.l " ^ (Int.to_string j) ^ "(`s1)," ^ (Int.to_string i) ^ "(`s0)"; dst = []; src = [s0; munchAddrExp e1]; jump = None})
-  
-            | { t = MEM { t = BINOP (MINUS, e1, { t = CONST j } ) } } ->
-                emit(A.OPER {assem = "move.l " ^ (Int.to_string ~-j) ^ "(`s1)," ^ (Int.to_string i) ^ "(`s0)"; dst = []; src = [s0; munchAddrExp e1]; jump = None})
-
-            | { t = MEM { t = CONST i } } ->
-                emit(A.OPER {assem = "move.l " ^ (Int.to_string i) ^ ",(`s0)"; dst = []; src = [s0]; jump = None})
-
-            | { t = MEM e1 } ->
-                emit(A.OPER {assem = "move.l (`s1)," ^ (Int.to_string i) ^ "(`s0)"; dst = []; src = [s0; munchAddrExp e1]; jump = None})
-
-            | { t = CONST j } ->
-                emit(A.OPER {assem = "move.l #" ^ (Int.to_string j) ^ "," ^ (Int.to_string i) ^ "(`s0)"; dst = []; src = [s0]; jump = None})
-
-            | { t = NAME l } ->
-                emit(A.OPER {assem = "move.l " ^ (Symbol.name l) ^ "," ^ (Int.to_string i) ^ "(`s0)"; dst = []; src = [s0]; jump = None})
-
-            | { t = CALL (l, args) } ->
-                emitCall (l, args) dst
-
-            | e1 ->
-                let s1 = if e1.addr then munchAddrExp e1 else munchDataExp e1 in 
-                emit(A.OPER {assem = "move.l `s1," ^ (Int.to_string i) ^ "(`s0)"; dst = []; src = [s0; s1]; jump = None})
-        end
-
-        | MOVE ({ t = MEM { t = BINOP (MINUS, e0, { t = CONST i }) } } as dst, e1) ->
-        begin
-            let s0 = munchAddrExp e0 in
-            match e1 with
-            | { t = MEM { t = BINOP (PLUS, e1, { t = CONST j }) } }
-            | { t = MEM { t = BINOP (PLUS, { t = CONST j}, e1) } } ->
-                emit(A.OPER {assem = "move.l " ^ (Int.to_string j) ^ "(`s1)," ^ (Int.to_string ~-i) ^ "(`s0)"; dst = []; src = [s0; munchAddrExp e1]; jump = None})
-  
-            | { t = MEM { t = BINOP (MINUS, e1, { t = CONST j }) } } ->
-                emit(A.OPER {assem = "move.l " ^ (Int.to_string ~-j) ^ "(`s1)," ^ (Int.to_string ~-i) ^ "(`s0)"; dst = []; src = [s0; munchAddrExp e1]; jump = None})
-
-            | { t = MEM { t = CONST i } } ->
-                emit(A.OPER {assem = "move.l " ^ (Int.to_string i) ^ "," ^ (Int.to_string ~-i) ^ "(`s0)"; dst = []; src = [s0]; jump = None})
-
-            | { t = MEM e1 } ->
-                emit(A.OPER {assem = "move.l (`s1)," ^ (Int.to_string ~-i) ^ "(`s0)"; dst = []; src = [s0; munchAddrExp e1]; jump = None})
-
-            | { t = CONST j } ->
-                emit(A.OPER {assem = "move.l #" ^ (Int.to_string j) ^ "," ^ (Int.to_string ~-i) ^ "(`s0)"; dst = []; src = [s0]; jump = None})
-
-            | { t = NAME l } ->
-                emit(A.OPER {assem = "move.l " ^ (Symbol.name l) ^ "," ^ (Int.to_string ~-i) ^ "(`s0)"; dst = []; src = [s0]; jump = None})
-
-            | { t = CALL (l, args) } ->
-                emitCall (l, args) dst
-
-            | _ ->
-                let s1 = if e1.addr then munchAddrExp e1 else munchDataExp e1 in 
-                emit(A.OPER {assem = "move.l `s1," ^ (Int.to_string ~-i) ^ "(`s0)"; dst = []; src = [s0; s1]; jump = None})
-        end
-
-        | MOVE ({ t = MEM e0 } as dst, e1) ->
-        begin
-            let s0 = munchAddrExp e0 in
-            match e1 with
-            | { t = MEM { t = BINOP (PLUS, e1, { t = CONST j } ) } }
-            | { t = MEM { t = BINOP (PLUS, { t = CONST j }, e1) } } ->
-                emit(A.OPER {assem = "move.l " ^ (Int.to_string j) ^ "(`s1),(`s0)"; dst = []; src = [s0; munchAddrExp e1]; jump = None})
-  
-            | { t = MEM { t = BINOP (MINUS, e1, { t = CONST j }) } } ->
-                emit(A.OPER {assem = "move.l " ^ (Int.to_string ~-j) ^ "(`s1),(`s0)"; dst = []; src = [s0; munchAddrExp e1]; jump = None})
-
-            | { t = MEM { t = CONST i } } ->
-                emit(A.OPER {assem = "move.l " ^ (Int.to_string i) ^ ",(`s0)"; dst = []; src = [s0]; jump = None})
-
-            | { t = MEM e1 } ->
-                emit(A.OPER {assem = "move.l (`s1),(`s0)"; dst = []; src = [s0; munchAddrExp e1]; jump = None});
-
-            | { t = CONST i } ->
-                emit(A.OPER {assem = "move.l #" ^ (Int.to_string i) ^ ",(`s0)"; dst = []; src = [s0]; jump = None})
-
-            | { t = NAME l } ->
-                emit(A.OPER {assem = "move.l " ^ (Symbol.name l) ^ ",(`s0)"; dst = []; src = [s0]; jump = None})
-
-            | { t = CALL (l, args) } ->
-                emitCall (l, args) dst
-
-            | _ ->
-                let s1 = if e1.addr then munchAddrExp e1 else munchDataExp e1 in 
-                emit(A.OPER {assem = "move.l `s1,(`s0)"; dst = []; src = [s0; s1]; jump = None})
-        end 
-
+ 
         | MOVE(e0, e1) ->
         begin
-            let d0 = if e0.addr then munchAddrExp e0 else munchDataExp e0 in
             match e1 with
-            | { t = MEM { t = BINOP (PLUS, e1, { t = CONST j }) } }
-            | { t = MEM { t = BINOP (PLUS, { t = CONST j }, e1) } } ->
-                if e0.addr then
-                    emit(A.OPER {assem = "movea.l " ^ (Int.to_string j) ^ "(`s0),`d0"; dst = [d0]; src = [munchAddrExp e1]; jump = None})
-                else
-                    emit(A.OPER {assem = "move.l " ^ (Int.to_string j) ^ "(`s0),`d0"; dst = [d0]; src = [munchAddrExp e1]; jump = None})
-            | { t = MEM { t = BINOP (MINUS, e1, { t = CONST j }) } } ->
-                if e0.addr then
-                    emit(A.OPER {assem = "movea.l " ^ (Int.to_string ~-j) ^ "(`s0),`d0"; dst = [d0]; src = [munchAddrExp e1]; jump = None})
-                else
-                    emit(A.OPER {assem = "move.l " ^ (Int.to_string ~-j) ^ "(`s0),`d0"; dst = [d0]; src = [munchAddrExp e1]; jump = None})        
-            | { t = MEM { t = CONST i } } ->
-                if e0.addr then
-                    emit(A.OPER {assem = "movea.l " ^ (Int.to_string i) ^ ",`d0"; dst = [d0]; src = []; jump = None})
-                else
-                    emit(A.OPER {assem = "move.l " ^ (Int.to_string i) ^ ",`d0"; dst = [d0]; src = []; jump = None})
-            | { t = MEM e1 } ->
-                if e0 <> e1 then
-                begin
-                    if e0.addr then
-                        emit(A.OPER {assem = "movea.l (`s0),`d0"; dst = [d0]; src = [munchAddrExp e1]; jump = None})
-                    else
-                        emit(A.OPER {assem = "move.l (`s0),`d0"; dst = [d0]; src = [munchAddrExp e1]; jump = None})
-                end
-            | { t = CONST i } ->
-                if e0.addr then
-                    emit(A.OPER {assem = "movea.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [d0]; src = []; jump = None})
-                else
-                    emit(A.OPER {assem = "move.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [d0]; src = []; jump = None})
-            | { t = NAME l } ->
-                emit(A.OPER {assem = "lea.l " ^ (Symbol.name l) ^ ",`d0"; dst = [d0]; src = []; jump = None})
             | { t = CALL (l, args) } ->
                 emitCall (l, args) e0
             | _ ->
-               let s0 = if e1.addr then munchAddrExp e1 else munchDataExp e1 in
-                if e0.addr then
-                    emit(A.MOVE {assem = "movea.l `s0,`d0"; dst = d0; src = s0 })
-                else
-                    emit(A.MOVE {assem = "move.l `s0,`d0"; dst = d0; src = s0 })
+                let dst = munchOperand e0 true in
+                let src = munchOperand e1 false in
+                let e = mergeOperands src dst in
+                match e1 with
+                | { t = NAME l } ->
+                    emit(A.OPER {assem = "lea.l " ^ e.assem; dst = e.dst; src = e.src; jump = None})
+                | _ ->
+                    if e.assem = "`s0,`d0" then
+                    begin
+                        if e0.addr && dst.assem = "`d0" then
+                            emit(A.MOVE {assem = "movea.l " ^ e.assem; dst = List.hd_exn e.dst; src = List.hd_exn e.src })
+                        else
+                            emit(A.MOVE {assem = "move.l " ^ e.assem; dst = List.hd_exn e.dst; src = List.hd_exn e.src})
+                    end
+                    else
+                    begin
+                        if e0.addr && dst.assem = "`d0" then
+                            emit(A.OPER {assem = "movea.l " ^ e.assem; dst = e.dst; src = e.src; jump = None})
+                        else
+                            emit(A.OPER {assem = "move.l " ^ e.assem; dst = e.dst; src = e.src; jump = None})
+                    end
         end
 
         | LABEL label -> 
@@ -479,7 +369,7 @@ let codegen frame stm =
             in    
             let src' = src.src @ dst.src in
             let dst' = src.dst @ dst.dst in
-            src.assem, (renumber dst.assem (List.length src.src) (List.length src.dst)), src', dst'
+            { assem = src.assem ^ "," ^ (renumber dst.assem (List.length src.src) (List.length src.dst)); dst = dst'; src = src' }
 
 
     in 
