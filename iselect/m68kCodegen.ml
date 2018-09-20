@@ -34,25 +34,16 @@ let codegen frame stm =
             | _ ->
                 let dst = munchOperand e0 true in
                 let src = munchOperand e1 false in
-                let e = mergeOperands src dst in
+                let srcdst = mergeOperands src dst in
                 match e1 with
                 | { t = NAME l } ->
-                    emit(A.OPER {assem = "lea.l " ^ e.assem; dst = e.dst; src = e.src; jump = None})
+                    emit(A.OPER {assem = "lea.l " ^ srcdst.assem; dst = srcdst.dst; src = srcdst.src; jump = None})
                 | _ ->
-                    if e.assem = "`s0,`d0" then
-                    begin
-                        if e0.addr && dst.assem = "`d0" then
-                            emit(A.MOVE {assem = "movea.l " ^ e.assem; dst = List.hd_exn e.dst; src = List.hd_exn e.src })
-                        else
-                            emit(A.MOVE {assem = "move.l " ^ e.assem; dst = List.hd_exn e.dst; src = List.hd_exn e.src})
-                    end
+                    let move = if e0.addr && dst.assem = "`d0" then "movea.l " else "move.l " in
+                    if srcdst.assem = "`s0,`d0" then
+                        emit(A.MOVE {assem = move ^ srcdst.assem; dst = List.hd_exn srcdst.dst; src = List.hd_exn srcdst.src })
                     else
-                    begin
-                        if e0.addr && dst.assem = "`d0" then
-                            emit(A.OPER {assem = "movea.l " ^ e.assem; dst = e.dst; src = e.src; jump = None})
-                        else
-                            emit(A.OPER {assem = "move.l " ^ e.assem; dst = e.dst; src = e.src; jump = None})
-                    end
+                        emit(A.OPER {assem = move ^ srcdst.assem; dst = srcdst.dst; src = srcdst.src; jump = None})
         end
 
         | LABEL label -> 
