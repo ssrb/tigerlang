@@ -155,18 +155,19 @@ let codegen frame stm =
                         data(fun r -> 
                             emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = s0});
                             emit(A.OPER {assem = "addi.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = [r]; jump = None}))
-                    | ({ t = MEM e0 }, e1) | (e1, { t = MEM e0}) ->
-                        let s0 = munchAddrExp e0 in
-                        let s1 = munchDataExp e1 in
-                        data(fun r -> 
-                            emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = s1});
-                            emit(A.OPER {assem = "add.l (`s0),`d0"; dst = [r]; src = [s0; r]; jump = None}))
                     | _ ->
-                        let s0 = munchDataExp e0 in
-                        let s1 = munchDataExp e1 in
+                        let s0 = munchOperand e0 false in
+                        let s1 = munchOperand e1 false in
                         data(fun r -> 
-                            emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = s0});
-                            emit(A.OPER {assem = "add.l `s0,`d0"; dst = [r]; src = [s1; r]; jump = None}))
+                            let r = {assem = "`d0"; dst = [ r ]; src = []} in
+                            let s0r = mergeOperands s0 r in
+                            let s1r = mergeOperands s1 r in
+                            if s0r.assem = "`s0,`d0" then
+                                emit(A.MOVE {assem = "move.l " ^ s0r.assem; dst = List.hd_exn s0r.dst; src = List.hd_exn s0r.src})
+                            else
+                                emit(A.OPER {assem = "move.l " ^ s0r.assem; dst = s0r.dst; src = s0r.src; jump = None});
+                            
+                            emit(A.OPER {assem = "add.l " ^ s1r.assem; dst = s1r.dst; src = s1r.src @ s1r.dst; jump = None}))
                 end
             | MINUS ->
                 begin
@@ -181,24 +182,18 @@ let codegen frame stm =
                         data(fun r -> 
                             emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = s0});
                             emit(A.OPER {assem = "subi.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = [r]; jump = None}))
-                    | ({ t = MEM e0 }, e1) ->
-                        let s0 = munchAddrExp e0 in
-                        let s1 = munchDataExp e1 in
-                        data(fun r -> 
-                            emit(A.OPER {assem = "move.l `(s0),`d0"; dst = [r]; src = [s0]; jump = None});
-                            emit(A.OPER {assem = "sub.l `s0,`d0"; dst = [r]; src = [s1; r]; jump = None}))
-                    | (e0, { t = MEM e1}) ->
-                        let s0 = munchDataExp e0 in
-                        let s1 = munchAddrExp e1 in
-                        data(fun r -> 
-                            emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = s0});
-                            emit(A.OPER {assem = "sub.l (`s0),`d0"; dst = [r]; src = [s1; r]; jump = None}))
                     | _ ->
-                        let s0 = munchDataExp e0 in
-                        let s1 = munchDataExp e1 in
+                        let s0 = munchOperand e0 false in
+                        let s1 = munchOperand e1 false in
                         data(fun r -> 
-                            emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = s0});
-                            emit(A.OPER {assem = "sub.l `s0,`d0"; dst = [r]; src = [s1; r]; jump = None}))
+                            let r = {assem = "`d0"; dst = [ r ]; src = []} in
+                            let s0r = mergeOperands s0 r in
+                            let s1r = mergeOperands s1 r in
+                            if s0r.assem = "`s0,`d0" then
+                                emit(A.MOVE {assem = "move.l " ^ s0r.assem; dst = List.hd_exn s0r.dst; src = List.hd_exn s0r.src})
+                            else
+                                emit(A.OPER {assem = "move.l " ^ s0r.assem; dst = s0r.dst; src = s0r.src; jump = None});
+                            emit(A.OPER {assem = "sub.l " ^ s1r.assem; dst = s1r.dst; src = s1r.src @ s1r.dst; jump = None}))
                 end
             | MUL ->
                 let s0 = munchOperand e0 false in
@@ -207,7 +202,10 @@ let codegen frame stm =
                     let r = {assem = "`d0"; dst = [ r ]; src = []} in
                     let s0r = mergeOperands s0 r in
                     let s1r = mergeOperands s1 r in
-                    emit(A.MOVE {assem = "move.l " ^ s0r.assem; dst = List.hd_exn s0r.dst; src = List.hd_exn s0r.src});
+                    if s0r.assem = "`s0,`d0" then
+                        emit(A.MOVE {assem = "move.l " ^ s0r.assem; dst = List.hd_exn s0r.dst; src = List.hd_exn s0r.src})
+                    else
+                        emit(A.OPER {assem = "move.l " ^ s0r.assem; dst = s0r.dst; src = s0r.src; jump = None});
                     emit(A.OPER {assem = "muls.w " ^ s1r.assem; dst = s1r.dst; src = s1r.src @ s1r.dst; jump = None})) 
             | DIV ->
                 let s0 = munchDataExp e0 in
@@ -280,33 +278,23 @@ let codegen frame stm =
         begin
             match op with 
             | PLUS ->
-                begin
-                    match (e0, e1) with
-                    | ({ t = CONST i }, e0) | (e0, { t = CONST i }) ->
-                        let s0 = munchDataExp e0 in
-                        address(fun r -> 
-                            emit(A.OPER {assem = "movea.l `s0,`d0"; dst = [r]; src = [s0]; jump = None});
-                            emit(A.OPER {assem = "adda.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = [r]; jump = None}))
-                    | ({ t = MEM e0 }, e1) | (e1, { t = MEM e0 }) ->
-                        let s0 = munchAddrExp e0 in
-                        let s1 = munchDataExp e1 in
-                        address(fun r -> 
-                            emit(A.OPER {assem = "movea.l `s0,`d0"; dst = [r]; src = [s1]; jump = None});
-                            emit(A.OPER {assem = "adda.l (`s0),`d0"; dst = [r]; src = [s0; r]; jump = None}))
-                    | _ ->
-                        let s0 = munchDataExp e0 in
-                        let s1 = munchDataExp e1 in
-                        address(fun r -> 
-                            emit(A.OPER {assem = "movea.l `s0,`d0"; dst = [r]; src = [s0]; jump = None});
-                            emit(A.OPER {assem = "adda.l `s0,`d0"; dst = [r]; src = [s1; r]; jump = None}))
-                end
+                let s0 = munchOperand e0 false in
+                let s1 = munchOperand e1 false in
+                address(fun r -> 
+                    let r = {assem = "`d0"; dst = [ r ]; src = []} in
+                    let s0r = mergeOperands s0 r in
+                    let s1r = mergeOperands s1 r in
+                    emit(A.OPER {assem = "movea.l " ^ s0r.assem; dst = s0r.dst; src = s0r.src; jump = None});
+                    emit(A.OPER {assem = "adda.l " ^ s1r.assem; dst = s1r.dst; src = s1r.src @ s1r.dst; jump = None}))
             | MINUS ->
-                let s0 = munchDataExp e0 in
-                let s1 = munchDataExp e1 in
-                 address(fun r -> 
-                    emit(A.OPER {assem = "movea.l `s0,`d0"; dst = [r]; src = [s0]; jump = None});
-                    emit(A.OPER {assem = "suba.l `s0,`d0"; dst = [r]; src = [s1; r]; jump = None})) 
-            
+                let s0 = munchOperand e0 false in
+                let s1 = munchOperand e1 false in
+                address(fun r -> 
+                    let r = {assem = "`d0"; dst = [ r ]; src = []} in
+                    let s0r = mergeOperands s0 r in
+                    let s1r = mergeOperands s1 r in
+                    emit(A.OPER {assem = "movea.l " ^ s0r.assem; dst = s0r.dst; src = s0r.src; jump = None});
+                    emit(A.OPER {assem = "suba.l " ^ s1r.assem; dst = s1r.dst; src = s1r.src @ s1r.dst; jump = None}))
             | _ -> assert(false)
         end
         | { t = MEM { t = BINOP (PLUS, e0, { t = CONST i } ) } }
