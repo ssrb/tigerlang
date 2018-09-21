@@ -201,11 +201,14 @@ let codegen frame stm =
                             emit(A.OPER {assem = "sub.l `s0,`d0"; dst = [r]; src = [s1; r]; jump = None}))
                 end
             | MUL ->
-                let s0 = munchDataExp e0 in
-                let s1 = munchDataExp e1 in
+                let s0 = munchOperand e0 false in
+                let s1 = munchOperand e1 false in
                  data(fun r -> 
-                    emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = s0});
-                    emit(A.OPER {assem = "muls.w `s0,`d0"; dst = [r]; src = [s1; r]; jump = None})) 
+                    let r = {assem = "`d0"; dst = [ r ]; src = []} in
+                    let s0r = mergeOperands s0 r in
+                    let s1r = mergeOperands s1 r in
+                    emit(A.MOVE {assem = "move.l " ^ s0r.assem; dst = List.hd_exn s0r.dst; src = List.hd_exn s0r.src});
+                    emit(A.OPER {assem = "muls.w " ^ s1r.assem; dst = s1r.dst; src = s1r.src @ s1r.dst; jump = None})) 
             | DIV ->
                 let s0 = munchDataExp e0 in
                 let s1 = munchDataExp e1 in
