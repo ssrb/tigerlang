@@ -195,7 +195,7 @@ let codegen frame stm =
                                 emit(A.OPER {assem = "move.l " ^ s0r.assem; dst = s0r.dst; src = s0r.src; jump = None});
                             emit(A.OPER {assem = "sub.l " ^ s1r.assem; dst = s1r.dst; src = s1r.src @ s1r.dst; jump = None}))
                 end
-            | MUL ->
+            | _ ->
                 let s0 = munchOperand e0 false in
                 let s1 = munchOperand e1 false in
                  data(fun r -> 
@@ -206,49 +206,7 @@ let codegen frame stm =
                         emit(A.MOVE {assem = "move.l " ^ s0r.assem; dst = List.hd_exn s0r.dst; src = List.hd_exn s0r.src})
                     else
                         emit(A.OPER {assem = "move.l " ^ s0r.assem; dst = s0r.dst; src = s0r.src; jump = None});
-                    emit(A.OPER {assem = "muls.w " ^ s1r.assem; dst = s1r.dst; src = s1r.src @ s1r.dst; jump = None})) 
-            | DIV ->
-                let s0 = munchDataExp e0 in
-                let s1 = munchDataExp e1 in
-                 data(fun r -> 
-                    emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = s0});
-                    emit(A.OPER {assem = "divs.w `s0,`d0"; dst = [r]; src = [s1; r]; jump = None})) 
-            | AND ->
-                let s0 = munchDataExp e0 in
-                let s1 = munchDataExp e1 in
-                 data(fun r -> 
-                    emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = s0});
-                    emit(A.OPER {assem = "and.l `s0,`d0"; dst = [r]; src = [s1; r]; jump = None})) 
-            | OR ->
-                let s0 = munchDataExp e0 in
-                let s1 = munchDataExp e1 in
-                 data(fun r -> 
-                    emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = s0});
-                    emit(A.OPER {assem = "or.l `s0,`d0"; dst = [r]; src = [s1; r]; jump = None})) 
-            | LSHIFT ->
-                let s0 = munchDataExp e0 in
-                let s1 = munchDataExp e1 in
-                 data(fun r -> 
-                    emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = s0});
-                    emit(A.OPER {assem = "lsl.l `s0,`d0"; dst = [r]; src = [s1; r]; jump = None})) 
-            | RSHIFT ->
-                let s0 = munchDataExp e0 in
-                let s1 = munchDataExp e1 in
-                 data(fun r -> 
-                    emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = s0});
-                    emit(A.OPER {assem = "lsr.l `s0,`d0"; dst = [r]; src = [s1; r]; jump = None})) 
-            | ARSHIFT ->
-                let s0 = munchDataExp e0 in
-                let s1 = munchDataExp e1 in
-                 data(fun r -> 
-                    emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = s0});
-                    emit(A.OPER {assem = "asr.l `s0,`d0"; dst = [r]; src = [s1; r]; jump = None})) 
-            | XOR ->
-                let s0 = munchDataExp e0 in
-                let s1 = munchDataExp e1 in
-                 data(fun r -> 
-                    emit(A.MOVE {assem = "move.l `s0,`d0"; dst = r; src = s0});
-                    emit(A.OPER {assem = "eor.l `s0,`d0"; dst = [r]; src = [s1; r]; jump = None})) 
+                    emit(A.OPER {assem = (mnemonic op) ^ " " ^ s1r.assem; dst = s1r.dst; src = s1r.src @ s1r.dst; jump = None}))
         end
         | { t = MEM { t = BINOP (PLUS, e0, { t = CONST i } ) } }
         | { t = MEM { t = BINOP (PLUS, { t = CONST i }, e0) } } -> data(fun r -> emit(A.OPER {assem = "move.l " ^ (Int.to_string i) ^ "(`s0),`d0"; dst = [r]; src = [munchAddrExp e0]; jump = None}))
@@ -353,6 +311,16 @@ let codegen frame stm =
             let dst' = src.dst @ dst.dst in
             { assem = src.assem ^ "," ^ (renumber dst.assem (List.length src.src) (List.length src.dst)); dst = dst'; src = src' }
 
+        and mnemonic = function
+            | MUL -> "muls.w"
+            | DIV -> "divs.w"
+            | AND -> "and.l"
+            | OR -> "or.l"
+            | LSHIFT -> "lsl.l"
+            | RSHIFT -> "lsr.l"
+            | ARSHIFT -> "asr.l"
+            | XOR -> "eor.l" 
+            | _ -> assert(false)
 
     in 
     munchStm stm;
