@@ -33,12 +33,12 @@ let codegen frame stm =
                 emitCall (l, args) e0
             | _ ->
                 let dst = munchOperand e0 true in
-                let src = munchOperand e1 false in
-                let srcdst = mergeOperands src dst in
                 match e1 with
                 | { t = NAME l } ->
-                    emit(A.OPER {assem = "lea.l " ^ srcdst.assem; dst = srcdst.dst; src = srcdst.src; jump = None})
+                    emit(A.OPER {assem = "lea.l " ^ (Symbol.name l) ^ "," ^ dst.assem; dst = dst.dst; src = dst.src; jump = None})
                 | _ ->
+                    let src = munchOperand e1 false in
+                    let srcdst = mergeOperands src dst in
                     let move = if e0.addr && dst.assem = "`d0" then "movea.l " else "move.l " in
                     if srcdst.assem = "`s0,`d0" then
                         emit(A.MOVE {assem = move ^ srcdst.assem; dst = List.hd_exn srcdst.dst; src = List.hd_exn srcdst.src })
@@ -265,7 +265,7 @@ let codegen frame stm =
         
         | { t = NAME l } -> address(fun r -> emit(A.OPER {assem = "lea.l " ^ (Symbol.name l) ^ ",`d0" ; dst = [r]; src = []; jump = None}))
         
-        | { t = CONST i } -> address(fun r -> emit(A.OPER {assem = "lea.l #" ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
+        | { t = CONST i } -> address(fun r -> emit(A.OPER {assem = "lea.l " ^ (Int.to_string i) ^ ",`d0"; dst = [r]; src = []; jump = None}))
  
         | { t = CALL (l, args) } -> address(fun r -> emitCall (l, args) { t = TEMP r.temp; addr = true })
 
@@ -289,7 +289,7 @@ let codegen frame stm =
             | { t = CONST j } ->
                 { assem = "#" ^ (Int.to_string j); dst = []; src = [] }
             | { t = NAME l } ->
-                { assem = (Symbol.name l); dst = []; src=  [] }
+                { assem = "#" ^ (Symbol.name l); dst = []; src=  [] }
             | _ ->
                 let e = if op.addr then munchAddrExp op else munchDataExp op in
                 if dst then
