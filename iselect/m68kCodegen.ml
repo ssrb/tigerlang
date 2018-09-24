@@ -123,7 +123,8 @@ let codegen frame stm =
             emit(A.OPER {assem = "suba.l #" ^ (Int.to_string (4 * nargs)) ^ ",sp"; dst = []; src = []; jump = None});
 
         args |> List.iteri ~f:(fun i a -> 
-            emit(A.OPER {assem = "move.l `s0,+" ^ (Int.to_string (4 * i)) ^ "(sp)"; dst = []; src = [ munchDataExp a ]; jump = None})
+            let s0 = munchOperand a false in
+            emit(A.OPER {assem = "move.l " ^ s0.assem ^ ",+" ^ (Int.to_string (4 * i)) ^ "(sp)"; dst = s0.dst; src = s0.src; jump = None})
         );
 
         (match l with
