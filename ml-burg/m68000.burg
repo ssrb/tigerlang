@@ -63,6 +63,7 @@ stm: CJUMP(CONST, areg) = stm_cjump_k_a (1);
 stm: CJUMP(areg, CONST) = stm_cjump_a_k (1);
 
 stm: MOVE(dreg, dreg) = stm_move_d_d (1);
+stm: MOVE(areg, areg) = stm_move_a_a (1);
 stm: MOVE(areg, dreg) = stm_move_a_d (1);
 stm: MOVE(dreg, areg) = stm_move_d_a (1);
 stm: MOVE(mem, mem) = stm_move_m_m (1);
@@ -296,6 +297,8 @@ module Generator : Codegen.T with module Frame = M68kFrame = struct
 				emit_relop relop t f
 
 		 	| (Burm.R_stm_move_d_d (e1, e2), _) ->
+                emit(A.MOVE {assem = "move.l `s0,`d0"; dst = walk e1; src = walk e2})
+			| (Burm.R_stm_move_a_a (e1, e2), _) ->
                 emit(A.MOVE {assem = "move.l `s0,`d0"; dst = walk e1; src = walk e2})
 			| (Burm.R_stm_move_a_d (e1, e2), _) ->
                 emit(A.MOVE {assem = "move.l `s0,`d0"; dst = walk e1; src = walk e2})

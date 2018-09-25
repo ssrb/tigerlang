@@ -144,7 +144,10 @@ ifndef SUBPROJS
   export SUBPROJS = lexer_tester parser_tester absyn_tester semant_tester canon_tester iselect_tester regalloc_tester
 endif
 
-all: debug-code native-code
+all: ml-burg/m68000.ml debug-code native-code
 
 %:
 	@$(MAKE) -f $(OCAMLMAKEFILE) subprojs SUBTARGET=$@
+
+ml-burg/m68000.ml: ml-burg/m68000.burg
+	ml-burg/burg ml-burg/m68000.burg
