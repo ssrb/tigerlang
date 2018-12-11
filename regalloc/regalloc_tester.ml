@@ -8,7 +8,7 @@ module Temp = M68kFrame.Temp
 module TT = Temp.Table
 
 open Core
-
+open Out_channel
 
 (**
   * Direct translation of the example of glpk's reference manual.
@@ -36,15 +36,17 @@ let () =
 
 let _ = 
 
-let open Out_channel in
-
 let fragments = 
 	let lexbuf = Lexing.from_channel  In_channel.stdin in
 	Tigerparse.prog Lexer.read lexbuf
 	|> Semant.transProg2
 in
 
-let f frag =
+let f outchannel frag =
+	let output_string_endl out str = 
+		output_string out str;
+		newline out
+	in
 	match frag with
 	| Translate.Frame.PROC proc -> 
 
@@ -59,10 +61,9 @@ let f frag =
 		let asm, allocation = Regalloc.alloc (M68kFrame.procEntryExit2 (proc.frame, asm), proc.frame) in
 
 		let asm = M68kFrame.procEntryExit3 (proc.frame, asm) in
-		let outchannel = Out_channel.stdout in
-		Out_channel.print_endline ((Symbol.name (M68kFrame.name proc.frame)) ^ ":");
+		output_string_endl outchannel ((Symbol.name (M68kFrame.name proc.frame)) ^ ":");
 		M68kFrame.(
-			Out_channel.output_string outchannel asm.prolog;
+			output_string outchannel asm.prolog;
 
 			asm.body |> List.iter ~f:(fun instr ->
 			
@@ -72,22 +73,19 @@ let f frag =
 				in
 
 				if not (String.is_empty asm) then
-				begin 
-					Out_channel.output_string outchannel asm;
-					Out_channel.newline outchannel
-				end
+					output_string_endl outchannel asm
 			);
-			Out_channel.output_string outchannel asm.epilog;
+			output_string outchannel asm.epilog;
 		)
 	
 	| Translate.Frame.STRING (lbl, str) -> 
-		Out_channel.print_endline ((Symbol.name lbl) ^ ": even");
-		Out_channel.print_endline ("\tdc.l " ^ (str |> String.length |> Int.to_string));
-		Out_channel.print_endline ("\tdc.b \"" ^ (String.escaped str) ^ "\"")
+		output_string_endl outchannel ((Symbol.name lbl) ^ ": even");
+		output_string_endl outchannel ("\tdc.l " ^ (str |> String.length |> Int.to_string));
+		output_string_endl outchannel ("\tdc.b \"" ^ (String.escaped str) ^ "\"")
 in
 
 let _ = 
-Out_channel.print_endline "_tigermain:";
-Out_channel.print_endline "\tpublic _tigermain";
-fragments |> List.iter ~f:f in
-()
+print_endline "_tigermain:";
+print_endline "\tpublic _tigermain";
+fragments |> List.iter ~f:(f stdout) in
+flush stdout

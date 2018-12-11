@@ -8,15 +8,21 @@ module Temp = M68kFrame.Temp
 module TT = Temp.Table
 
 open Core
+open Out_channel
 
 let _ = 
 
-let open Out_channel in
-
 let fragments = 
-	let lexbuf = Lexing.from_channel  (In_channel.create Sys.argv.(1)) in
-	Tigerparse.prog Lexer.read lexbuf
-	|> Semant.transProg2
+	In_channel.with_file Sys.argv.(1) ~f:(fun inchannel ->
+		let lexbuf = Lexing.from_channel inchannel in
+		Tigerparse.prog Lexer.read lexbuf
+		|> Semant.transProg2
+	)
+in
+
+let output_string_endl out str = 
+		output_string out str;
+		newline out
 in
 
 let f outchannel frag =
@@ -35,11 +41,10 @@ let f outchannel frag =
 
 		let asm = M68kFrame.procEntryExit3 (proc.frame, asm) in
 
-		Out_channel.output_string outchannel ((Symbol.name (M68kFrame.name proc.frame)) ^ ":");
-		Out_channel.newline outchannel;
+		output_string_endl outchannel ((Symbol.name (M68kFrame.name proc.frame)) ^ ":");
 
 		M68kFrame.(
-			Out_channel.output_string outchannel asm.prolog;
+			output_string outchannel asm.prolog;
 
 			asm.body |> List.iter ~f:(fun instr ->
 			
@@ -49,28 +54,22 @@ let f outchannel frag =
 				in
 
 				if not (String.is_empty asm) then
-				begin 
-					Out_channel.output_string outchannel asm;
-					Out_channel.newline outchannel
-				end
+					output_string_endl outchannel asm
 			);
-			Out_channel.output_string outchannel asm.epilog;
+			output_string outchannel asm.epilog;
 		)
 	
 	| Translate.Frame.STRING (lbl, str) -> 
-		Out_channel.output_string outchannel ((Symbol.name lbl) ^ ": even");
-		Out_channel.newline outchannel;
-		Out_channel.output_string outchannel ("\tdc.l " ^ (str |> String.length |> Int.to_string));
-		Out_channel.newline outchannel;
-		Out_channel.output_string outchannel ("\tdc.b \"" ^ (String.escaped str) ^ "\"");
-		Out_channel.newline outchannel
+		output_string_endl outchannel ((Symbol.name lbl) ^ ": even");
+		output_string_endl outchannel ("\tdc.l " ^ (str |> String.length |> Int.to_string));
+		output_string_endl outchannel ("\tdc.b \"" ^ (String.escaped str) ^ "\"");
 in
 
-let outchannel = Out_channel.stdout in
-Out_channel.output_string outchannel "_tigermain:";
-Out_channel.newline outchannel;
-Out_channel.output_string outchannel "\tpublic _tigermain";
-Out_channel.newline outchannel;
-fragments |> List.iter ~f:(f outchannel);
-let son = Unix.fork_exec ~prog:"vc" ~argv:[ "vc"; "+kick13" ] () in
+let asm = Sys.argv.(1) ^ ".S" in
+Out_channel.with_file asm ~f:(fun outchannel ->
+	output_string_endl outchannel "_tigermain:";
+	output_string_endl outchannel "\tpublic _tigermain";
+	fragments |> List.iter ~f:(f outchannel)
+);
+let son = Unix.fork_exec ~prog:"vc" ~argv:[ "vc"; "+kick13"; "runtime.c"; asm ] () in
 Unix.waitpid_exn son

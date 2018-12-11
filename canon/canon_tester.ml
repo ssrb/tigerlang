@@ -5,6 +5,7 @@ module Tree = M68kFrame.Tree
 module Canon = Canon.F(Tree)
 
 open Core
+open Out_channel
 
 let _ = 
 
@@ -18,17 +19,17 @@ let f frag =
 	match frag with
 	| Translate.Frame.PROC proc -> 
 		let ts = proc.body |> Canon.linearize |> Canon.basicBlocks |> Canon.traceSchedule in
-		Tree.LABEL (M68kFrame.name proc.frame) |> Tree.sexp_of_stm |> Sexp.output_hum Out_channel.stdout;
-		Out_channel.newline Out_channel.stdout;
+		Tree.LABEL (M68kFrame.name proc.frame) |> Tree.sexp_of_stm |> Sexp.output_hum stdout;
+		newline stdout;
 		List.iter ts ~f:(fun t ->
-			Tree.sexp_of_stm t |> Sexp.output_hum Out_channel.stdout;
-			Out_channel.newline Out_channel.stdout)
+			Tree.sexp_of_stm t |> Sexp.output_hum stdout;
+			newline stdout)
 	| Translate.Frame.STRING (lab, str) -> 
-		(Tree.LABEL lab) |> Tree.sexp_of_stm |> Sexp.output_hum Out_channel.stdout;
-		Out_channel.newline Out_channel.stdout;
-		Out_channel.print_endline ("\"" ^ str ^ "\"")
+		(Tree.LABEL lab) |> Tree.sexp_of_stm |> Sexp.output_hum stdout;
+		newline stdout;
+		print_endline ("\"" ^ str ^ "\"")
 in
 
 let _ = fragments |> List.iter ~f:f in 
 
-Out_channel.flush Out_channel.stdout
+flush stdout
