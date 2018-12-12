@@ -15,7 +15,7 @@ let output_string_endl out str =
 		newline out
 ;;
 
-let compile tigersource = 
+let compile tigersource outputasm outfile = 
 
 	let fragments = 
 		In_channel.with_file tigersource ~f:(fun inchannel ->
@@ -65,7 +65,13 @@ let compile tigersource =
 			output_string_endl outchannel ("\tdc.b \"" ^ (String.escaped str) ^ "\"")
 	in
 
-	let asm = Filename.temp_file  "tiger" ".S" in
+	let asm = 
+		if not outputasm then 
+			Filename.temp_file  "tiger" ".S"
+		else match outfile with
+		| Some outfile -> outfile
+		| None -> (tigersource |> Filename.basename |> Filename.chop_extension) ^ ".S"
+	in
 
 	Out_channel.with_file asm ~f:(fun outchannel ->
 		output_string_endl outchannel "_tigermain:";
@@ -73,17 +79,19 @@ let compile tigersource =
 		fragments |> List.iter ~f:(f outchannel)
 	);
 
-	let son = Unix.fork_exec ~prog:"vc" ~argv:[ "vc"; "+kick13"; "runtime.c"; asm ] () in
-
-	Unix.waitpid_exn son;
-
-	Unix.remove asm
+	if not outputasm then
+		let outfile = Option.value outfile ~default:"a.out" in
+		let son = Unix.fork_exec ~prog:"vc" ~argv:[ "vc"; "+kick13"; "runtime.c"; asm; "-o"; outfile ] () in
+		Unix.waitpid_exn son;
+		Unix.remove asm
 ;;
 
 let spec =
   let open Command.Spec in
   empty
-  +> anon ("tigersource" %: string)
+  +> anon ("tigersource" %: file)
+  +> flag "-S" no_arg ~doc:"Do not assemble.  The output is in the form of an assembler code file."
+  +> flag "-o" (optional string) ~doc:"outfile The outputfile name"
 ;;
 
 let command =
@@ -91,7 +99,7 @@ let command =
     ~summary:"ssrb's Tiger toy compiler"
     ~readme:(fun () -> "Compile a single Tiger source file to an AmigaOS(Kickstart ROM 1.3) loadseg()ble executable/binary")
     spec
-    (fun tigersource () -> compile tigersource)
+    (fun tigersource outputasm outfile () -> compile tigersource outputasm outfile)
 ;;
 
 let () = Command.run ~version:"0.1" ~build_info:"" command
