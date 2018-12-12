@@ -11,8 +11,8 @@ open Core
 open Out_channel
 
 let output_string_endl out str = 
-		output_string out str;
-		newline out
+	output_string out str;
+	newline out
 ;;
 
 let compile tigersource outputasm outfile = 
